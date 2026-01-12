@@ -5,3 +5,5 @@ src/gp_functions
 src/qr_weekly
 src/gp_renewal
 data
+results
+slurm_out
