@@ -23,8 +23,7 @@ make_training_counts <- function(reduced_counts, x_location, x_pathogen, days_ah
   training_counts <- reduced_counts |> 
     select(location, pathogen, date = notification_date, y = cases, y_smooth = cases_trend) |> 
     complete(date = seq(min(date), max(date), by = "days"), fill = list(location = x_location, pathogen = x_pathogen)) |>
-    arrange(date) |> 
-    mutate(x = as.numeric(date - min(date)))
+    arrange(date)
   
   n_na <- sum(is.na(training_counts$y))
   
@@ -47,8 +46,7 @@ make_training_counts <- function(reduced_counts, x_location, x_pathogen, days_ah
         
         location = x_location, pathogen = x_pathogen
       )
-    ) |> 
-      mutate(x = as.numeric(date - min(date)))
+    )
   }
   
   
@@ -56,7 +54,10 @@ make_training_counts <- function(reduced_counts, x_location, x_pathogen, days_ah
   
   stopifnot(n_diff == 1)
   
-  return(training_counts)
+  training_counts |>
+    arrange(date) |> 
+    mutate(x = as.numeric(date - min(date)),
+           day_of_week = wday(date))
 }
 
 

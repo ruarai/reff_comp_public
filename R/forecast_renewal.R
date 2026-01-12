@@ -64,7 +64,7 @@ model <- cmdstan_model("src/gp_renewal.stan")
 data_list <- list(
   x = training_counts$x, y = training_counts$y[1:n_days_data],
   N = nrow(training_counts), N_data = n_days_data,
-  M_annual = 20, M_noise = 30, c_factor = 1.2,
+  M_annual = 40, M_noise = 40, c_factor = 1.2,
   
   gi = gi, N_gi = length(gi)
 )

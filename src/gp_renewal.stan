@@ -10,8 +10,11 @@ data {
   int<lower=1> N;
   int<lower=1> N_data;
   
+  array[N] int day_of_week;
+  
   vector[N] x;
   array[N_data] int y;
+  
   
   int<lower=1> N_gi;
   vector[N_gi] gi;
@@ -41,7 +44,6 @@ parameters {
   real<lower=0> ls_annual;
   real<lower=0> ls_noise;
   
-  real r_0;
   real<lower=0> phi;
 
   vector[2 * M_annual] beta_annual;
@@ -60,11 +62,11 @@ transformed parameters {
   vector[N] f_annual = phi_annual * (diag_SPD_annual .* beta_annual);
   vector[N] f_noise  = phi_noise * (diag_SPD_noise .* beta_noise);
   
-  vector[N] log_R = r_0 + f_annual + f_noise;
+  vector[N] log_R = f_annual + f_noise;
   
   // Implies each obs_offset_weekly_i ~ N(0, scaling_weekly)
   // with constraint of sum to zero
-  vector[7] obs_offset_weekly = weekly_Q * beta_weekly * sqrt(7.0 / 6.0);
+  vector[7] obs_offset_weekly = weekly_Q * (beta_weekly * scaling_weekly) * sqrt(7.0 / 6.0);
   
   vector[N] inf = rep_vector(0.0, N);
   vector[N] inf_weekly;
@@ -83,7 +85,7 @@ transformed parameters {
       }
     }
     
-    inf_weekly[t] = inf[t] * exp(obs_offset_weekly[t % 7 + 1]);
+    inf_weekly[t] = inf[t] * exp(obs_offset_weekly[day_of_week[t]]);
   }
 }
 
@@ -91,8 +93,6 @@ model {
   scaling_annual ~ exponential(1.0);
   scaling_weekly ~ exponential(1.0);
   scaling_noise  ~ exponential(1.0);
-  
-  r_0 ~ std_normal();
   
   // Inv-gamma priors derived from:
   // find_inv_gamma_params(7.0, 28.0)
@@ -104,7 +104,7 @@ model {
   phi ~ gamma(2, 0.1);
 
   beta_annual ~ std_normal();
-  beta_weekly ~ normal(0, scaling_weekly);
+  beta_weekly ~ std_normal();
   beta_noise  ~ std_normal();
   
   for(t in 1:N_gi) {

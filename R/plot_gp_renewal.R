@@ -5,8 +5,8 @@ library(tidyverse)
 
 source("R/functions.R")
 
-x_location <- "VIC"
-x_pathogen <- "SARSCOV2"
+x_location <- "NSW"
+x_pathogen <- "RSV"
 
 fit <- read_rds(str_c("results/2025-06-19/", x_pathogen, "_", x_location, ".rds"))
 training_counts <- arrow::read_parquet(str_c("results/2025-06-19/", x_pathogen, "_", x_location, "_training_counts.parquet"))
@@ -47,12 +47,7 @@ plot_data |>
   
   theme_bw() +
   
-  # scale_y_log10() +
-  
-  
-  # geom_vline(xintercept = training_date, linetype = "44") +
-  
-  coord_cartesian(ylim = c(0, 100))
+  coord_cartesian(ylim = c(0, 500))
 
 plot_data |> 
   ungroup() |> 
@@ -104,7 +99,7 @@ ggplot(plot_quants) +
   scale_alpha_manual(values = alpha_vals) +
   
   # scale_y_log10() +
-  coord_cartesian(ylim = c(NA, 100)) +
+  coord_cartesian(ylim = c(NA, 500)) +
   
   theme_bw() +
   
@@ -137,7 +132,7 @@ ggplot(plot_quants_weekly) +
   
   scale_alpha_manual(values = alpha_vals) +
   
-  coord_cartesian(ylim = c(0, 50),
+  coord_cartesian(ylim = c(0, 500),
                   xlim = c(origin_date - days(7 * 12), origin_date + days(7 * 20))
   ) +
   
