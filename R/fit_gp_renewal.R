@@ -1,10 +1,10 @@
-library(targets)
+
 library(tidyverse)
 
 source("R/functions.R")
 
 
-combined_counts <- read_csv("../autogpcast/data/combined_counts.csv", show_col_types = FALSE) |> 
+combined_counts <- read_csv("data/combined_counts.csv", show_col_types = FALSE) |> 
   filter(round_id == max(round_id)) |> 
   select(-round_id)
 
@@ -24,7 +24,7 @@ ggplot(training_counts) +
   geom_point(aes(x = date, y = y), size = 0.5, stroke = 0.5) +
   geom_line(aes(x = date, y = y_smooth)) +
   
-  geom_vline(xintercept = training_date, linetype = "44") +
+  # geom_vline(xintercept = training_date, linetype = "44") +
   
   theme_bw()
 

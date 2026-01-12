@@ -19,16 +19,8 @@ get_training_dates <- function() {
   
 }
 
-make_training_counts <- function(combined_counts, x_location, x_pathogen, days_ahead = 0) {
-  training_dates <- get_training_dates()
-  
-  training_counts <- combined_counts |> 
-    left_join(training_dates, by = join_by(location, pathogen)) |> 
-    filter(notification_date >= cutoff_date, !outlier) |> 
-    filter(
-      notification_date < max(notification_date)
-    ) |> 
-    filter(location == x_location, pathogen == x_pathogen) |> 
+make_training_counts <- function(reduced_counts, days_ahead = 0) {
+  training_counts <- reduced_counts |> 
     select(location, pathogen, date = notification_date, y = cases, y_smooth = cases_trend) |> 
     complete(date = seq(min(date), max(date), by = "days"), fill = list(location = x_location, pathogen = x_pathogen)) |>
     arrange(date) |> 
@@ -142,4 +134,14 @@ make_intervals <- function(
     mutate(quant = factor(quant, levels = as.character(probs * 100)) %>% fct_rev())
   
   quants
+}
+
+get_gi <- function(pathogen) {
+  gis <- list(
+    "SARSCOV2" = make_gi(0.89, rate = 0.27, 0.995),
+    "RSV" = make_gi(12.76, 1.7, 0.995),
+    "flu" = make_gi(4.00, 1.54, 0.995)
+  )
+  
+  gi <- gis[[pathogen]]
 }
