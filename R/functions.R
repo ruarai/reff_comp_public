@@ -19,7 +19,7 @@ get_training_dates <- function() {
   
 }
 
-make_training_counts <- function(reduced_counts, days_ahead = 0) {
+make_training_counts <- function(reduced_counts, x_location, x_pathogen, days_ahead = 0) {
   training_counts <- reduced_counts |> 
     select(location, pathogen, date = notification_date, y = cases, y_smooth = cases_trend) |> 
     complete(date = seq(min(date), max(date), by = "days"), fill = list(location = x_location, pathogen = x_pathogen)) |>

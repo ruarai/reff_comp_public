@@ -48,7 +48,7 @@ n_days_ahead <- 365
 
 training_counts <- combined_counts_outliers |> 
   filter(!outlier) |> 
-  make_training_counts(days_ahead = n_days_ahead)
+  make_training_counts(x_location, x_pathogen, days_ahead = n_days_ahead)
 
 
 n_days_data <- nrow(training_counts) - n_days_ahead
