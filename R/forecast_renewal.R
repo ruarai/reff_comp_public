@@ -59,12 +59,10 @@ library(cmdstanr)
 
 gi <- get_gi(x_pathogen)
 
-model <- cmdstan_model("src/gp_renewal.stan")
-
 data_list <- list(
   x = training_counts$x,
   day_of_week = training_counts$day_of_week,
-  school_holidays = training_counts$school_holidays,
+  school_holiday_type = training_counts$school_holiday_type,
   
   y = training_counts$y[1:n_days_data],
   N = nrow(training_counts), N_data = n_days_data,
@@ -74,12 +72,15 @@ data_list <- list(
   gi_reversed = rev(gi), N_gi = length(gi)
 )
 
+model <- cmdstan_model("src/gp_renewal.stan")
+
 fit <- model$sample(
   data = data_list,
   seed = 2,
   chains = 4,
   parallel_chains = 4,
-  refresh = 50
+  refresh = 50,
+  iter_warmup = 1000, iter_sampling = 1000
 )
 
 print("Saving fit object and training data")

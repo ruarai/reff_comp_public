@@ -47,11 +47,19 @@ plot_latent_inf <- function(trajectory_data, training_counts, origin_date, holid
                 values_from = inf) |> 
     make_intervals()
   
+  plot_quants_delayed <- trajectory_data |> 
+    ungroup() |> 
+    select(.draw, date, inf_delayed) |> 
+    pivot_wider(names_from = .draw,
+                names_prefix = "sample_",
+                values_from = inf_delayed) |> 
+    make_intervals()
+  
   
   alpha_vals <- scales::rescale(rev(1/1.7^(1:8)), to = c(0.05, 0.99))
   
   
-  ggplot(plot_quants) +
+  ggplot() +
     
     geom_vline(aes(xintercept = date), tibble(date = seq(ymd("2023-01-01"), ymd("2027-01-01"), "6 months")),
                alpha = 0.3) +
@@ -61,7 +69,13 @@ plot_latent_inf <- function(trajectory_data, training_counts, origin_date, holid
     
     geom_ribbon(aes(x = date, ymin = lower, ymax = upper,
                     group = quant, alpha = quant),
+                plot_quants_delayed,
                 fill = ggokabeito::palette_okabe_ito(5)) +
+    
+    geom_ribbon(aes(x = date, ymin = lower, ymax = upper,
+                    group = quant, alpha = quant),
+                plot_quants,
+                fill = ggokabeito::palette_okabe_ito(1)) +
     
     geom_vline(xintercept = origin_date, linetype = "44") +
     
@@ -160,7 +174,7 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
     pull(date) |> 
     max()
   
-  eval_counts <- read_csv("data/combined-count-2025-12-25.csv") |> 
+  eval_counts <- read_csv("data/combined-count-2026-01-15.csv") |> 
     group_by(location, pathogen) |> 
     mutate(cases_trend = zoo::rollmean(cases, k = 7, fill = NA),
            outlier = FALSE) |> 
@@ -169,30 +183,35 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
     filter(date > origin_date)
   
   
-  draws <- fit |> 
+  draws <- fit |>
     tidybayes::tidy_draws()
-  
+
   pars <- c(
     "scaling_annual", "scaling_weekly", "scaling_noise", "ls_noise", "ls_annual", "phi",
-    "school_holiday_effect"
+    "delay_mean", "delay_sd"
   )
-  
+
   p_hist <- mcmc_hist(draws |> mutate(chain = .chain), pars = pars) +
     theme_bw()
-  
+
+
   p_trace <- mcmc_trace(draws |> mutate(chain = .chain), pars = pars) +
     theme_bw()
-  
+
   p_hist / p_trace
-  
+
   ggsave(str_c(round_results, "/", x_pathogen, "_", x_location, "_plot_MCMC.png"), width = 8, height = 8)
+
+  p_pairs <- mcmc_pairs(draws |> mutate(chain = .chain), pars = pars)
+
+  ggsave(str_c(round_results, "/", x_pathogen, "_", x_location, "_plot_MCMC_pairs.png"), p_pairs, width = 16, height = 16)
   
   
   holidays <- get_school_holidays() |> 
     filter(location == x_location)
   
   trajectory_data <- fit |> 
-    spread_draws(log_R[ix_x], inf[ix_x], cases[ix_x], f_annual[ix_x], f_noise[ix_x]) |> 
+    spread_draws(log_R[ix_x], inf[ix_x], inf_delayed[ix_x], cases[ix_x], f_annual[ix_x], f_noise[ix_x]) |> 
     mutate(date = training_counts$date[ix_x])
   
   plot_reff_components(trajectory_data, origin_date, holidays)
@@ -211,7 +230,7 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
   
   p_latent_inf / p_cases
   
-  ggsave(str_c(round_results, "/", x_pathogen, "_", x_location, "_plot_latent_inf.png"), width = 10, height = 8)
+  ggsave(str_c(round_results, "/", x_pathogen, "_", x_location, "_plot_latent_inf.png"), width = 14, height = 8)
   
   
   make_forecast_plot(trajectory_data, training_counts, eval_counts, origin_date, holidays, x_location, x_pathogen)

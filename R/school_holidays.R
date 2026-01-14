@@ -5,7 +5,7 @@ get_school_holidays <- function() {
   tribble(
     ~location, ~start_date,  ~end_date, ~holiday_name,
     
-    "NSW", "2022-12-21", "2023-01-29", "Summer 2022/23", 
+    "NSW", "2022-12-21", "2023-01-29", "Summer 2022/23",
     "NSW", "2023-04-07", "2023-04-23", "Autumn 2023",
     "NSW", "2023-07-01", "2023-07-16", "Winter 2023",
     "NSW", "2023-09-23", "2023-10-08", "Spring 2023",
@@ -151,7 +151,14 @@ get_school_holidays <- function() {
   ) |> 
     mutate(
       start_date = ymd(start_date),
-      end_date = ymd(end_date)
+      end_date = ymd(end_date),
+      school_holiday_type = case_when(
+        # Default 1 -> no holiday
+        str_detect(holiday_name, "Summer") ~ 2,
+        str_detect(holiday_name, "Autumn") ~ 3,
+        str_detect(holiday_name, "Winter") ~ 4,
+        str_detect(holiday_name, "Spring") ~ 5,
+      )
     )
 }
 
@@ -160,5 +167,5 @@ get_school_holidays_long <- function() {
     rowwise() |> 
     mutate(date = list(seq(start_date, end_date, by = "days"))) |> 
     unnest(date) |> 
-    select(location, date)
+    select(location, date, school_holiday_type)
 }

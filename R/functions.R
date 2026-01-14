@@ -62,8 +62,8 @@ make_training_counts <- function(
     arrange(date) |> 
     mutate(x = as.numeric(date - min(date)),
            day_of_week = wday(date)) |> 
-    left_join(school_holidays_location |> mutate(school_holidays = 1), by = join_by(date)) |> 
-    mutate(school_holidays = replace_na(school_holidays, 0))
+    left_join(school_holidays_location, by = join_by(date, location)) |> 
+    mutate(school_holiday_type = replace_na(school_holiday_type, 1))
   
   
   n_diff <- diff(training_counts$x) |> table() |> unique() |> length()
@@ -159,3 +159,37 @@ get_gi <- function(pathogen) {
   
   gi <- gis[[pathogen]]
 }
+
+make_retrospective_jobs <- function() {
+  hub_path <- "../forecast-hub/"
+  
+  rounds <- fs::dir_ls(fs::path(hub_path, "processed-data", "2025"))
+  
+  tibble(
+    round_dir = rounds
+  ) |> 
+    mutate(round_id = str_extract(round_dir, "\\d{4}-\\d{2}-\\d{2}"),
+           counts_file = fs::path(round_dir, str_c("combined-count-", round_id, ".csv")),
+           smoothed_file = fs::path(round_dir, str_c("combined-count-smoothed-", round_id, ".csv"))) |> 
+    
+    filter(fs::file_exists(counts_file), fs::file_exists(smoothed_file)) |> 
+    
+    rowwise() |> 
+    mutate(counts = list(read_csv(counts_file, show_col_types = FALSE)), 
+           jobs = list(distinct(counts, location, pathogen))) |> 
+    select(-counts) |> 
+    unnest(jobs) |> 
+    
+    select(round_id, location, pathogen)
+}
+
+calculate_M <- function(c, length_scale, x) {
+  x_centered <- x - mean(x) 
+  S <- max(abs(x_centered))
+  
+  # Formula of Riutort-Mayol 2023
+  M <- 2.65 * (c * S) / length_scale
+  
+  return(round(M))
+}
+
