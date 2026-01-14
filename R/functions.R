@@ -1,5 +1,7 @@
 
 
+source("R/school_holidays.R")
+source("R/plotting_functions.R")
 
 
 get_training_dates <- function() {
@@ -19,7 +21,14 @@ get_training_dates <- function() {
   
 }
 
-make_training_counts <- function(reduced_counts, x_location, x_pathogen, days_ahead = 0) {
+make_training_counts <- function(
+  reduced_counts,
+  x_location, x_pathogen, 
+  days_ahead = 0
+) {
+  school_holidays_location <- get_school_holidays_long() |> 
+    filter(location == x_location)
+  
   training_counts <- reduced_counts |> 
     select(location, pathogen, date = notification_date, y = cases, y_smooth = cases_trend) |> 
     complete(date = seq(min(date), max(date), by = "days"), fill = list(location = x_location, pathogen = x_pathogen)) |>
@@ -49,15 +58,19 @@ make_training_counts <- function(reduced_counts, x_location, x_pathogen, days_ah
     )
   }
   
+  training_counts <- training_counts |>
+    arrange(date) |> 
+    mutate(x = as.numeric(date - min(date)),
+           day_of_week = wday(date)) |> 
+    left_join(school_holidays_location |> mutate(school_holidays = 1), by = join_by(date)) |> 
+    mutate(school_holidays = replace_na(school_holidays, 0))
+  
   
   n_diff <- diff(training_counts$x) |> table() |> unique() |> length()
   
   stopifnot(n_diff == 1)
   
-  training_counts |>
-    arrange(date) |> 
-    mutate(x = as.numeric(date - min(date)),
-           day_of_week = wday(date))
+  return(training_counts)
 }
 
 

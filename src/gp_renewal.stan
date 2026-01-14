@@ -11,13 +11,14 @@ data {
   int<lower=1> N_data;
   
   array[N] int day_of_week;
+  vector[N] school_holidays;
   
   vector[N] x;
   array[N_data] int y;
   
   
   int<lower=1> N_gi;
-  vector[N_gi] gi;
+  vector[N_gi] gi_reversed;
 
   int<lower=1> M_annual;
   int<lower=1> M_noise; 
@@ -34,6 +35,10 @@ transformed data {
   matrix[N, M_noise] phi_noise = PHI(N, M_noise, L, x_centered);
   
   matrix[7, 6] weekly_Q = qr_weekly();
+  
+  
+  // Infection time-series with burn-in period
+  int N_total = N + N_gi;
 }
 
 parameters {
@@ -51,7 +56,10 @@ parameters {
   
   vector[6] beta_weekly;
   
-  vector<lower=0>[N_gi] inf_init;
+  real r_0;
+  real log_I_0;
+  
+  real school_holiday_effect;
 }
 
 transformed parameters {
@@ -62,37 +70,40 @@ transformed parameters {
   vector[N] f_annual = phi_annual * (diag_SPD_annual .* beta_annual);
   vector[N] f_noise  = phi_noise * (diag_SPD_noise .* beta_noise);
   
-  vector[N] log_R = f_annual + f_noise;
+  vector[N] log_R = f_annual + f_noise + school_holiday_effect * school_holidays;
   
   // Implies each obs_offset_weekly_i ~ N(0, scaling_weekly)
   // with constraint of sum to zero
   vector[7] obs_offset_weekly = weekly_Q * (beta_weekly * scaling_weekly) * sqrt(7.0 / 6.0);
   
-  vector[N] inf = rep_vector(0.0, N);
-  vector[N] inf_weekly;
+  vector[N] inf;
   
-  // Renewal equation
-  for(t in 1:N) {
-    real R_t = exp(log_R[t]);
+  {
+    vector[N_total] inf_full = rep_vector(0.0, N_total);
+
+    // Calculate initial infs as exp growth: I(t) = I_0 * exp(r * t)
+    inf_full[1:N_gi] = exp(log_I_0 + r_0 * linspaced_vector(N_gi, 0, N_gi - 1));
     
-    for(t_back in 1:N_gi) {
-      real gi_density = gi[t_back];
+    for(t in 1:N) {
+      real R_t = exp(log_R[t]);
       
-      if(t - t_back < 1) {
-        inf[t] += R_t * gi_density * inf_init[t - t_back + N_gi];
-      } else {
-        inf[t] += R_t * gi_density * inf[t - t_back];
-      }
+      real new_infections = R_t * dot_product(gi_reversed, segment(inf_full, t, N_gi));
+      
+      inf_full[t + N_gi] = new_infections;
     }
     
-    inf_weekly[t] = inf[t] * exp(obs_offset_weekly[day_of_week[t]]);
+    inf = segment(inf_full, N_gi + 1, N);
   }
+  
+  vector[N] inf_weekly = inf .* exp(obs_offset_weekly[day_of_week]);
 }
 
 model {
   scaling_annual ~ exponential(1.0);
   scaling_weekly ~ exponential(1.0);
   scaling_noise  ~ exponential(1.0);
+  
+  school_holiday_effect ~ std_normal();
   
   // Inv-gamma priors derived from:
   // find_inv_gamma_params(7.0, 28.0)
@@ -107,10 +118,12 @@ model {
   beta_weekly ~ std_normal();
   beta_noise  ~ std_normal();
   
-  for(t in 1:N_gi) {
-    inf_init[t] ~ lognormal(3.2, 1);
-  }
-
+  log_I_0 ~ lognormal(3.2, 1);
+  r_0 ~ normal(0, 0.2);
   
   y ~ neg_binomial_2(inf_weekly[1:N_data], phi);
+}
+
+generated quantities {
+  array[N] int cases = neg_binomial_2_rng(inf_weekly, phi);
 }

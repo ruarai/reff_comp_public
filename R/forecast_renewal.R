@@ -21,6 +21,7 @@ print(str_c("Generated ", nrow(jobs), " jobs from combined_counts_smoothed"))
 
 if(ix_job > nrow(jobs)) {
   print("Exiting without completing a job (ix_job > nrow(jobs))")
+  q('no')
 }
 
 job <- jobs[ix_job, ]
@@ -48,7 +49,7 @@ n_days_ahead <- 365
 
 training_counts <- combined_counts_outliers |> 
   filter(!outlier) |> 
-  make_training_counts(x_location, x_pathogen, days_ahead = n_days_ahead)
+  make_training_counts(x_location, x_pathogen, n_days_ahead)
 
 
 n_days_data <- nrow(training_counts) - n_days_ahead
@@ -60,18 +61,22 @@ gi <- get_gi(x_pathogen)
 
 model <- cmdstan_model("src/gp_renewal.stan")
 
-# TODO: how to pick these M values? see paper on HSGP
 data_list <- list(
-  x = training_counts$x, y = training_counts$y[1:n_days_data],
+  x = training_counts$x,
+  day_of_week = training_counts$day_of_week,
+  school_holidays = training_counts$school_holidays,
+  
+  y = training_counts$y[1:n_days_data],
   N = nrow(training_counts), N_data = n_days_data,
+  
   M_annual = 40, M_noise = 40, c_factor = 1.2,
   
-  gi = gi, N_gi = length(gi)
+  gi_reversed = rev(gi), N_gi = length(gi)
 )
 
 fit <- model$sample(
   data = data_list,
-  seed = 1,
+  seed = 2,
   chains = 4,
   parallel_chains = 4,
   refresh = 50
@@ -83,8 +88,18 @@ fs::dir_create(fs::path("results", round_id))
 
 fit$save_object(str_c("results/", round_id, "/", x_pathogen, "_", x_location, ".rds"))
 arrow::write_parquet(training_counts, str_c("results/", round_id, "/", x_pathogen, "_", x_location, "_training_counts.parquet"))
+ 
+print("Making plots...")
 
-print("Complete")
+library(bayesplot)
+library(tidybayes)
+library(tidyverse)
+library(patchwork)
+
+source("R/plotting_functions.R")
+
+make_fit_plots(round_id, x_pathogen, x_location)
+
 
 
 

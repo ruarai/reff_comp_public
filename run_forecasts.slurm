@@ -8,7 +8,7 @@
 #SBATCH --job-name=periodicgpcast
 #SBATCH -o ./slurm_out/periodicgpcast_dist_%a.txt # STDOUT
 
-export round_id="2025-06-19"
+export round_id="2025-10-09"
 
 cd /data/gpfs/projects/punim1541/periodic_gp_cast/
   
