@@ -1,8 +1,11 @@
 
-
 library(tidyverse)
+library(tidybayes)
+library(bayesplot)
+library(patchwork)
 
 source("R/functions.R")
+source("R/plotting_functions.R")
 
 args <- commandArgs(trailingOnly = TRUE)
 
@@ -45,20 +48,11 @@ fs::dir_create(fs::path("results", round_id))
 fit$save_object(str_c("results/", round_id, "/", x_pathogen, "_", x_location, ".rds"))
 arrow::write_parquet(training_counts, str_c("results/", round_id, "/", x_pathogen, "_", x_location, "_training_counts.parquet"))
 
-
 print("Writing trajectories...")
 
 write_forecast_file(round_id, x_pathogen, x_location, origin_date)
 
-
 print("Making plots...")
-
-library(bayesplot)
-library(tidybayes)
-library(tidyverse)
-library(patchwork)
-
-source("R/plotting_functions.R")
 
 make_fit_plots(round_id, x_pathogen, x_location)
 

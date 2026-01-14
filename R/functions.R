@@ -114,41 +114,71 @@ find_inv_gamma_params <- function(l, u, tail_prob = 0.01) {
 }
 
 
+
 make_intervals <- function(
     tbl,
+    vars,
+    grouping_var = rlang::sym(".draw"),
+    date_var = rlang::sym("date"),
     probs = c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9),
-    prefix = "sample_",
     na.rm = FALSE
 ) {
-  data_matrix <- tbl %>%
-    select(starts_with(prefix)) %>%
+  tbl |> 
+    ungroup() |> 
+    select(!!date_var, !!grouping_var, all_of(vars)) |> 
+    pivot_longer(
+      cols = c(-!!grouping_var, -!!date_var), 
+      names_to = "variable", 
+      values_to = "value"
+    ) |> 
+    pivot_wider(
+      names_from = !!grouping_var, 
+      names_prefix = "sample_", 
+      values_from = value
+    ) |> 
+    make_intervals_internal(probs = probs, na.rm = na.rm)
+}
+
+make_intervals_internal <- function(
+    tbl, 
+    probs = c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9), 
+    prefix = "sample_", 
+    na.rm = FALSE
+) {
+  data_matrix <- tbl |> 
+    select(starts_with(prefix)) |> 
     as.matrix()
   
-  id_tbl <- tbl %>%
+  id_tbl <- tbl |> 
     select(!starts_with(prefix))
   
-  medians <- data_matrix %>%
-    matrixStats::rowMedians() %>%
-    tibble(median = .)
+  medians <- data_matrix |> 
+    matrixStats::rowMedians(na.rm = na.rm)
   
   quant_probs <- c(rev(1 - probs) / 2, 0.5 + probs / 2)
-  quant_names <- c(str_c("lower_", rev(probs) * 100), str_c("upper_", probs * 100))
+  quant_labels <- as.character(probs * 100)
   
-  quants <- data_matrix %>%
-    matrixStats::rowQuantiles(probs = quant_probs, na.rm = na.rm) %>%
-    `colnames<-`(quant_names) %>%
-    as_tibble() %>%
-    bind_cols(id_tbl, medians, .) %>%
-    pivot_longer(cols = -all_of(c(colnames(id_tbl), colnames(medians))),
-                 names_to = c("type", "quant"),
-                 names_sep = "_") %>%
-    pivot_wider(names_from = "type",
-                values_from = "value") %>%
-    
-    mutate(quant = factor(quant, levels = as.character(probs * 100)) %>% fct_rev())
+  quant_names <- c(
+    str_c("lower_", rev(quant_labels)), 
+    str_c("upper_", quant_labels)
+  )
   
-  quants
+  quants <- data_matrix |> 
+    matrixStats::rowQuantiles(probs = quant_probs, na.rm = na.rm)
+  
+  colnames(quants) <- quant_names
+  
+  bind_cols(id_tbl, median = medians, as_tibble(quants)) |> 
+    pivot_longer(
+      cols = all_of(quant_names),
+      names_to = c(".value", "quant"),
+      names_pattern = "(lower|upper)_(.*)"
+    ) |> 
+    mutate(
+      quant = factor(quant, levels = quant_labels) |> fct_rev()
+    )
 }
+
 
 get_gi <- function(pathogen) {
   gis <- list(

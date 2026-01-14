@@ -1,8 +1,12 @@
 
 
 library(tidyverse)
+library(tidybayes)
+library(bayesplot)
+library(patchwork)
 
 source("R/functions.R")
+source("R/plotting_functions.R")
 
 args <- commandArgs(trailingOnly = TRUE)
 
@@ -49,14 +53,7 @@ print("Writing trajectories...")
 
 write_forecast_file(round_id, x_pathogen, x_location, origin_date)
 
-
 print("Making plots...")
-
-library(bayesplot)
-library(tidybayes)
-library(patchwork)
-
-source("R/plotting_functions.R")
 
 make_fit_plots(round_id, x_pathogen, x_location)
 
