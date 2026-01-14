@@ -23,66 +23,20 @@ x_location <- job$location[[1]]
 x_pathogen <- job$pathogen[[1]]
 round_id <- job$round_id[[1]]
 
+origin_date <- get_origin_date(combined_counts, x_pathogen, x_location)
+
 print(str_c("Performing job ", ix_job, " (", round_id, ": ", x_location, "-", x_pathogen, ")"))
-
-training_dates <- get_training_dates()
-
 
 combined_counts <- read_csv(str_c("../forecast-hub/processed-data/2025/", round_id, "/combined-count-", round_id, ".csv"))
 combined_counts_smoothed <- read_csv(str_c("../forecast-hub/processed-data/2025/", round_id, "/combined-count-smoothed-", round_id, ".csv"))
 
-all_counts <- combined_counts |> 
-  left_join(combined_counts_smoothed)
-
-combined_counts_outliers <- all_counts |> 
-  left_join(training_dates) |> 
-  filter(notification_date >= cutoff_date) |> 
-  filter(location == x_location, pathogen == x_pathogen) |> 
-  mutate(outlier = abs(log(cases_trend_and_remainder + 0.5) - log(cases_trend + 0.5)) > 1.38) |> 
-  
-  filter(
-    notification_date < max(notification_date)
-  )
-
-print(str_c("Dropping ", sum(combined_counts_outliers$outlier), " outliers"))
-
 n_days_ahead <- 365
 
-training_counts <- combined_counts_outliers |> 
-  filter(!outlier) |> 
-  make_training_counts(x_location, x_pathogen, n_days_ahead)
+training_counts <- process_counts(combined_counts, combined_counts_smoothed, x_location, x_pathogen, n_days_ahead)
 
+data_list <- create_stan_data(training_counts, days_ahead, x_pathogen)
 
-n_days_data <- nrow(training_counts) - n_days_ahead
-
-
-library(cmdstanr)
-
-gi <- get_gi(x_pathogen)
-
-data_list <- list(
-  x = training_counts$x,
-  day_of_week = training_counts$day_of_week,
-  school_holiday_type = training_counts$school_holiday_type,
-  
-  y = training_counts$y[1:n_days_data],
-  N = nrow(training_counts), N_data = n_days_data,
-  
-  M_annual = 40, M_noise = 40, c_factor = 1.2,
-  
-  gi_reversed = rev(gi), N_gi = length(gi)
-)
-
-model <- cmdstan_model("src/gp_renewal.stan")
-
-fit <- model$sample(
-  data = data_list,
-  seed = 2,
-  chains = 4,
-  parallel_chains = 4,
-  refresh = 50,
-  iter_warmup = 1000, iter_sampling = 1000
-)
+fit <- fit_model(data_list)
 
 print("Saving fit object and training data")
 
@@ -90,6 +44,12 @@ fs::dir_create(fs::path("results", round_id))
 
 fit$save_object(str_c("results/", round_id, "/", x_pathogen, "_", x_location, ".rds"))
 arrow::write_parquet(training_counts, str_c("results/", round_id, "/", x_pathogen, "_", x_location, "_training_counts.parquet"))
+
+
+print("Writing trajectories...")
+
+write_forecast_file(round_id, x_pathogen, x_location, origin_date)
+
 
 print("Making plots...")
 

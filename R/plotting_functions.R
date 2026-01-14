@@ -32,6 +32,8 @@ plot_reff_components <- function(trajectory_data, origin_date, holidays) {
     
     ggokabeito::scale_colour_okabe_ito(order = c(3, 5, 9)) +
     
+    scale_y_log10() +
+    
     geom_vline(xintercept = origin_date, linetype = "44") +
     
     theme_bw() +
@@ -194,7 +196,6 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
   p_hist <- mcmc_hist(draws |> mutate(chain = .chain), pars = pars) +
     theme_bw()
 
-
   p_trace <- mcmc_trace(draws |> mutate(chain = .chain), pars = pars) +
     theme_bw()
 
@@ -214,21 +215,14 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
     spread_draws(log_R[ix_x], inf[ix_x], inf_delayed[ix_x], cases[ix_x], f_annual[ix_x], f_noise[ix_x]) |> 
     mutate(date = training_counts$date[ix_x])
   
-  plot_reff_components(trajectory_data, origin_date, holidays)
-  
-  ggsave(str_c(round_results, "/", x_pathogen, "_", x_location, "_plot_components.png"), width = 8, height = 8)
+  p_reff <- plot_reff_components(trajectory_data, origin_date, holidays)
   
   p_latent_inf <- plot_latent_inf(trajectory_data, training_counts, origin_date, holidays) +
     
     geom_line(aes(x = date, y = y_smooth), colour = "orangered",
               eval_counts)
   
-  p_cases <- plot_cases(trajectory_data, training_counts, origin_date, holidays) +
-    
-    geom_line(aes(x = date, y = y), colour = "orangered",
-              eval_counts)
-  
-  p_latent_inf / p_cases
+  p_reff / p_latent_inf
   
   ggsave(str_c(round_results, "/", x_pathogen, "_", x_location, "_plot_latent_inf.png"), width = 14, height = 8)
   

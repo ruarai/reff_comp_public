@@ -7,3 +7,4 @@ src/gp_renewal
 data
 results
 slurm_out
+forecast_outputs
