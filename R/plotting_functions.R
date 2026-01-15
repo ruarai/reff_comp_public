@@ -21,7 +21,7 @@ plot_reff_components <- function(trajectory_data, origin_date, holidays) {
   
   ggplot(trajectory_quants) +
     
-    geom_vline(aes(xintercept = date), tibble(date = seq(ymd("2023-01-01"), ymd("2027-01-01"), "6 months")),
+    geom_vline(aes(xintercept = date), tibble(date = seq(ymd("2023-01-01"), ymd("2027-01-01"), "1 year")),
                alpha = 0.3) +
     
     geom_rect(aes(xmin = start_date, xmax = end_date, ymin = 0, ymax = Inf),
@@ -63,23 +63,21 @@ plot_latent_inf <- function(trajectory_data, training_counts, origin_date, holid
   
   ggplot() +
     
-    geom_vline(aes(xintercept = date), tibble(date = seq(ymd("2023-01-01"), ymd("2027-01-01"), "6 months")),
-               alpha = 0.3) +
+    geom_vline(aes(xintercept = date), tibble(date = seq(ymd("2023-01-01"), ymd("2027-01-01"), "1 year")),
+               alpha = 0.4) +
     
     geom_rect(aes(xmin = start_date, xmax = end_date, ymin = -Inf, ymax = Inf),
               holidays, alpha = 0.1) +
     
     geom_ribbon(aes(x = date, ymin = lower, ymax = upper,
                     group = quant, alpha = quant),
-                plot_quants_delayed,
-                fill = ggokabeito::palette_okabe_ito(5)) +
-    
-    geom_ribbon(aes(x = date, ymin = lower, ymax = upper,
-                    group = quant, alpha = quant),
                 plot_quants,
                 fill = ggokabeito::palette_okabe_ito(1)) +
     
-    geom_vline(xintercept = origin_date, linetype = "44") +
+    geom_ribbon(aes(x = date, ymin = lower, ymax = upper,
+                    group = quant, alpha = quant),
+                plot_quants_delayed,
+                fill = ggokabeito::palette_okabe_ito(5)) +
     
     geom_line(aes(x = date, y = y_smooth),
               training_counts) +
@@ -203,7 +201,7 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
 
   ggsave(str_c(round_results, "/", x_pathogen, "_", x_location, "_plot_MCMC.png"), width = 10, height = 10)
 
-  p_pairs <- mcmc_pairs(draws |> mutate(chain = .chain), pars = pars)
+  p_pairs <- mcmc_pairs(draws |> mutate(chain = .chain), pars = pars, off_diag_args = list(size = 0.3, alpha = 0.5))
 
   ggsave(str_c(round_results, "/", x_pathogen, "_", x_location, "_plot_MCMC_pairs.png"), p_pairs, width = 16, height = 16)
   

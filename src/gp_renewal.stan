@@ -71,7 +71,11 @@ parameters {
 }
 
 transformed parameters {
-  vector[2 * M_annual] diag_SPD_annual = diagSPD_Periodic(scaling_annual, ls_annual, M_annual);
+  real ls_annual_rad = ls_annual * (2 * pi() / 365.25);
+
+  // Use the radian lengthscale for the SPD
+  vector[2 * M_annual] diag_SPD_annual = diagSPD_Periodic(scaling_annual, ls_annual_rad, M_annual);
+  
   vector[M_noise] diag_SPD_noise = diagSPD_Matern52(scaling_noise, ls_noise, L, M_noise);
   
   
