@@ -366,8 +366,9 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
     filter(location == x_location)
   
   trajectory_data <- fit |> 
-    spread_draws(log_R[ix_x], inf[ix_x], inf_delayed[ix_x], cases[ix_x], f_annual[ix_x], f_noise[ix_x]) |> 
-    mutate(date = training_counts$date[ix_x])
+    spread_draws(log_R[ix_t], inf[ix_t], inf_delayed[ix_t],
+                 cases[ix_t], f_annual[ix_t], f_noise[ix_t]) |> 
+    mutate(date = training_counts$date[ix_t])
   
   p_reff <- plot_reff_components(trajectory_data, origin_date, school_holidays, public_holidays) +
     xlim(c(ymd(min(trajectory_data$date)), ymd(origin_date + days(365))))

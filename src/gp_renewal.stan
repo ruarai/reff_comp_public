@@ -139,10 +139,11 @@ transformed parameters {
   
   vector[N] latent_cases = exp(
     log(inf_delayed) + 
-    obs_offset_weekly[day_of_week] +
     school_holiday_asc_effect[school_holiday_type] +
     public_holiday_asc_effect[public_holiday_type]
   );
+  
+  vector[N] latent_cases_weekly = latent_cases * exp(obs_offset_weekly[day_of_week]);
 }
 
 model {
@@ -179,9 +180,9 @@ model {
   
   
   
-  y ~ neg_binomial_2(latent_cases[1:N_data], phi);
+  y ~ neg_binomial_2(latent_cases_weekly[1:N_data], phi);
 }
 
 generated quantities {
-  array[N] int cases = neg_binomial_2_rng(latent_cases, phi);
+  array[N] int cases = neg_binomial_2_rng(latent_cases_weekly, phi);
 }
