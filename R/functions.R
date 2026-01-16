@@ -114,6 +114,7 @@ find_inv_gamma_params <- function(l, u, tail_prob = 0.01) {
   
   if (result$termcd %in% c(1, 2)) {
     sol <- exp(result$x)
+    print(str_c("inv_gamma(", round(sol[1], digits = 3), ", ", round(sol[2], digits = 3), ")"))
     return(list(alpha = sol[1], theta = sol[2]))
   } else {
     stop(sprintf("Solver failed to converge. Return code: %d, Message: %s", 
