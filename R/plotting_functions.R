@@ -29,7 +29,7 @@ plot_reff_components <- function(trajectory_data, origin_date, school_holidays, 
     
     geom_rug(aes(x = date), public_holidays) +
     
-    geom_ribbon(aes(x = date, ymin = exp(lower), ymax = exp(upper),
+    pammtools::geom_stepribbon(aes(x = date, ymin = exp(lower), ymax = exp(upper),
                     group = quant, alpha = quant, fill = variable)) +
     
     geom_line(aes(x = date, y = exp(value), group = .draw, colour = variable),
@@ -47,9 +47,9 @@ plot_reff_components <- function(trajectory_data, origin_date, school_holidays, 
     ggokabeito::scale_colour_okabe_ito(order = c(3, 5, 6)) +
     ggokabeito::scale_fill_okabe_ito(order = c(3, 5, 6)) +
     
-    scale_y_log10() +
+    scale_y_log10(breaks = c(0.66, 0.8, 1, 1.25, 1.5)) +
     
-    coord_cartesian(ylim = c(1/2, 2)) +
+    coord_cartesian(ylim = c(1/1.6, 1.6)) +
     
     geom_vline(xintercept = origin_date, linetype = "44") +
     
@@ -63,6 +63,12 @@ plot_latent_inf <- function(trajectory_data, training_counts, origin_date, schoo
   
   
   alpha_vals <- scales::rescale(rev(1/1.7^(1:8)), to = c(0.05, 0.99))
+  
+  
+  trajectory_trace <- trajectory_data |> 
+    ungroup() |> 
+    filter(.draw %% 1000 == 0) |>
+    select(date, .draw, inf)
   
   
   ggplot() +
@@ -85,6 +91,10 @@ plot_latent_inf <- function(trajectory_data, training_counts, origin_date, schoo
                 plot_quants_delayed,
                 fill = ggokabeito::palette_okabe_ito(5)) +
     
+    geom_line(aes(x = date, y = inf, group = .draw),
+              alpha = 0.3,
+              trajectory_trace) +
+    
     geom_line(aes(x = date, y = y_smooth),
               training_counts) +
     
@@ -106,6 +116,10 @@ plot_cases <- function(trajectory_data, training_counts, origin_date, school_hol
   
   alpha_vals <- scales::rescale(rev(1/1.7^(1:8)), to = c(0.05, 0.99))
   
+  trajectory_trace <- trajectory_data |> 
+    ungroup() |> 
+    filter(.draw %% 1000 == 0) |>
+    select(date, .draw, cases)
   
   ggplot(plot_quants) +
     
@@ -117,6 +131,10 @@ plot_cases <- function(trajectory_data, training_counts, origin_date, school_hol
     geom_ribbon(aes(x = date, ymin = lower, ymax = upper,
                     group = quant, alpha = quant),
                 fill = ggokabeito::palette_okabe_ito(5)) +
+    
+    geom_line(aes(x = date, y = cases, group = .draw),
+              alpha = 0.3,
+              trajectory_trace) +
     
     coord_cartesian(ylim = c(0, max(training_counts$y_smooth, na.rm = TRUE) * 1.5)) +
     
@@ -176,13 +194,13 @@ plot_holiday_effects <- function(fit, public_holidays) {
     mutate(school_holiday_type = school_holiday_type - 1) |> 
     filter(school_holiday_type > 0) |> 
     mutate(holiday_name = case_when(
-      school_holiday_type == 1 ~ "Summer",
-      school_holiday_type == 2 ~ "Autumn",
-      school_holiday_type == 3 ~ "Winter",
-      school_holiday_type == 4 ~ "Spring"
+      school_holiday_type == 1 ~ "Summer holidays",
+      school_holiday_type == 2 ~ "Autumn holidays",
+      school_holiday_type == 3 ~ "Winter holidays",
+      school_holiday_type == 4 ~ "Spring holidays"
     )) |> 
     ungroup() |> 
-    mutate(holiday_name = factor(holiday_name, c("Summer", "Autumn", "Winter", "Spring")))
+    mutate(holiday_name = factor(holiday_name, c("Summer holidays", "Autumn holidays", "Winter holidays", "Spring holidays")))
   
   
   public_holiday_labels <- public_holidays |> 
@@ -200,6 +218,26 @@ plot_holiday_effects <- function(fit, public_holidays) {
     ungroup() |> 
     mutate(holiday_name = factor(holiday_name, public_holiday_labels$holiday_name))
   
+  school_bounds <- school_holiday_draws |>
+    group_by(holiday_name) |>
+    summarise(
+      lb = quantile(school_holiday_Rt_effect, 0.025),
+      ub = quantile(school_holiday_Rt_effect, 0.975),
+      lb_asc = quantile(school_holiday_asc_effect, 0.025),
+      ub_asc = quantile(school_holiday_asc_effect, 0.975)
+    ) |> 
+    summarise(lb = min(lb), ub = max(ub), lb_asc = min(lb_asc), ub_asc = max(ub_asc))
+  
+  public_bounds <- public_holiday_draws |>
+    group_by(holiday_name) |>
+    summarise(
+      lb = quantile(public_holiday_Rt_effect, 0.025),
+      ub = quantile(public_holiday_Rt_effect, 0.975),
+      lb_asc = quantile(public_holiday_asc_effect, 0.025),
+      ub_asc = quantile(public_holiday_asc_effect, 0.975)
+    ) |> 
+    summarise(lb = min(lb), ub = max(ub), lb_asc = min(lb_asc), ub_asc = max(ub_asc))
+  
   
   p_school_Rt <- ggplot(school_holiday_draws) +
     
@@ -208,14 +246,9 @@ plot_holiday_effects <- function(fit, public_holidays) {
                           .width = c(0.5, 0.9, 0.95),
                           orientation = "horizontal") +
     
-    geom_blank(
-      aes(
-        xmin = exp(quantile(public_holiday_draws$public_holiday_Rt_effect, 0.025)),
-        xmax = exp(quantile(public_holiday_draws$public_holiday_Rt_effect, 0.975)),
-      )
-    ) +
+    geom_blank(aes(xmin = exp(public_bounds$lb), xmax = exp(public_bounds$ub))) +
     
-    scale_colour_brewer() +
+    scale_colour_manual(values = RColorBrewer::brewer.pal(4, "Blues")[2:4]) +
     
     xlab("Rt effect") + ylab(NULL) +
     scale_x_log10(breaks = scales::log_breaks(n = 7)) +
@@ -231,14 +264,9 @@ plot_holiday_effects <- function(fit, public_holidays) {
                           .width = c(0.5, 0.9, 0.95),
                           orientation = "horizontal") +
     
-    geom_blank(
-      aes(
-        xmin = exp(quantile(public_holiday_draws$public_holiday_asc_effect, 0.025)),
-        xmax = exp(quantile(public_holiday_draws$public_holiday_asc_effect, 0.975)),
-      )
-    ) +
+    geom_blank(aes(xmin = exp(public_bounds$lb_asc), xmax = exp(public_bounds$ub_asc))) +
     
-    scale_colour_brewer() +
+    scale_colour_manual(values = RColorBrewer::brewer.pal(4, "Blues")[2:4]) +
     
     xlab("Ascertainment effect") + ylab(NULL) +
     scale_x_log10(breaks = scales::log_breaks(n = 7)) +
@@ -254,14 +282,9 @@ plot_holiday_effects <- function(fit, public_holidays) {
                           .width = c(0.5, 0.9, 0.95),
                           orientation = "horizontal") +
     
-    geom_blank(
-      aes(
-        xmin = exp(quantile(school_holiday_draws$school_holiday_Rt_effect, 0.025)),
-        xmax = exp(quantile(school_holiday_draws$school_holiday_Rt_effect, 0.975)),
-      )
-    ) +
+    geom_blank(aes(xmin = exp(school_bounds$lb), xmax = exp(school_bounds$ub))) +
     
-    scale_colour_brewer() +
+    scale_colour_manual(values = RColorBrewer::brewer.pal(4, "Blues")[2:4]) +
     
     xlab("Rt effect") + ylab(NULL) +
     scale_x_log10(breaks = scales::log_breaks(n = 7)) +
@@ -276,14 +299,10 @@ plot_holiday_effects <- function(fit, public_holidays) {
                           .width = c(0.5, 0.9, 0.95),
                           orientation = "horizontal") +
     
-    geom_blank(
-      aes(
-        xmin = exp(quantile(school_holiday_draws$school_holiday_asc_effect, 0.025)),
-        xmax = exp(quantile(school_holiday_draws$school_holiday_asc_effect, 0.975)),
-      )
-    ) +
+    geom_blank(aes(xmin = exp(school_bounds$lb_asc), xmax = exp(school_bounds$ub_asc))) +
+
     
-    scale_colour_brewer() +
+    scale_colour_manual(values = RColorBrewer::brewer.pal(4, "Blues")[2:4]) +
     
     xlab("Ascertainment effect") + ylab(NULL) +
     scale_x_log10(breaks = scales::log_breaks(n = 7)) +
@@ -291,8 +310,8 @@ plot_holiday_effects <- function(fit, public_holidays) {
     theme_bw() +
     theme(legend.position = "none")
   
-  (p_school_Rt / p_public_Rt) + plot_layout(heights = c(1, 2)) |
-    (p_school_asc / p_public_asc) + plot_layout(heights = c(1, 2))
+  (p_school_Rt / p_public_Rt) + plot_layout(heights = c(1, 2), axis_titles = "collect") |
+    (p_school_asc / p_public_asc) + plot_layout(heights = c(1, 2), axis_titles = "collect")
 }
 
 
@@ -321,7 +340,7 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
     tidybayes::tidy_draws()
 
   pars <- c(
-    "scaling_annual", "scaling_weekly_Rt", "scaling_weekly_asc", "scaling_noise", "ls_noise", "ls_annual", "phi",
+    "scaling_annual", "scaling_weekly_asc", "scaling_noise", "ls_noise", "ls_annual", "phi",
     "delay_mean", "delay_sd"
   )
 
@@ -339,8 +358,6 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
   p_pairs <- mcmc_pairs(draws |> mutate(chain = .chain), pars = pars, off_diag_args = list(size = 0.3, alpha = 0.5))
 
   ggsave(str_c(round_results, "/", x_pathogen, "_", x_location, "_plot_MCMC_pairs.png"), p_pairs, width = 16, height = 16)
-  
-  mcmc_pairs(draws |> mutate(chain = .chain), pars = c("weekend_effect_Rt", "obs_offset_weekly[1]", "obs_offset_weekly[4]"), off_diag_args = list(size = 0.3, alpha = 0.5))
   
   school_holidays <- get_school_holidays() |> 
     filter(location == x_location)

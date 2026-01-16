@@ -172,36 +172,77 @@ get_school_holidays_long <- function() {
 get_public_holidays <- function() {
   locations_aus <- c("VIC", "NSW", "QLD", "NT", "TAS", "SA", "WA", "ACT")
   
-  years_ahead <- 4
-  
-  aus_consistent <- tribble(
-    ~date_origin, ~holiday_name,
-    "2023-01-01", "New Year's Day",
+  aus_holidays <- tribble(
+    ~date,       ~holiday_name,
+    "2023-01-01", "New Year's Day", 
+    "2023-01-02", "New Year's Day (Observed)",
     "2023-01-26", "Australia Day",
     "2023-04-25", "ANZAC Day",
     "2023-12-25", "Christmas Day",
     "2023-12-26", "Boxing Day",
+    
+    "2024-01-01", "New Year's Day",
+    "2024-01-26", "Australia Day",
+    "2024-04-25", "ANZAC Day",
+    "2024-12-25", "Christmas Day",
+    "2024-12-26", "Boxing Day",
+    
+    "2025-01-01", "New Year's Day",
+    "2025-01-26", "Australia Day",
+    "2025-01-27", "Australia Day (Observed)",
+    "2025-04-25", "ANZAC Day",
+    "2025-12-25", "Christmas Day",
+    "2025-12-26", "Boxing Day",
+    
+    "2026-01-01", "New Year's Day",
+    "2026-01-26", "Australia Day",
+    "2026-12-25", "Christmas Day",
+    "2026-12-26", "Boxing Day",
+    "2026-12-28", "Boxing Day (Observed)" 
   ) |> 
-    rowwise() |> 
-    mutate(date = list(ymd(date_origin) + years(0:years_ahead))) |> 
-    unnest(date) |> 
-    select(-date_origin) |> 
-    expand_grid(location = locations_aus)
+    mutate(date = ymd(date)) |> 
+    expand_grid(location = c(locations_aus)) |> 
+    bind_rows(
+      bind_rows(
+        tibble(date = ymd("2026-04-25"), holiday_name = "ANZAC Day", location = locations_aus),
+        tibble(date = ymd("2026-04-27"), holiday_name = "ANZAC Day (Observed)", location = c("WA", "ACT", "QLD", "NT"))
+      )
+    )
   
-  nz_consistent <- tribble(
-    ~date_origin, ~holiday_name,
+  
+  nz_holidays <- tribble(
+    ~date,       ~holiday_name,
     "2023-01-01", "New Year's Day",
     "2023-01-02", "Day after New Year's Day",
     "2023-02-06", "Waitangi Day",
     "2023-04-25", "ANZAC Day",
     "2023-12-25", "Christmas Day",
     "2023-12-26", "Boxing Day",
+    
+    "2024-01-01", "New Year's Day",
+    "2024-01-02", "Day after New Year's Day",
+    "2024-02-06", "Waitangi Day",
+    "2024-04-25", "ANZAC Day",
+    "2024-12-25", "Christmas Day",
+    "2024-12-26", "Boxing Day",
+    
+    "2025-01-01", "New Year's Day",
+    "2025-01-02", "Day after New Year's Day",
+    "2025-02-06", "Waitangi Day",
+    "2025-04-25", "ANZAC Day",
+    "2025-12-25", "Christmas Day",
+    "2025-12-26", "Boxing Day",
+    
+    "2026-01-01", "New Year's Day",
+    "2026-01-02", "Day after New Year's Day",
+    "2026-02-06", "Waitangi Day",
+    "2026-04-25", "ANZAC Day",   
+    "2026-04-27", "ANZAC Day (Observed)",   
+    "2026-12-25", "Christmas Day",
+    "2026-12-26", "Boxing Day",
+    "2026-12-28", "Boxing Day (Observed)"   
   ) |> 
-    rowwise() |> 
-    mutate(date = list(ymd(date_origin) + years(0:years_ahead))) |> 
-    unnest(date) |> 
-    select(-date_origin) |> 
-    mutate(location = "NZ")
+    mutate(date = ymd(date), location = "NZ")
   
   easter_holidays <- tribble(
     ~date, ~holiday_name,
@@ -227,26 +268,6 @@ get_public_holidays <- function() {
   ) |> 
     mutate(date = ymd(date)) |> 
     expand_grid(location = c("NZ", locations_aus))
-  
-  nz_variable_holidays <- tribble(
-    ~location, ~date,          ~holiday_name,
-    "NZ", "2023-06-05", "King's Birthday",
-    "NZ", "2023-07-14", "Matariki",
-    "NZ", "2023-10-23", "Labour Day",
-    
-    "NZ", "2024-06-03", "King's Birthday",
-    "NZ", "2024-06-28", "Matariki",
-    "NZ", "2024-10-28", "Labour Day",
-    
-    "NZ", "2025-06-02", "King's Birthday",
-    "NZ", "2025-06-20", "Matariki",
-    "NZ", "2025-10-27", "Labour Day",
-    
-    "NZ", "2026-06-01", "King's Birthday",
-    "NZ", "2026-07-10", "Matariki",
-    "NZ", "2026-10-26", "Labour Day"
-  ) |> 
-    mutate(date = ymd(date))
   
   vic_holidays <- tribble(
     ~location, ~date,          ~holiday_name,
@@ -405,9 +426,8 @@ get_public_holidays <- function() {
     mutate(date = ymd(date))
   
   bind_rows(
-    aus_consistent,
-    nz_consistent,
-    nz_variable_holidays,
+    aus_holidays,
+    nz_holidays,
     easter_holidays,
     vic_holidays,
     nsw_holidays,

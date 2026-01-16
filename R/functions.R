@@ -361,7 +361,7 @@ fit_model <- function(data_list) {
     chains = 4,
     parallel_chains = 4,
     refresh = 50,
-    iter_warmup = 250, iter_sampling = 250,
+    iter_warmup = 1000, iter_sampling = 1000,
     init = 0.5
   )
   
