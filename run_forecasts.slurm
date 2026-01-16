@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --ntasks=1
-#SBATCH --time=03:00:00
+#SBATCH --time=01:00:00
 #SBATCH --partition=cascade,sapphire
 #SBATCH --cpus-per-task=4
 #SBATCH --mem-per-cpu=6G

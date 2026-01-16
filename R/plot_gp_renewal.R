@@ -8,7 +8,7 @@ source("R/functions.R")
 
 jobs |> 
   pmap(function(location, pathogen) {
-    make_fit_plots("2025-06-19", pathogen, location)
+    make_fit_plots("2025-10-09", pathogen, location)
   })
 
 

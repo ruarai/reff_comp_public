@@ -153,11 +153,10 @@ get_school_holidays <- function() {
       start_date = ymd(start_date),
       end_date = ymd(end_date),
       school_holiday_type = case_when(
-        # Default 1 -> no holiday
-        str_detect(holiday_name, "Summer") ~ 2,
-        str_detect(holiday_name, "Autumn") ~ 3,
-        str_detect(holiday_name, "Winter") ~ 4,
-        str_detect(holiday_name, "Spring") ~ 5,
+        str_detect(holiday_name, "Summer") ~ 1,
+        str_detect(holiday_name, "Autumn") ~ 2,
+        str_detect(holiday_name, "Winter") ~ 3,
+        str_detect(holiday_name, "Spring") ~ 4,
       )
     )
 }
@@ -168,4 +167,256 @@ get_school_holidays_long <- function() {
     mutate(date = list(seq(start_date, end_date, by = "days"))) |> 
     unnest(date) |> 
     select(location, date, school_holiday_type)
+}
+
+get_public_holidays <- function() {
+  locations_aus <- c("VIC", "NSW", "QLD", "NT", "TAS", "SA", "WA", "ACT")
+  
+  years_ahead <- 4
+  
+  aus_consistent <- tribble(
+    ~date_origin, ~holiday_name,
+    "2023-01-01", "New Year's Day",
+    "2023-01-26", "Australia Day",
+    "2023-04-25", "ANZAC Day",
+    "2023-12-25", "Christmas Day",
+    "2023-12-26", "Boxing Day",
+  ) |> 
+    rowwise() |> 
+    mutate(date = list(ymd(date_origin) + years(0:years_ahead))) |> 
+    unnest(date) |> 
+    select(-date_origin) |> 
+    expand_grid(location = locations_aus)
+  
+  nz_consistent <- tribble(
+    ~date_origin, ~holiday_name,
+    "2023-01-01", "New Year's Day",
+    "2023-01-02", "Day after New Year's Day",
+    "2023-02-06", "Waitangi Day",
+    "2023-04-25", "ANZAC Day",
+    "2023-12-25", "Christmas Day",
+    "2023-12-26", "Boxing Day",
+  ) |> 
+    rowwise() |> 
+    mutate(date = list(ymd(date_origin) + years(0:years_ahead))) |> 
+    unnest(date) |> 
+    select(-date_origin) |> 
+    mutate(location = "NZ")
+  
+  easter_holidays <- tribble(
+    ~date, ~holiday_name,
+    "2023-04-07", "Good Friday",
+    "2023-04-08", "Saturday before Easter Sunday",
+    "2023-04-09", "Easter Sunday",
+    "2023-04-10", "Easter Monday",
+    
+    "2024-03-29", "Good Friday",
+    "2024-03-30", "Saturday before Easter Sunday",
+    "2024-03-31", "Easter Sunday",
+    "2024-04-01", "Easter Monday",
+    
+    "2025-04-18", "Good Friday",
+    "2025-04-19", "Saturday before Easter Sunday",
+    "2025-04-20", "Easter Sunday",
+    "2025-04-21", "Easter Monday",
+    
+    "2026-04-03", "Good Friday",
+    "2026-04-04", "Saturday before Easter Sunday",
+    "2026-04-05", "Easter Sunday",
+    "2026-04-06", "Easter Monday",
+  ) |> 
+    mutate(date = ymd(date)) |> 
+    expand_grid(location = c("NZ", locations_aus))
+  
+  nz_variable_holidays <- tribble(
+    ~location, ~date,          ~holiday_name,
+    "NZ", "2023-06-05", "King's Birthday",
+    "NZ", "2023-07-14", "Matariki",
+    "NZ", "2023-10-23", "Labour Day",
+    
+    "NZ", "2024-06-03", "King's Birthday",
+    "NZ", "2024-06-28", "Matariki",
+    "NZ", "2024-10-28", "Labour Day",
+    
+    "NZ", "2025-06-02", "King's Birthday",
+    "NZ", "2025-06-20", "Matariki",
+    "NZ", "2025-10-27", "Labour Day",
+    
+    "NZ", "2026-06-01", "King's Birthday",
+    "NZ", "2026-07-10", "Matariki",
+    "NZ", "2026-10-26", "Labour Day"
+  ) |> 
+    mutate(date = ymd(date))
+  
+  vic_holidays <- tribble(
+    ~location, ~date,          ~holiday_name,
+    "VIC", "2023-03-13", "Labour Day",
+    "VIC", "2023-06-12", "King's Birthday",
+    "VIC", "2023-09-29", "Friday before the AFL Grand Final",
+    "VIC", "2023-11-07", "Melbourne Cup",
+    
+    "VIC", "2024-03-11", "Labour Day",
+    "VIC", "2024-06-10", "King's Birthday",
+    "VIC", "2024-09-27", "Friday before the AFL Grand Final",
+    "VIC", "2024-11-05", "Melbourne Cup",
+    
+    "VIC", "2025-03-10", "Labour Day",
+    "VIC", "2025-06-09", "King's Birthday",
+    "VIC", "2025-09-26", "Friday before the AFL Grand Final",
+    "VIC", "2025-11-04", "Melbourne Cup",
+    
+    "VIC", "2026-03-09", "Labour Day",
+    "VIC", "2026-06-08", "King's Birthday",
+    "VIC", "2026-09-25", "Friday before the AFL Grand Final",
+    "VIC", "2026-11-03", "Melbourne Cup"
+  ) |> 
+    mutate(date = ymd(date))
+  
+  nsw_holidays <- tribble(
+    ~location, ~date,          ~holiday_name,
+    "NSW", "2023-06-12", "King's Birthday",
+    "NSW", "2023-10-02", "Labour Day",
+    
+    "NSW", "2024-06-10", "King's Birthday",
+    "NSW", "2024-10-07", "Labour Day",
+    
+    "NSW", "2025-06-09", "King's Birthday",
+    "NSW", "2025-10-06", "Labour Day",
+    
+    "NSW", "2026-06-08", "King's Birthday",
+    "NSW", "2026-10-05", "Labour Day"
+  ) |> 
+    mutate(date = ymd(date))
+  
+  act_holidays <- tribble(
+    ~location, ~date,          ~holiday_name,
+    "ACT", "2023-03-13", "Canberra Day",
+    "ACT", "2023-05-29", "Reconciliation Day",
+    "ACT", "2023-06-12", "King's Birthday",
+    "ACT", "2023-10-02", "Labour Day",
+    
+    "ACT", "2024-03-11", "Canberra Day",
+    "ACT", "2024-05-27", "Reconciliation Day",
+    "ACT", "2024-06-10", "King's Birthday",
+    "ACT", "2024-10-07", "Labour Day",
+    
+    "ACT", "2025-03-10", "Canberra Day",
+    "ACT", "2025-06-02", "Reconciliation Day",
+    "ACT", "2025-06-09", "King's Birthday",
+    "ACT", "2025-10-06", "Labour Day",
+    
+    "ACT", "2026-03-09", "Canberra Day",
+    "ACT", "2026-06-01", "Reconciliation Day",
+    "ACT", "2026-06-08", "King's Birthday",
+    "ACT", "2026-10-05", "Labour Day"
+  ) |> 
+    mutate(date = ymd(date))
+  
+  qld_holidays <- tribble(
+    ~location, ~date,          ~holiday_name,
+    "QLD", "2023-05-01", "Labour Day",
+    "QLD", "2023-10-02", "King's Birthday",
+    
+    "QLD", "2024-05-06", "Labour Day",
+    "QLD", "2024-10-07", "King's Birthday",
+    
+    "QLD", "2025-05-05", "Labour Day",
+    "QLD", "2025-10-06", "King's Birthday",
+    
+    "QLD", "2026-05-04", "Labour Day",
+    "QLD", "2026-10-05", "King's Birthday"
+  ) |> 
+    mutate(date = ymd(date))
+  
+  nt_holidays <- tribble(
+    ~location, ~date,          ~holiday_name,
+    "NT", "2023-05-01", "May Day",
+    "NT", "2023-06-12", "King's Birthday",
+    "NT", "2023-08-07", "Picnic Day",
+    
+    "NT", "2024-05-06", "May Day",
+    "NT", "2024-06-10", "King's Birthday",
+    "NT", "2024-08-05", "Picnic Day",
+    
+    "NT", "2025-05-05", "May Day",
+    "NT", "2025-06-09", "King's Birthday",
+    "NT", "2025-08-04", "Picnic Day",
+    
+    "NT", "2026-05-04", "May Day",
+    "NT", "2026-06-08", "King's Birthday",
+    "NT", "2026-08-03", "Picnic Day"
+  ) |> 
+    mutate(date = ymd(date))
+  
+  sa_holidays <- tribble(
+    ~location, ~date,          ~holiday_name,
+    "SA", "2023-03-13", "Adelaide Cup Day",
+    "SA", "2023-06-12", "King's Birthday",
+    "SA", "2023-10-02", "Labour Day",
+    
+    "SA", "2024-03-11", "Adelaide Cup Day",
+    "SA", "2024-06-10", "King's Birthday",
+    "SA", "2024-10-07", "Labour Day",
+    
+    "SA", "2025-03-10", "Adelaide Cup Day",
+    "SA", "2025-06-09", "King's Birthday",
+    "SA", "2025-10-06", "Labour Day",
+    
+    "SA", "2026-03-09", "Adelaide Cup Day",
+    "SA", "2026-06-08", "King's Birthday",
+    "SA", "2026-10-05", "Labour Day"
+  ) |> 
+    mutate(date = ymd(date))
+  
+  tas_holidays <- tribble(
+    ~location, ~date,          ~holiday_name,
+    "TAS", "2023-03-13", "Eight Hours Day",
+    "TAS", "2023-06-12", "King's Birthday",
+    
+    "TAS", "2024-03-11", "Eight Hours Day",
+    "TAS", "2024-06-10", "King's Birthday",
+    
+    "TAS", "2025-03-10", "Eight Hours Day",
+    "TAS", "2025-06-09", "King's Birthday",
+    
+    "TAS", "2026-03-09", "Eight Hours Day",
+    "TAS", "2026-06-08", "King's Birthday"
+  ) |> 
+    mutate(date = ymd(date))
+  
+  wa_holidays <- tribble(
+    ~location, ~date,          ~holiday_name,
+    "WA", "2023-03-06", "Labour Day",
+    "WA", "2023-06-05", "Western Australia Day",
+    "WA", "2023-09-25", "King's Birthday",
+    
+    "WA", "2024-03-04", "Labour Day",
+    "WA", "2024-06-03", "Western Australia Day",
+    "WA", "2024-09-23", "King's Birthday",
+    
+    "WA", "2025-03-03", "Labour Day",
+    "WA", "2025-06-02", "Western Australia Day",
+    "WA", "2025-09-29", "King's Birthday",
+    
+    "WA", "2026-03-02", "Labour Day",
+    "WA", "2026-06-01", "Western Australia Day",
+    "WA", "2026-09-28", "King's Birthday"
+  ) |> 
+    mutate(date = ymd(date))
+  
+  bind_rows(
+    aus_consistent,
+    nz_consistent,
+    nz_variable_holidays,
+    easter_holidays,
+    vic_holidays,
+    nsw_holidays,
+    act_holidays,
+    qld_holidays,
+    nt_holidays,
+    sa_holidays,
+    tas_holidays,
+    wa_holidays
+  ) |> 
+    arrange(location, date)
 }

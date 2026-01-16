@@ -13,8 +13,8 @@ args <- commandArgs(trailingOnly = TRUE)
 ix_job <- as.integer(args[1])
 round_id <- str_trim(args[2])
 
-combined_counts <- read_csv(str_c("data/combined-count-", round_id, ".csv"))
-combined_counts_smoothed <- read_csv(str_c("data/combined-count-smoothed-", round_id, ".csv"))
+combined_counts <- read_csv(str_c("../forecast-hub/processed-data/2025/", round_id, "/combined-count-", round_id, ".csv"))
+combined_counts_smoothed <- read_csv(str_c("../forecast-hub/processed-data/2025/", round_id, "/combined-count-smoothed-", round_id, ".csv"))
 
 jobs <- distinct(combined_counts, location, pathogen)
 
@@ -49,14 +49,15 @@ fs::dir_create(fs::path("results", round_id))
 fit$save_object(str_c("results/", round_id, "/", x_pathogen, "_", x_location, ".rds"))
 arrow::write_parquet(training_counts, str_c("results/", round_id, "/", x_pathogen, "_", x_location, "_training_counts.parquet"))
 
-# print("Writing trajectories...")
+print("Writing trajectories...")
 
-# write_forecast_file(round_id, x_pathogen, x_location, origin_date)
+write_forecast_file(round_id, x_pathogen, x_location, origin_date)
 
 print("Making plots...")
 
 make_fit_plots(round_id, x_pathogen, x_location)
 
+print("Complete")
 
 
 

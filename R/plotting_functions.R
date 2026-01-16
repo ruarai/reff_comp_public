@@ -1,5 +1,5 @@
 
-plot_reff_components <- function(trajectory_data, origin_date, holidays) {
+plot_reff_components <- function(trajectory_data, origin_date, school_holidays, public_holidays) {
   
   labels <- c(
     "f_annual" = "exp(f_annual)",
@@ -25,7 +25,9 @@ plot_reff_components <- function(trajectory_data, origin_date, holidays) {
                alpha = 0.3) +
     
     geom_rect(aes(xmin = start_date, xmax = end_date, ymin = 0, ymax = Inf),
-              holidays, alpha = 0.1) +
+              school_holidays, alpha = 0.1) +
+    
+    geom_rug(aes(x = date), public_holidays) +
     
     geom_ribbon(aes(x = date, ymin = exp(lower), ymax = exp(upper),
                     group = quant, alpha = quant, fill = variable)) +
@@ -47,13 +49,15 @@ plot_reff_components <- function(trajectory_data, origin_date, holidays) {
     
     scale_y_log10() +
     
+    coord_cartesian(ylim = c(1/2, 2)) +
+    
     geom_vline(xintercept = origin_date, linetype = "44") +
     
     theme_bw() +
     theme(legend.position = "none")
 }
 
-plot_latent_inf <- function(trajectory_data, training_counts, origin_date, holidays) {
+plot_latent_inf <- function(trajectory_data, training_counts, origin_date, school_holidays, public_holidays) {
   plot_quants <- make_intervals(trajectory_data, "inf")
   plot_quants_delayed <- make_intervals(trajectory_data, "inf_delayed")
   
@@ -66,8 +70,10 @@ plot_latent_inf <- function(trajectory_data, training_counts, origin_date, holid
     geom_vline(aes(xintercept = date), tibble(date = seq(ymd("2023-01-01"), ymd("2027-01-01"), "1 year")),
                alpha = 0.4) +
     
-    geom_rect(aes(xmin = start_date, xmax = end_date, ymin = -Inf, ymax = Inf),
-              holidays, alpha = 0.1) +
+    geom_rect(aes(xmin = start_date, xmax = end_date, ymin = 0, ymax = Inf),
+              school_holidays, alpha = 0.1) +
+    
+    geom_rug(aes(x = date), public_holidays) +
     
     geom_ribbon(aes(x = date, ymin = lower, ymax = upper,
                     group = quant, alpha = quant),
@@ -94,7 +100,7 @@ plot_latent_inf <- function(trajectory_data, training_counts, origin_date, holid
           legend.position = "none")
 }
 
-plot_cases <- function(trajectory_data, training_counts, origin_date, holidays) {
+plot_cases <- function(trajectory_data, training_counts, origin_date, school_holidays, public_holidays) {
   plot_quants <- make_intervals(trajectory_data, "cases")
   
   
@@ -103,8 +109,10 @@ plot_cases <- function(trajectory_data, training_counts, origin_date, holidays) 
   
   ggplot(plot_quants) +
     
-    geom_rect(aes(xmin = start_date, xmax = end_date, ymin = -Inf, ymax = Inf),
-              holidays, alpha = 0.1) +
+    geom_rect(aes(xmin = start_date, xmax = end_date, ymin = 0, ymax = Inf),
+              school_holidays, alpha = 0.1) +
+    
+    geom_rug(aes(x = date), public_holidays) +
     
     geom_ribbon(aes(x = date, ymin = lower, ymax = upper,
                     group = quant, alpha = quant),
@@ -127,11 +135,18 @@ plot_cases <- function(trajectory_data, training_counts, origin_date, holidays) 
           legend.position = "none")
 }
 
-make_forecast_plot <- function(trajectory_data, training_counts, eval_counts, origin_date, holidays, x_location, x_pathogen) {
+make_forecast_plot <- function(trajectory_data, training_counts, eval_counts, origin_date, school_holidays, public_holidays, x_location, x_pathogen) {
   
   forecast_plot_window <- c(origin_date - days(7 * 4), origin_date + days(7 * 12))
   
-  p_forecast_latent <- plot_latent_inf(trajectory_data, training_counts, origin_date, holidays) +
+  
+  p_forecast_components <- plot_reff_components(trajectory_data, origin_date, school_holidays, public_holidays) +
+    
+    xlim(forecast_plot_window) +
+    
+    geom_vline(xintercept = origin_date + days(4 * 7), linetype = "24")
+  
+  p_forecast_latent <- plot_latent_inf(trajectory_data, training_counts, origin_date, school_holidays, public_holidays) +
     
     xlim(forecast_plot_window) +
     
@@ -140,7 +155,7 @@ make_forecast_plot <- function(trajectory_data, training_counts, eval_counts, or
     
     geom_vline(xintercept = origin_date + days(4 * 7), linetype = "24")
   
-  p_forecast_cases <- plot_cases(trajectory_data, training_counts, origin_date, holidays) +
+  p_forecast_cases <- plot_cases(trajectory_data, training_counts, origin_date, school_holidays, public_holidays) +
     
     xlim(forecast_plot_window) +
     
@@ -151,14 +166,133 @@ make_forecast_plot <- function(trajectory_data, training_counts, eval_counts, or
     
     labs(caption = str_c(x_location, " - ", x_pathogen))
   
-  
-  p_forecast_components <- plot_reff_components(trajectory_data, origin_date, holidays) +
-    
-    xlim(forecast_plot_window) +
-    
-    geom_vline(xintercept = origin_date + days(4 * 7), linetype = "24")
-  
   p_forecast_components / p_forecast_latent / p_forecast_cases
+}
+
+plot_holiday_effects <- function(fit, public_holidays) {
+  school_holiday_draws <- fit |> 
+    spread_draws(school_holiday_asc_effect[school_holiday_type],
+                 school_holiday_Rt_effect[school_holiday_type]) |> 
+    mutate(school_holiday_type = school_holiday_type - 1) |> 
+    filter(school_holiday_type > 0) |> 
+    mutate(holiday_name = case_when(
+      school_holiday_type == 1 ~ "Summer",
+      school_holiday_type == 2 ~ "Autumn",
+      school_holiday_type == 3 ~ "Winter",
+      school_holiday_type == 4 ~ "Spring"
+    )) |> 
+    ungroup() |> 
+    mutate(holiday_name = factor(holiday_name, c("Summer", "Autumn", "Winter", "Spring")))
+  
+  
+  public_holiday_labels <- public_holidays |> 
+    distinct(holiday_name) |> 
+    mutate(public_holiday_type = row_number())
+  
+  public_holiday_draws <- fit |> 
+    spread_draws(public_holiday_asc_effect[public_holiday_type],
+                 public_holiday_Rt_effect[public_holiday_type]) |> 
+    mutate(public_holiday_type = public_holiday_type - 1) |> 
+    filter(public_holiday_type > 0) |> 
+    
+    left_join(public_holiday_labels) |> 
+    
+    ungroup() |> 
+    mutate(holiday_name = factor(holiday_name, public_holiday_labels$holiday_name))
+  
+  
+  p_school_Rt <- ggplot(school_holiday_draws) +
+    
+    geom_vline(xintercept = 1, linetype = "22") +
+    ggdist::stat_interval(aes(y = holiday_name, x = exp(school_holiday_Rt_effect)),
+                          .width = c(0.5, 0.9, 0.95),
+                          orientation = "horizontal") +
+    
+    geom_blank(
+      aes(
+        xmin = exp(quantile(public_holiday_draws$public_holiday_Rt_effect, 0.025)),
+        xmax = exp(quantile(public_holiday_draws$public_holiday_Rt_effect, 0.975)),
+      )
+    ) +
+    
+    scale_colour_brewer() +
+    
+    xlab("Rt effect") + ylab(NULL) +
+    scale_x_log10(breaks = scales::log_breaks(n = 7)) +
+    
+    theme_bw() +
+    theme(legend.position = "none")
+  
+  
+  p_school_asc <- ggplot(school_holiday_draws) +
+    
+    geom_vline(xintercept = 1, linetype = "22") +
+    ggdist::stat_interval(aes(y = holiday_name, x = exp(school_holiday_asc_effect)),
+                          .width = c(0.5, 0.9, 0.95),
+                          orientation = "horizontal") +
+    
+    geom_blank(
+      aes(
+        xmin = exp(quantile(public_holiday_draws$public_holiday_asc_effect, 0.025)),
+        xmax = exp(quantile(public_holiday_draws$public_holiday_asc_effect, 0.975)),
+      )
+    ) +
+    
+    scale_colour_brewer() +
+    
+    xlab("Ascertainment effect") + ylab(NULL) +
+    scale_x_log10(breaks = scales::log_breaks(n = 7)) +
+    
+    theme_bw() +
+    theme(legend.position = "none")
+  
+  
+  p_public_Rt <- ggplot(public_holiday_draws) +
+    
+    geom_vline(xintercept = 1, linetype = "22") +
+    ggdist::stat_interval(aes(y = holiday_name, x = exp(public_holiday_Rt_effect)),
+                          .width = c(0.5, 0.9, 0.95),
+                          orientation = "horizontal") +
+    
+    geom_blank(
+      aes(
+        xmin = exp(quantile(school_holiday_draws$school_holiday_Rt_effect, 0.025)),
+        xmax = exp(quantile(school_holiday_draws$school_holiday_Rt_effect, 0.975)),
+      )
+    ) +
+    
+    scale_colour_brewer() +
+    
+    xlab("Rt effect") + ylab(NULL) +
+    scale_x_log10(breaks = scales::log_breaks(n = 7)) +
+    
+    theme_bw() +
+    theme(legend.position = "none")
+  
+  p_public_asc <- ggplot(public_holiday_draws) +
+    
+    geom_vline(xintercept = 1, linetype = "22") +
+    ggdist::stat_interval(aes(y = holiday_name, x = exp(public_holiday_asc_effect)),
+                          .width = c(0.5, 0.9, 0.95),
+                          orientation = "horizontal") +
+    
+    geom_blank(
+      aes(
+        xmin = exp(quantile(school_holiday_draws$school_holiday_asc_effect, 0.025)),
+        xmax = exp(quantile(school_holiday_draws$school_holiday_asc_effect, 0.975)),
+      )
+    ) +
+    
+    scale_colour_brewer() +
+    
+    xlab("Ascertainment effect") + ylab(NULL) +
+    scale_x_log10(breaks = scales::log_breaks(n = 7)) +
+    
+    theme_bw() +
+    theme(legend.position = "none")
+  
+  (p_school_Rt / p_public_Rt) + plot_layout(heights = c(1, 2)) |
+    (p_school_asc / p_public_asc) + plot_layout(heights = c(1, 2))
 }
 
 
@@ -200,33 +334,46 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
   p_hist / p_trace
 
   ggsave(str_c(round_results, "/", x_pathogen, "_", x_location, "_plot_MCMC.png"), width = 10, height = 10)
+  
 
   p_pairs <- mcmc_pairs(draws |> mutate(chain = .chain), pars = pars, off_diag_args = list(size = 0.3, alpha = 0.5))
 
   ggsave(str_c(round_results, "/", x_pathogen, "_", x_location, "_plot_MCMC_pairs.png"), p_pairs, width = 16, height = 16)
   
   
-  holidays <- get_school_holidays() |> 
+  school_holidays <- get_school_holidays() |> 
+    filter(location == x_location)
+  
+  public_holidays <- get_public_holidays() |> 
     filter(location == x_location)
   
   trajectory_data <- fit |> 
     spread_draws(log_R[ix_x], inf[ix_x], inf_delayed[ix_x], cases[ix_x], f_annual[ix_x], f_noise[ix_x]) |> 
     mutate(date = training_counts$date[ix_x])
   
-  p_reff <- plot_reff_components(trajectory_data, origin_date, holidays)
+  p_reff <- plot_reff_components(trajectory_data, origin_date, school_holidays, public_holidays) +
+    xlim(c(ymd(min(trajectory_data$date)), ymd(origin_date + days(365))))
   
-  p_latent_inf <- plot_latent_inf(trajectory_data, training_counts, origin_date, holidays) +
+  p_latent_inf <- plot_latent_inf(trajectory_data, training_counts, origin_date, school_holidays, public_holidays) +
     
     geom_line(aes(x = date, y = y_smooth), colour = "orangered",
-              eval_counts)
+              eval_counts) +
+    xlim(c(ymd(min(trajectory_data$date)), ymd(origin_date + days(365))))
   
   p_reff / p_latent_inf
   
   ggsave(str_c(round_results, "/", x_pathogen, "_", x_location, "_plot_latent_inf.png"), width = 14, height = 8)
   
   
-  make_forecast_plot(trajectory_data, training_counts, eval_counts, origin_date, holidays, x_location, x_pathogen)
+  make_forecast_plot(
+    trajectory_data, training_counts, eval_counts, origin_date,
+    school_holidays, public_holidays, x_location, x_pathogen
+  )
   
   ggsave(str_c(round_results, "/", x_pathogen, "_", x_location, "_plot_forecast.png"), width = 10, height = 10)
+  
+  plot_holiday_effects(fit, public_holidays)
+  
+  ggsave(str_c(round_results, "/", x_pathogen, "_", x_location, "_holiday_effects.png"), width = 12, height = 8)
   
 }

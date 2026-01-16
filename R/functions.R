@@ -1,6 +1,6 @@
 
 
-source("R/school_holidays.R")
+source("R/holidays.R")
 source("R/plotting_functions.R")
 
 
@@ -28,6 +28,11 @@ make_training_counts <- function(
 ) {
   school_holidays_location <- get_school_holidays_long() |> 
     filter(location == x_location)
+  
+  public_holidays_location <- get_public_holidays() |> 
+    filter(location == x_location) |> 
+    mutate(public_holiday_type = match(holiday_name, unique(holiday_name))) |> 
+    select(date, location, public_holiday_type)
   
   training_counts <- reduced_counts |> 
     select(location, pathogen, date = notification_date, y = cases, y_smooth = cases_trend_and_remainder) |> 
@@ -58,12 +63,15 @@ make_training_counts <- function(
     )
   }
   
+  
   training_counts <- training_counts |>
     arrange(date) |> 
     mutate(x = as.numeric(date - min(date)),
            day_of_week = wday(date)) |> 
     left_join(school_holidays_location, by = join_by(date, location)) |> 
-    mutate(school_holiday_type = replace_na(school_holiday_type, 1))
+    left_join(public_holidays_location, by = join_by(date, location)) |> 
+    mutate(school_holiday_type = replace_na(school_holiday_type, 0) + 1,
+           public_holiday_type = replace_na(public_holiday_type, 0) + 1)
   
   
   n_diff <- diff(training_counts$x) |> table() |> unique() |> length()
@@ -75,9 +83,9 @@ make_training_counts <- function(
 
 
 make_gi <- function(shape, rate, p_threshold) {
-  cdf_gi <- pgamma(0:30, shape = shape, rate = rate)
+  cdf_gi <- pgamma(0:21, shape = shape, rate = rate)
   
-  discrete_gi <- diff(cdf_gi[cdf_gi < p_threshold])
+  discrete_gi <- diff(cdf_gi)
   discrete_gi[length(discrete_gi)] <- discrete_gi[length(discrete_gi)] + 1 - sum(discrete_gi)
   
   return(discrete_gi)
@@ -272,36 +280,12 @@ write_forecast_file <- function(round_id, x_pathogen, x_location, origin_date) {
       value
     )
   
-  output_file <- fs::path("forecast_outputs", str_c(round_id, "-uom-gp-reff.parquet"))
+  output_file <- fs::path("forecast_outputs_raw", str_c(x_location, "-", round_id, "-uom-gp-reff.parquet"))
   
   arrow::write_parquet(forecast_data, output_file)
 }
 
-create_stan_data <- function(
-    training_counts,
-    days_ahead,
-    x_pathogen
-) {
-  gi <- get_gi(x_pathogen)
-  n_days_data <- nrow(training_counts) - n_days_ahead
-  
-  data_list <- list(
-    x = training_counts$x,
-    day_of_week = training_counts$day_of_week,
-    school_holiday_type = training_counts$school_holiday_type,
-    
-    y = training_counts$y[1:n_days_data],
-    N = nrow(training_counts), N_data = n_days_data,
-    
-    M_annual = 40,
-    M_noise = calculate_M_matern(c = 1.25, length_scale = 10.0, x = training_counts$x),
-    c_factor = 1.25,
-    
-    gi_reversed = rev(gi), N_gi = length(gi)
-  )
-  
-  return(data_list)
-}
+
 
 
 process_counts <- function(
@@ -331,6 +315,37 @@ process_counts <- function(
     make_training_counts(x_location, x_pathogen, n_days_ahead)
   
   return(training_counts)
+}
+
+create_stan_data <- function(
+    training_counts,
+    days_ahead,
+    x_pathogen
+) {
+  gi <- get_gi(x_pathogen)
+  n_days_data <- nrow(training_counts) - n_days_ahead
+  
+  N_public_holiday_types <- length(unique(training_counts$public_holiday_type))
+  
+  data_list <- list(
+    x = training_counts$x,
+    day_of_week = training_counts$day_of_week,
+    school_holiday_type = training_counts$school_holiday_type,
+    
+    public_holiday_type = training_counts$public_holiday_type,
+    
+    y = training_counts$y[1:n_days_data],
+    N = nrow(training_counts), N_data = n_days_data,
+    N_public_holiday_types = N_public_holiday_types,
+    
+    M_annual = 40,
+    M_noise = calculate_M_matern(c = 1.25, length_scale = 10.0, x = training_counts$x),
+    c_factor = 1.25,
+    
+    gi_reversed = rev(gi), N_gi = length(gi)
+  )
+  
+  return(data_list)
 }
 
 fit_model <- function(data_list) {

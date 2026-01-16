@@ -13,6 +13,6 @@ sum(construct_delay_dist(0.1, 1.5))
 
 
 fit <- model$pathfinder(
-  seed = 1, data = data_list,
-  max_lbfgs_iters = 1000
+  seed = 3, data = data_list,
+  max_lbfgs_iters = 2000
 )

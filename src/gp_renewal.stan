@@ -12,15 +12,16 @@ data {
   int<lower=1> N;
   int<lower=1> N_data;
   
+  int<lower=1> N_public_holiday_types;
+  
   array[N] int day_of_week;
   array[N] int school_holiday_type;
+  array[N] int public_holiday_type;
   
   vector[N] x;
   array[N_data] int y;
   
-  
-  int<lower=1> N_gi;
-  vector[N_gi] gi_reversed;
+  vector[21] gi_reversed;
 
   int<lower=1> M_annual;
   int<lower=1> M_noise; 
@@ -40,9 +41,7 @@ transformed data {
   
   int N_delay = 21;
   
-  // Infection time-series with burn-in period
-  int N_burn_in = max(N_gi, N_delay);
-  int N_total = N + N_burn_in;
+  int N_total = N + N_delay;
 }
 
 parameters {
@@ -63,8 +62,18 @@ parameters {
   real r_0;
   real log_I_0;
   
-  vector[4] school_holiday_Rt_effect;
-  vector[4] school_holiday_asc_effect;
+  // For school holidays and public holidays, type = 1 is no holiday
+  // Only fit effects to type > 1
+  vector[4] school_holiday_Rt_effect_raw;
+  vector[4] school_holiday_asc_effect_raw;
+  
+  real public_holiday_Rt_mean;
+  real public_holiday_asc_mean;
+  real<lower=0> public_holiday_Rt_sd;
+  real<lower=0> public_holiday_asc_sd;
+  
+  vector[N_public_holiday_types - 1] public_holiday_Rt_effect_raw;
+  vector[N_public_holiday_types - 1] public_holiday_asc_effect_raw;
   
   real<lower=0, upper=21> delay_mean;
   real<lower=0> delay_sd;
@@ -82,12 +91,17 @@ transformed parameters {
   vector[N] f_annual = phi_annual * (diag_SPD_annual .* beta_annual);
   vector[N] f_noise  = phi_noise * (diag_SPD_noise .* beta_noise);
   
-  vector[5] holiday_Rt_effects = rep_vector(0.0, 5);
-  holiday_Rt_effects[2:5] = school_holiday_Rt_effect;
+  vector[5] school_holiday_Rt_effect = rep_vector(0.0, 5);
+  school_holiday_Rt_effect[2:5] = school_holiday_Rt_effect_raw;
+  
+  vector[N_public_holiday_types] public_holiday_Rt_effect = rep_vector(0.0, N_public_holiday_types);
+  public_holiday_Rt_effect[2:N_public_holiday_types] = 
+    public_holiday_Rt_mean + public_holiday_Rt_sd * public_holiday_Rt_effect_raw;
   
   vector[N] log_R = f_annual + 
     f_noise + 
-    holiday_Rt_effects[school_holiday_type];
+    school_holiday_Rt_effect[school_holiday_type] +
+    public_holiday_Rt_effect[public_holiday_type];
   
   // Implies each obs_offset_weekly_i ~ N(0, scaling_weekly)
   // with constraint of sum to zero
@@ -102,31 +116,36 @@ transformed parameters {
     vector[N_total] inf_full = rep_vector(0.0, N_total);
 
     // Calculate initial infs as exp growth: I(t) = I_0 * exp(r * t)
-    inf_full[1:N_burn_in] = exp(log_I_0 + r_0 * linspaced_vector(N_burn_in, 0, N_burn_in - 1));
+    inf_full[1:N_delay] = exp(log_I_0 + r_0 * linspaced_vector(N_delay, 0, N_delay - 1));
     
     for(t in 1:N) {
       real R_t = exp(log_R[t]);
       
-      real new_infections = R_t * dot_product(gi_reversed, segment(inf_full, t, N_gi));
+      real new_infections = R_t * dot_product(gi_reversed, segment(inf_full, t, N_delay));
       
-      inf_full[t + N_burn_in] = new_infections;
+      inf_full[t + N_delay] = new_infections;
     }
     
-    inf = segment(inf_full, N_burn_in + 1, N);
+    inf = segment(inf_full, N_delay + 1, N);
     
     for(k in 1:N_delay) {
       int lag = k - 1;
-      inf_delayed += segment(inf_full, N_burn_in + 1 - lag, N) * delay_dist[k];
+      inf_delayed += segment(inf_full, N_delay + 1 - lag, N) * delay_dist[k];
     }
   }
   
-  vector[5] holiday_asc_effects = rep_vector(0.0, 5);
-  holiday_asc_effects[2:5] = school_holiday_asc_effect;
+  vector[5] school_holiday_asc_effect = rep_vector(0.0, 5);
+  school_holiday_asc_effect[2:5] = school_holiday_asc_effect_raw;
+  
+  vector[N_public_holiday_types] public_holiday_asc_effect = rep_vector(0.0, N_public_holiday_types);
+  public_holiday_asc_effect[2:N_public_holiday_types] = 
+    public_holiday_asc_mean + public_holiday_asc_sd * public_holiday_asc_effect_raw;
   
   vector[N] latent_cases = exp(
     log(inf_delayed) + 
     obs_offset_weekly[day_of_week] +
-    holiday_asc_effects[school_holiday_type]
+    school_holiday_asc_effect[school_holiday_type] +
+    public_holiday_asc_effect[public_holiday_type]
   );
 }
 
@@ -135,8 +154,16 @@ model {
   scaling_weekly ~ exponential(1.0);
   scaling_noise  ~ exponential(1.0);
   
-  school_holiday_Rt_effect ~ std_normal();
-  school_holiday_asc_effect ~ std_normal();
+  school_holiday_Rt_effect_raw ~ std_normal();
+  school_holiday_asc_effect_raw ~ std_normal();
+  
+  public_holiday_Rt_mean ~ std_normal();
+  public_holiday_asc_mean ~ std_normal();
+  public_holiday_Rt_sd ~ normal(0, 0.5);
+  public_holiday_asc_sd ~ normal(0, 0.5);
+  
+  public_holiday_Rt_effect_raw ~ std_normal();
+  public_holiday_asc_effect_raw ~ std_normal();
   
   // Inv-gamma priors derived from:
   // find_inv_gamma_params(7.0, 28.0)
