@@ -205,25 +205,25 @@ get_public_holidays <- function() {
   
   easter_holidays <- tribble(
     ~date, ~holiday_name,
-    "2023-04-07", "Good Friday",
-    "2023-04-08", "Saturday before Easter Sunday",
-    "2023-04-09", "Easter Sunday",
-    "2023-04-10", "Easter Monday",
+    "2023-04-07", "Easter",
+    "2023-04-08", "Easter",
+    "2023-04-09", "Easter",
+    "2023-04-10", "Easter",
     
-    "2024-03-29", "Good Friday",
-    "2024-03-30", "Saturday before Easter Sunday",
-    "2024-03-31", "Easter Sunday",
-    "2024-04-01", "Easter Monday",
+    "2024-03-29", "Easter",
+    "2024-03-30", "Easter",
+    "2024-03-31", "Easter",
+    "2024-04-01", "Easter",
     
-    "2025-04-18", "Good Friday",
-    "2025-04-19", "Saturday before Easter Sunday",
-    "2025-04-20", "Easter Sunday",
-    "2025-04-21", "Easter Monday",
+    "2025-04-18", "Easter",
+    "2025-04-19", "Easter",
+    "2025-04-20", "Easter",
+    "2025-04-21", "Easter",
     
-    "2026-04-03", "Good Friday",
-    "2026-04-04", "Saturday before Easter Sunday",
-    "2026-04-05", "Easter Sunday",
-    "2026-04-06", "Easter Monday",
+    "2026-04-03", "Easter",
+    "2026-04-04", "Easter",
+    "2026-04-05", "Easter",
+    "2026-04-06", "Easter",
   ) |> 
     mutate(date = ymd(date)) |> 
     expand_grid(location = c("NZ", locations_aus))

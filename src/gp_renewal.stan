@@ -47,8 +47,9 @@ transformed data {
 
 parameters {
   real<lower=0> scaling_annual;
-  real<lower=0> scaling_weekly;
   real<lower=0> scaling_noise;
+  
+  real<lower=0> scaling_weekly_asc;
   
   real<lower=0> ls_annual;
   real<lower=0> ls_noise;
@@ -58,7 +59,7 @@ parameters {
   vector[2 * M_annual] beta_annual;
   vector[M_noise] beta_noise;
   
-  vector[6] beta_weekly;
+  vector[6] beta_weekly_asc;
   
   real r_0;
   real log_I_0;
@@ -93,6 +94,7 @@ transformed parameters {
   vector[N_public_holiday_types] public_holiday_Rt_effect = rep_vector(0.0, N_public_holiday_types);
   public_holiday_Rt_effect[2:N_public_holiday_types] = public_holiday_Rt_effect_raw;
   
+  
   vector[N] log_R = f_annual + 
     f_noise + 
     school_holiday_Rt_effect[school_holiday_type] +
@@ -100,7 +102,7 @@ transformed parameters {
   
   // Implies each obs_offset_weekly_i ~ N(0, scaling_weekly)
   // with constraint of sum to zero
-  vector[7] obs_offset_weekly = weekly_Q * (beta_weekly * scaling_weekly) * sqrt(7.0 / 6.0);
+  vector[7] obs_offset_weekly = weekly_Q * (beta_weekly_asc * scaling_weekly_asc) * sqrt(7.0 / 6.0);
   
   vector[N_delay] delay_dist = construct_delay_dist(delay_mean, delay_sd, N_delay);
   
@@ -145,8 +147,9 @@ transformed parameters {
 
 model {
   scaling_annual ~ exponential(1.0);
-  scaling_weekly ~ exponential(1.0);
   scaling_noise  ~ exponential(1.0);
+  
+  scaling_weekly_asc ~ exponential(1.0);
   
   school_holiday_Rt_effect_raw ~ std_normal();
   school_holiday_asc_effect_raw ~ std_normal();
@@ -164,8 +167,9 @@ model {
   phi ~ gamma(2, 0.1);
 
   beta_annual ~ std_normal();
-  beta_weekly ~ std_normal();
   beta_noise  ~ std_normal();
+  
+  beta_weekly_asc ~ std_normal();
   
   log_I_0 ~ lognormal(3.2, 1);
   r_0 ~ normal(0, 0.2);

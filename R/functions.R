@@ -67,7 +67,8 @@ make_training_counts <- function(
   training_counts <- training_counts |>
     arrange(date) |> 
     mutate(x = as.numeric(date - min(date)),
-           day_of_week = wday(date)) |> 
+           day_of_week = wday(date, week_start = 7),
+           is_weekend = if_else(day_of_week == 1 | day_of_week == 7, 1, 0)) |> 
     left_join(school_holidays_location, by = join_by(date, location)) |> 
     left_join(public_holidays_location, by = join_by(date, location)) |> 
     mutate(school_holiday_type = replace_na(school_holiday_type, 0) + 1,
@@ -331,6 +332,7 @@ create_stan_data <- function(
   data_list <- list(
     x = training_counts$x,
     day_of_week = training_counts$day_of_week,
+    is_weekend = training_counts$is_weekend,
     school_holiday_type = training_counts$school_holiday_type,
     
     public_holiday_type = training_counts$public_holiday_type,
@@ -353,12 +355,15 @@ fit_model <- function(data_list) {
   require(cmdstanr)
   model <- cmdstan_model("src/gp_renewal.stan")
   
-  model$sample(
+  fit <- model$sample(
     data = data_list,
-    seed = 2,
+    seed = 5,
     chains = 4,
     parallel_chains = 4,
     refresh = 50,
-    iter_warmup = 1000, iter_sampling = 1000
+    iter_warmup = 250, iter_sampling = 250,
+    init = 0.5
   )
+  
+  return(fit)
 }

@@ -321,7 +321,7 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
     tidybayes::tidy_draws()
 
   pars <- c(
-    "scaling_annual", "scaling_weekly", "scaling_noise", "ls_noise", "ls_annual", "phi",
+    "scaling_annual", "scaling_weekly_Rt", "scaling_weekly_asc", "scaling_noise", "ls_noise", "ls_annual", "phi",
     "delay_mean", "delay_sd"
   )
 
@@ -340,6 +340,7 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
 
   ggsave(str_c(round_results, "/", x_pathogen, "_", x_location, "_plot_MCMC_pairs.png"), p_pairs, width = 16, height = 16)
   
+  mcmc_pairs(draws |> mutate(chain = .chain), pars = c("weekend_effect_Rt", "obs_offset_weekly[1]", "obs_offset_weekly[4]"), off_diag_args = list(size = 0.3, alpha = 0.5))
   
   school_holidays <- get_school_holidays() |> 
     filter(location == x_location)
