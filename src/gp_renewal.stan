@@ -69,8 +69,8 @@ parameters {
   vector[N_school_holiday_types] school_holiday_Rt_effect_raw;
   vector[N_school_holiday_types] school_holiday_asc_effect_raw;
   
-  vector[N_public_holiday_types - 1] public_holiday_Rt_effect_raw;
-  vector[N_public_holiday_types - 1] public_holiday_asc_effect_raw;
+  vector[N_public_holiday_types] public_holiday_Rt_effect_raw;
+  vector[N_public_holiday_types] public_holiday_asc_effect_raw;
   
   real<lower=0, upper=21> delay_mean;
   real<lower=0> delay_sd;
@@ -91,8 +91,8 @@ transformed parameters {
   vector[N_school_holiday_types + 1] school_holiday_Rt_effect = rep_vector(0.0, N_school_holiday_types + 1);
   school_holiday_Rt_effect[2:(N_school_holiday_types + 1)] = school_holiday_Rt_effect_raw;
   
-  vector[N_public_holiday_types] public_holiday_Rt_effect = rep_vector(0.0, N_public_holiday_types);
-  public_holiday_Rt_effect[2:N_public_holiday_types] = public_holiday_Rt_effect_raw;
+  vector[N_public_holiday_types + 1] public_holiday_Rt_effect = rep_vector(0.0, N_public_holiday_types + 1);
+  public_holiday_Rt_effect[2:(N_public_holiday_types + 1)] = public_holiday_Rt_effect_raw;
   
   
   vector[N] log_R = f_annual + 
@@ -134,8 +134,8 @@ transformed parameters {
   vector[N_school_holiday_types + 1] school_holiday_asc_effect = rep_vector(0.0, N_school_holiday_types + 1);
   school_holiday_asc_effect[2:(N_school_holiday_types + 1)] = school_holiday_asc_effect_raw;
   
-  vector[N_public_holiday_types] public_holiday_asc_effect = rep_vector(0.0, N_public_holiday_types);
-  public_holiday_asc_effect[2:N_public_holiday_types] = public_holiday_asc_effect_raw;
+  vector[N_public_holiday_types + 1] public_holiday_asc_effect = rep_vector(0.0, N_public_holiday_types + 1);
+  public_holiday_asc_effect[2:(N_public_holiday_types + 1)] = public_holiday_asc_effect_raw;
   
   vector[N] latent_cases = exp(
     log(inf_delayed) + 
@@ -143,7 +143,7 @@ transformed parameters {
     public_holiday_asc_effect[public_holiday_type]
   );
   
-  vector[N] latent_cases_weekly = latent_cases * exp(obs_offset_weekly[day_of_week]);
+  vector[N] latent_cases_weekly = exp(obs_offset_weekly[day_of_week]) .* latent_cases;
 }
 
 model {

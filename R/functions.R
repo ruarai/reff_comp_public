@@ -128,21 +128,22 @@ find_inv_gamma_params <- function(l, u, tail_prob = 0.01) {
 make_intervals <- function(
     tbl,
     vars,
-    grouping_var = rlang::sym(".draw"),
+    sample_var = rlang::sym(".draw"),
     date_var = rlang::sym("date"),
+    group_vars = "",
     probs = c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9),
     na.rm = FALSE
 ) {
   tbl |> 
     ungroup() |> 
-    select(!!date_var, !!grouping_var, all_of(vars)) |> 
+    select(!!date_var, !!sample_var, all_of(vars), any_of(group_vars)) |> 
     pivot_longer(
-      cols = c(-!!grouping_var, -!!date_var), 
+      cols = c(-!!sample_var, -!!date_var, -any_of(group_vars)), 
       names_to = "variable", 
       values_to = "value"
     ) |> 
     pivot_wider(
-      names_from = !!grouping_var, 
+      names_from = !!sample_var, 
       names_prefix = "sample_", 
       values_from = value
     ) |> 
@@ -282,7 +283,7 @@ write_forecast_file <- function(round_id, x_pathogen, x_location, origin_date) {
       value
     )
   
-  output_file <- fs::path("forecast_outputs_raw", str_c(x_location, "-", round_id, "-uom-gp-reff.parquet"))
+  output_file <- fs::path("forecast_outputs_raw", str_c(round_id, "-", x_location, "-", x_pathogen, "-uom-gp-reff.parquet"))
   
   arrow::write_parquet(forecast_data, output_file)
 }
@@ -327,7 +328,7 @@ create_stan_data <- function(
   gi <- get_gi(x_pathogen)
   n_days_data <- nrow(training_counts) - n_days_ahead
   
-  N_public_holiday_types <- length(unique(training_counts$public_holiday_type))
+  N_public_holiday_types <- max(training_counts$public_holiday_type) - 1
   
   data_list <- list(
     x = training_counts$x,
