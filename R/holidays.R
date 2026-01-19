@@ -1,28 +1,34 @@
 
 
+# List of school holiday across all locations
+# Includes every day from the day after the end of school
+# through to the day before the start of school
 get_school_holidays <- function() {
-  # TODO verify dates here
   tribble(
     ~location, ~start_date,  ~end_date, ~holiday_name,
     
-    "NSW", "2022-12-21", "2023-01-29", "Summer 2022/23",
-    "NSW", "2023-04-07", "2023-04-23", "Autumn 2023",
-    "NSW", "2023-07-01", "2023-07-16", "Winter 2023",
-    "NSW", "2023-09-23", "2023-10-08", "Spring 2023",
-    "NSW", "2023-12-20", "2024-01-29", "Summer 2023/24",
-    "NSW", "2024-04-13", "2024-04-28", "Autumn 2024",
-    "NSW", "2024-07-06", "2024-07-21", "Winter 2024",
-    "NSW", "2024-09-28", "2024-10-13", "Spring 2024",
-    "NSW", "2024-12-21", "2025-02-05", "Summer 2024/25", 
-    "NSW", "2025-04-12", "2025-04-29", "Autumn 2025",    
-    "NSW", "2025-07-05", "2025-07-21", "Winter 2025",    
-    "NSW", "2025-09-27", "2025-10-13", "Spring 2025",    
+    # Verified 2026-01-19
+    # https://education.nsw.gov.au/schooling/calendars/future-and-past-nsw-term-and-vacation-dates
+    "NSW", "2022-12-21", "2023-01-29", "Summer 2022/23", 
+    "NSW", "2023-04-07", "2023-04-23", "Autumn 2023", 
+    "NSW", "2023-07-01", "2023-07-16", "Winter 2023", 
+    "NSW", "2023-09-23", "2023-10-08", "Spring 2023", 
+    "NSW", "2023-12-18", "2024-01-31", "Summer 2023/24", 
+    "NSW", "2024-04-13", "2024-04-29", "Autumn 2024", 
+    "NSW", "2024-07-06", "2024-07-22", "Winter 2024", 
+    "NSW", "2024-09-28", "2024-10-13", "Spring 2024", 
+    "NSW", "2024-12-18", "2025-02-05", "Summer 2024/25", 
+    "NSW", "2025-04-12", "2025-04-29", "Autumn 2025",  
+    "NSW", "2025-07-05", "2025-07-21", "Winter 2025", 
+    "NSW", "2025-09-27", "2025-10-13", "Spring 2025", 
     "NSW", "2025-12-20", "2026-02-01", "Summer 2025/26", 
-    "NSW", "2026-04-03", "2026-04-21", "Autumn 2026",    
+    "NSW", "2026-04-03", "2026-04-21", "Autumn 2026",
     "NSW", "2026-07-04", "2026-07-20", "Winter 2026",    
     "NSW", "2026-09-26", "2026-10-12", "Spring 2026",    
     "NSW", "2026-12-18", "2027-01-28", "Summer 2026/27", 
     
+    # Verified 2026-01-19
+    # https://www.vic.gov.au/school-term-dates-and-holidays-victoria
     "VIC", "2022-12-21", "2023-01-29", "Summer 2022/23",
     "VIC", "2023-04-07", "2023-04-23", "Autumn 2023",
     "VIC", "2023-06-24", "2023-07-09", "Winter 2023",
@@ -35,12 +41,14 @@ get_school_holidays <- function() {
     "VIC", "2025-04-05", "2025-04-21", "Autumn 2025",
     "VIC", "2025-07-05", "2025-07-20", "Winter 2025",
     "VIC", "2025-09-20", "2025-10-05", "Spring 2025",
-    "VIC", "2025-12-20", "2026-01-27", "Summer 2025/26",
+    "VIC", "2025-12-20", "2026-01-29", "Summer 2025/26",
     "VIC", "2026-04-03", "2026-04-19", "Autumn 2026",
     "VIC", "2026-06-27", "2026-07-12", "Winter 2026",
     "VIC", "2026-09-19", "2026-10-04", "Spring 2026",
-    "VIC", "2026-12-19", "2027-01-27", "Summer 2026/27",
+    "VIC", "2026-12-19", "2027-01-29", "Summer 2026/27",
     
+    # Verified 2026-01-19
+    # https://education.qld.gov.au/about-us/calendar/term-dates
     "QLD", "2022-12-10", "2023-01-22", "Summer 2022/23",
     "QLD", "2023-04-01", "2023-04-16", "Autumn 2023",
     "QLD", "2023-06-24", "2023-07-09", "Winter 2023",
@@ -59,6 +67,8 @@ get_school_holidays <- function() {
     "QLD", "2026-09-19", "2026-10-05", "Spring 2026",
     "QLD", "2026-12-12", "2027-01-26", "Summer 2026/27",
     
+    # Verified 2026-01-19
+    # https://www.education.sa.gov.au/students/term-dates-south-australian-state-schools#previous-term-dates
     "SA",  "2022-12-17", "2023-01-29", "Summer 2022/23",
     "SA",  "2023-04-15", "2023-04-30", "Autumn 2023",
     "SA",  "2023-07-08", "2023-07-23", "Winter 2023",
@@ -75,8 +85,11 @@ get_school_holidays <- function() {
     "SA",  "2026-04-11", "2026-04-26", "Autumn 2026",
     "SA",  "2026-07-04", "2026-07-19", "Winter 2026",
     "SA",  "2026-09-26", "2026-10-11", "Spring 2026",
-    "SA",  "2026-12-12", "2027-01-31", "Summer 2026/27", 
+    "SA",  "2026-12-12", "2027-01-27", "Summer 2026/27", 
     
+    # Verified 2026-01-19
+    # https://www.education.wa.edu.au/future-term-dates
+    # https://www.education.wa.edu.au/past-term-dates
     "WA",  "2022-12-16", "2023-01-31", "Summer 2022/23",
     "WA",  "2023-04-07", "2023-04-23", "Autumn 2023",
     "WA",  "2023-07-01", "2023-07-16", "Winter 2023",
@@ -95,47 +108,56 @@ get_school_holidays <- function() {
     "WA",  "2026-09-26", "2026-10-11", "Spring 2026",
     "WA",  "2026-12-18", "2027-01-31", "Summer 2026/27",
     
+    # Verified 2026-01-19
+    # https://www.decyp.tas.gov.au/learning/term-dates/
+    # https://www.goodschools.com.au/start-here/at-school-and-beyond/2023-and-2024-school-term-dates/school-term-dates-tasmania
     "TAS", "2022-12-22", "2023-02-07", "Summer 2022/23",
     "TAS", "2023-04-06", "2023-04-25", "Autumn 2023",
     "TAS", "2023-07-08", "2023-07-24", "Winter 2023",
     "TAS", "2023-09-30", "2023-10-15", "Spring 2023",
-    "TAS", "2023-12-22", "2024-02-06", "Summer 2023/24",
-    "TAS", "2024-04-12", "2024-04-28", "Autumn 2024",
-    "TAS", "2024-07-06", "2024-07-22", "Winter 2024",
+    "TAS", "2023-12-22", "2024-02-07", "Summer 2023/24",
+    "TAS", "2024-04-13", "2024-04-28", "Autumn 2024",
+    "TAS", "2024-07-06", "2024-07-21", "Winter 2024",
     "TAS", "2024-09-28", "2024-10-13", "Spring 2024",
-    "TAS", "2024-12-20", "2025-02-04", "Summer 2024/25",
+    "TAS", "2024-12-20", "2025-02-05", "Summer 2024/25",
     "TAS", "2025-04-12", "2025-04-27", "Autumn 2025",
-    "TAS", "2025-07-05", "2025-07-21", "Winter 2025",
+    "TAS", "2025-07-05", "2025-07-20", "Winter 2025",
     "TAS", "2025-09-27", "2025-10-12", "Spring 2025",
-    "TAS", "2025-12-19", "2026-02-03", "Summer 2025/26",
+    "TAS", "2025-12-19", "2026-02-04", "Summer 2025/26",
     "TAS", "2026-04-18", "2026-05-03", "Autumn 2026",
     "TAS", "2026-07-11", "2026-07-26", "Winter 2026",
     "TAS", "2026-10-03", "2026-10-18", "Spring 2026",
     "TAS", "2026-12-19", "2027-02-02", "Summer 2026/27",
     
+    # Verified 2026-01-19
+    # https://nt.gov.au/learning/primary-and-secondary-students/school-term-dates-in-nt
+    # https://www.goodschools.com.au/start-here/at-school-and-beyond/2023-and-2024-school-term-dates/school-term-dates-northern-territory
     "NT",  "2022-12-17", "2023-01-30", "Summer 2022/23",
     "NT",  "2023-04-07", "2023-04-16", "Autumn 2023",
     "NT",  "2023-06-24", "2023-07-17", "Winter 2023",
-    "NT",  "2023-09-23", "2023-10-08", "Spring 2023",
+    "NT",  "2023-09-24", "2023-10-09", "Spring 2023",
     "NT",  "2023-12-16", "2024-01-29", "Summer 2023/24",
     "NT",  "2024-04-06", "2024-04-14", "Autumn 2024",
-    "NT",  "2024-06-22", "2024-07-15", "Winter 2024",
+    "NT",  "2024-06-22", "2024-07-16", "Winter 2024",
     "NT",  "2024-09-21", "2024-10-06", "Spring 2024",
-    "NT",  "2024-12-14", "2025-01-28", "Summer 2024/25",
+    "NT",  "2024-12-13", "2025-01-28", "Summer 2024/25",
     "NT",  "2025-04-05", "2025-04-13", "Autumn 2025",
     "NT",  "2025-06-21", "2025-07-14", "Winter 2025",
     "NT",  "2025-09-20", "2025-10-06", "Spring 2025",
-    "NT",  "2025-12-12", "2026-01-27", "Summer 2025/26",
-    "NT",  "2026-04-03", "2026-04-12", "Autumn 2026",
+    "NT",  "2025-12-12", "2026-01-28", "Summer 2025/26",
+    "NT",  "2026-04-03", "2026-04-13", "Autumn 2026",
     "NT",  "2026-06-20", "2026-07-13", "Winter 2026",
-    "NT",  "2026-09-19", "2026-10-04", "Spring 2026",
+    "NT",  "2026-09-19", "2026-10-05", "Spring 2026",
     "NT",  "2026-12-11", "2027-01-26", "Summer 2026/27",
     
-    "ACT", "2022-12-17", "2023-01-27", "Summer 2022/23",
+    # Verified 2026-01-19
+    # https://www.kidsfirm.com.au/Schools/SchoolTerms-452/
+    # https://www.act.gov.au/living-in-the-act/public-holidays-school-terms-and-daylight-saving
+    "ACT", "2022-12-17", "2023-01-31", "Summer 2022/23",
     "ACT", "2023-04-07", "2023-04-23", "Autumn 2023",
     "ACT", "2023-07-01", "2023-07-16", "Winter 2023",
     "ACT", "2023-09-23", "2023-10-08", "Spring 2023",
-    "ACT", "2023-12-16", "2024-01-29", "Summer 2023/24",
+    "ACT", "2023-12-16", "2024-01-31", "Summer 2023/24",
     "ACT", "2024-04-13", "2024-04-28", "Autumn 2024",
     "ACT", "2024-07-06", "2024-07-21", "Winter 2024",
     "ACT", "2024-09-28", "2024-10-13", "Spring 2024",
@@ -175,7 +197,7 @@ get_public_holidays <- function() {
   aus_holidays <- tribble(
     ~date,       ~holiday_name,
     "2023-01-01", "New Year's Day", 
-    "2023-01-02", "New Year's Day (Observed)",
+    # "2023-01-02", "New Year's Day (Observed)", # Ignoring as it falls too close to the burn-in period
     "2023-01-26", "Australia Day",
     "2023-04-25", "ANZAC Day",
     "2023-12-25", "Christmas Day",
@@ -205,17 +227,18 @@ get_public_holidays <- function() {
     bind_rows(
       bind_rows(
         tibble(date = ymd("2026-04-25"), holiday_name = "ANZAC Day", location = locations_aus),
-        tibble(date = ymd("2026-04-27"), holiday_name = "ANZAC Day (Observed)", location = c("WA", "ACT", "QLD", "NT"))
+        tibble(date = ymd("2026-04-27"), holiday_name = "ANZAC Day (Observed)", location = c("WA", "ACT", "NT"))
       )
     )
   
-  
+  # TODO matariki?
   nz_holidays <- tribble(
     ~date,       ~holiday_name,
     "2023-01-01", "New Year's Day",
     "2023-01-02", "Day after New Year's Day",
     "2023-02-06", "Waitangi Day",
     "2023-04-25", "ANZAC Day",
+    "2023-07-14", "Matariki",
     "2023-12-25", "Christmas Day",
     "2023-12-26", "Boxing Day",
     
@@ -223,6 +246,7 @@ get_public_holidays <- function() {
     "2024-01-02", "Day after New Year's Day",
     "2024-02-06", "Waitangi Day",
     "2024-04-25", "ANZAC Day",
+    "2024-06-28", "Matariki",
     "2024-12-25", "Christmas Day",
     "2024-12-26", "Boxing Day",
     
@@ -230,6 +254,7 @@ get_public_holidays <- function() {
     "2025-01-02", "Day after New Year's Day",
     "2025-02-06", "Waitangi Day",
     "2025-04-25", "ANZAC Day",
+    "2025-06-20", "Matariki",
     "2025-12-25", "Christmas Day",
     "2025-12-26", "Boxing Day",
     
@@ -238,6 +263,7 @@ get_public_holidays <- function() {
     "2026-02-06", "Waitangi Day",
     "2026-04-25", "ANZAC Day",   
     "2026-04-27", "ANZAC Day (Observed)",   
+    "2026-07-10", "Matariki",
     "2026-12-25", "Christmas Day",
     "2026-12-26", "Boxing Day",
     "2026-12-28", "Boxing Day (Observed)"   
@@ -286,6 +312,7 @@ get_public_holidays <- function() {
     "VIC", "2025-09-26", "Friday before the AFL Grand Final",
     "VIC", "2025-11-04", "Melbourne Cup",
     
+    # Note Friday before the AFL Grand Final may be subject to change
     "VIC", "2026-03-09", "Labour Day",
     "VIC", "2026-06-08", "King's Birthday",
     "VIC", "2026-09-25", "Friday before the AFL Grand Final",
@@ -419,6 +446,7 @@ get_public_holidays <- function() {
     "WA", "2025-06-02", "Western Australia Day",
     "WA", "2025-09-29", "King's Birthday",
     
+    # Note King's Birthday may be subject to change
     "WA", "2026-03-02", "Labour Day",
     "WA", "2026-06-01", "Western Australia Day",
     "WA", "2026-09-28", "King's Birthday"
