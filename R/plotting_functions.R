@@ -59,7 +59,7 @@ plot_reff_components <- function(trajectory_data, origin_date, school_holidays, 
 
 plot_latent_inf <- function(trajectory_data, training_counts, origin_date, school_holidays, public_holidays) {
   plot_quants <- make_intervals(trajectory_data, "inf")
-  plot_quants_delayed <- make_intervals(trajectory_data, "inf_delayed")
+  plot_quants_delayed <- make_intervals(trajectory_data, "latent_cases")
   
   
   alpha_vals <- scales::rescale(rev(1/1.7^(1:8)), to = c(0.05, 0.99))
@@ -327,10 +327,9 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
     pull(date) |> 
     max()
   
-  eval_counts <- read_csv("data/combined-count-2026-01-15.csv") |> 
+  eval_counts <- read_csv("data/combined-count-smoothed-2026-01-15.csv") |> 
     group_by(location, pathogen) |> 
-    mutate(cases_trend_and_remainder = zoo::rollmean(cases, k = 7, fill = NA),
-           outlier = FALSE) |> 
+    mutate(outlier = FALSE, cases = NA) |> 
     filter(location == x_location, pathogen == x_pathogen) |> 
     make_training_counts(x_location, x_pathogen) |> 
     filter(date > origin_date)
@@ -341,7 +340,7 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
 
   pars <- c(
     "scaling_annual", "scaling_weekly_asc", "scaling_noise", "ls_noise", "ls_annual", "phi",
-    "delay_mean", "delay_sd"
+    "delay_mean", "delay_sd", "rho_asc"
   )
 
   p_hist <- mcmc_hist(draws |> mutate(chain = .chain), pars = pars) +
@@ -367,7 +366,8 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
   
   trajectory_data <- fit |> 
     spread_draws(log_R[ix_t], inf[ix_t], inf_delayed[ix_t],
-                 cases[ix_t], f_annual[ix_t], f_noise[ix_t]) |> 
+                 cases[ix_t], f_annual[ix_t], f_noise[ix_t],
+                 latent_cases[ix_t]) |> 
     mutate(date = training_counts$date[ix_t])
   
   p_reff <- plot_reff_components(trajectory_data, origin_date, school_holidays, public_holidays) +
