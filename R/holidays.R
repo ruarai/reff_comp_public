@@ -231,7 +231,6 @@ get_public_holidays <- function() {
       )
     )
   
-  # TODO matariki?
   nz_holidays <- tribble(
     ~date,       ~holiday_name,
     "2023-01-01", "New Year's Day",
@@ -261,7 +260,7 @@ get_public_holidays <- function() {
     "2026-01-01", "New Year's Day",
     "2026-01-02", "Day after New Year's Day",
     "2026-02-06", "Waitangi Day",
-    "2026-04-25", "ANZAC Day",   
+    "2026-04-25", "ANZAC Day",
     "2026-04-27", "ANZAC Day (Observed)",   
     "2026-07-10", "Matariki",
     "2026-12-25", "Christmas Day",

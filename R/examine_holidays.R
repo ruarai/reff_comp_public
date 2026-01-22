@@ -31,7 +31,8 @@ public_holidays <- get_public_holidays() |>
 
 trajectory_data <- fit |> 
   spread_draws(log_R[ix_t], inf[ix_t], inf_delayed[ix_t],
-               cases[ix_t], f_annual[ix_t], f_noise[ix_t]) |> 
+               cases[ix_t], f_annual[ix_t], f_noise[ix_t],
+               latent_cases[ix_t]) |> 
   mutate(date = training_counts$date[ix_t])
 
 holiday_period <- c(ymd("2024-12-01"), ymd("2025-02-07"))
