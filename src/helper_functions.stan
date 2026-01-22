@@ -15,3 +15,22 @@ vector construct_delay_dist(real delay_mean, real delay_sd, int N) {
   
   return delay_pdf;
 }
+
+
+matrix qr_weekly() {
+  matrix[7, 7] A = diag_matrix(rep_vector(1.0, 7));
+  
+  A[, 1] = rep_vector(1.0, 7);
+  
+  matrix[7, 7] Q_full = qr_Q(A);
+  
+  return Q_full[, 2:7];
+}
+
+vector get_effect(matrix effect_raw, int N, int ix_loc) {
+  vector[N + 1] effect;
+  effect[1] = 0.0;
+  effect[2:(N + 1)] = col(effect_raw, ix_loc);
+  
+  return effect;
+}
