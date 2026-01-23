@@ -98,6 +98,8 @@ plot_latent_inf <- function(trajectory_data, training_counts, origin_date, schoo
     geom_line(aes(x = date, y = y_smooth),
               training_counts) +
     
+    geom_vline(xintercept = origin_date, linetype = "44") +
+    
     coord_cartesian(ylim = c(0, max(training_counts$y_smooth, na.rm = TRUE) * 1.5)) +
     
     xlab("Notification date") + ylab("Count") +
@@ -329,7 +331,7 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
   
   eval_counts <- read_csv("data/combined-count-smoothed-2026-01-15.csv") |> 
     group_by(location, pathogen) |> 
-    mutate(outlier = FALSE, cases = NA) |> 
+    mutate(outlier = FALSE, cases = cases_trend_and_remainder * exp(cases_season_week)) |> 
     filter(location == x_location, pathogen == x_pathogen) |> 
     make_training_counts(x_location, x_pathogen) |> 
     filter(date > origin_date)
@@ -340,7 +342,7 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
 
   pars <- c(
     "scaling_annual", "scaling_weekly_asc", "scaling_noise", "ls_noise", "ls_annual", "phi",
-    "delay_mean", "delay_sd", "rho_asc"
+    "delay_mean", "delay_sd", "typical_total_inf_log", "log_R_0"
   )
 
   p_hist <- mcmc_hist(draws |> mutate(chain = .chain), pars = pars) +
@@ -349,9 +351,9 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
   p_trace <- mcmc_trace(draws |> mutate(chain = .chain), pars = pars) +
     theme_bw()
 
-  p_hist / p_trace
+  p_hist | p_trace
 
-  ggsave(str_c(round_results, "/", x_pathogen, "_", x_location, "_plot_MCMC.png"), width = 10, height = 10)
+  ggsave(str_c(round_results, "/", x_pathogen, "_", x_location, "_plot_MCMC.png"), width = 14, height = 10)
   
 
   p_pairs <- mcmc_pairs(draws |> mutate(chain = .chain), pars = pars, off_diag_args = list(size = 0.3, alpha = 0.5))
@@ -367,8 +369,9 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
   trajectory_data <- fit |> 
     spread_draws(log_R[ix_t], inf[ix_t], inf_delayed[ix_t],
                  cases[ix_t], f_annual[ix_t], f_noise[ix_t],
-                 latent_cases[ix_t]) |> 
-    mutate(date = training_counts$date[ix_t])
+                 latent_cases_log[ix_t]) |> 
+    mutate(date = training_counts$date[ix_t],
+           latent_cases = exp(latent_cases_log))
   
   p_reff <- plot_reff_components(trajectory_data, origin_date, school_holidays, public_holidays) +
     xlim(c(ymd(min(trajectory_data$date)), ymd(origin_date + days(365))))

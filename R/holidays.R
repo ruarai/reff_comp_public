@@ -177,8 +177,8 @@ get_school_holidays <- function() {
       school_holiday_type = case_when(
         str_detect(holiday_name, "Summer") ~ 1,
         str_detect(holiday_name, "Autumn") ~ 2,
-        str_detect(holiday_name, "Winter") ~ 3,
-        str_detect(holiday_name, "Spring") ~ 4,
+        str_detect(holiday_name, "Winter") ~ 2,
+        str_detect(holiday_name, "Spring") ~ 2,
       )
     )
 }

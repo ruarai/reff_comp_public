@@ -1,4 +1,4 @@
-
+1
 
 source("R/holidays.R")
 source("R/plotting_functions.R")
@@ -64,22 +64,27 @@ make_training_counts <- function(
   }
   
   
-  training_counts <- training_counts |>
+  training_counts_full <- training_counts |>
     arrange(date) |> 
-    mutate(x = as.numeric(date - min(date)),
-           day_of_week = wday(date, week_start = 7),
-           is_weekend = if_else(day_of_week == 1 | day_of_week == 7, 1, 0)) |> 
+    mutate(
+      x = as.numeric(date - min(date)),
+      day_of_week = wday(date, week_start = 7),
+      is_weekend = if_else(day_of_week == 1 | day_of_week == 7, 1, 0),
+      year = as.integer(
+        interval(min(floor_date(date, "year")), floor_date(date, "year")) / years(1)
+      ) + 1
+    ) |> 
     left_join(school_holidays_location, by = join_by(date, location)) |> 
     left_join(public_holidays_location, by = join_by(date, location)) |> 
     mutate(school_holiday_type = replace_na(school_holiday_type, 0) + 1,
            public_holiday_type = replace_na(public_holiday_type, 0) + 1)
   
   
-  n_diff <- diff(training_counts$x) |> table() |> unique() |> length()
+  n_diff <- diff(training_counts_full$x) |> table() |> unique() |> length()
   
   stopifnot(n_diff == 1)
   
-  return(training_counts)
+  return(training_counts_full)
 }
 
 
@@ -272,7 +277,7 @@ write_forecast_file <- function(round_id, x_pathogen, x_location, origin_date) {
       value = as.integer(value)
     ) |> 
     
-    filter(horizon >= -7, horizon <= 28) |> 
+    filter(horizon >= -7, horizon <= 7 * 12) |> 
     
     select(
       round_id, origin_date,
@@ -301,23 +306,32 @@ process_counts <- function(
   all_counts <- combined_counts |> 
     left_join(combined_counts_smoothed)
   
-  combined_counts_outliers <- all_counts |> 
+  reduced_counts <- all_counts |> 
     left_join(training_dates) |> 
     filter(notification_date >= cutoff_date) |> 
     filter(location == x_location, pathogen == x_pathogen) |> 
     mutate(outlier = abs(log(cases_trend_and_remainder + 0.5) - log(cases_trend + 0.5)) > 1.38 & cases_trend > 20) |> 
     
     filter(
+      # Drop the last day of data (often issues)
+      # If this improves, remove this line
       notification_date < max(notification_date)
     )
   
-  print(str_c("Dropping ", sum(combined_counts_outliers$outlier), " outliers"))
-  
-  training_counts <- combined_counts_outliers |> 
-    filter(!outlier) |> 
+  training_counts <- reduced_counts |> 
     make_training_counts(x_location, x_pathogen, n_days_ahead)
   
   return(training_counts)
+}
+
+get_season_sigma <- function(x_pathogen) {
+  if(x_pathogen == "RSV") {
+    return(0.05)
+  } else if(x_pathogen == "flu") {
+    return(0.15)
+  } else if(x_pathogen == "SARSCOV2") {
+    return(0.25)
+  }
 }
 
 create_stan_data <- function(
@@ -329,6 +343,12 @@ create_stan_data <- function(
   n_days_data <- nrow(training_counts) - n_days_ahead
   
   N_public_holiday_types <- max(training_counts$public_holiday_type) - 1
+  N_school_holiday_types <- max(training_counts$school_holiday_type) - 1
+  N_years <- max(training_counts$year)
+  
+  year_coverage <- training_counts |> count(year) |> mutate(year_covered = pmin(365, n) / 365) |> arrange(year) |> pull(year_covered)
+  
+  year_ranges <- training_counts |> group_by(year) |> summarise(ix_year_start = min(x) + 1, ix_year_end = max(x) + 1)
   
   data_list <- list(
     x = training_counts$x,
@@ -341,10 +361,18 @@ create_stan_data <- function(
     y = training_counts$y[1:n_days_data],
     N = nrow(training_counts), N_data = n_days_data,
     N_public_holiday_types = N_public_holiday_types,
+    N_school_holiday_types = N_school_holiday_types,
+    N_years = N_years,
+    
+    year_coverage = year_coverage,
+    ix_year_start = year_ranges$ix_year_start,
+    ix_year_end = year_ranges$ix_year_end,
     
     M_annual = 40,
     M_noise = calculate_M_matern(c = 1.25, length_scale = 10.0, x = training_counts$x),
     c_factor = 1.25,
+    
+    season_sigma = get_season_sigma(x_pathogen),
     
     gi_reversed = rev(gi), N_gi = length(gi)
   )

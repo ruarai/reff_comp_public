@@ -107,3 +107,21 @@ plot_data_delay |>
 
 
 
+
+fit |> 
+  spread_draws(delay_mean, delay_sd)  |> 
+  mutate(sigma = sqrt(log(1 + (delay_sd ^ 2) / (delay_mean ^ 2))),
+         mu = log(delay_mean) - 0.5 * sigma ^ 2) |> 
+  
+  expand_grid(t = seq(1, 14, by = 1)) |> 
+  mutate(p = plnorm(t, mu, sigma) - plnorm(t - 1, mu, sigma)) |> 
+  mutate(location = x_location, pathogen = x_pathogen) |> 
+  filter(.draw %% 200 == 0) |> 
+  ggplot() +
+  geom_step(aes(x = t - 1, y = p, group = .draw),
+            alpha = 0.1) +
+  
+  facet_grid(rows = vars(location), cols = vars(pathogen)) +
+  
+  theme_bw()
+
