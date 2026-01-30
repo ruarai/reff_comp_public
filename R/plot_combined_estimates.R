@@ -1,5 +1,6 @@
 
 
+library(tidyverse)
 library(tidybayes)
 
 x_location <- "VIC"
@@ -32,15 +33,13 @@ plot_data <- jobs |>
 
 plot_data |> 
   bind_rows() |> 
-  filter(variable == "school_holiday_Rt_effect") |> 
+  filter(variable == "school_holiday_asc_effect") |> 
   mutate(holiday_name = case_when(
     ix_holiday == 2 ~ "Summer holidays",
-    ix_holiday == 3 ~ "Autumn holidays",
-    ix_holiday == 4 ~ "Winter holidays",
-    ix_holiday == 5 ~ "Spring holidays"
+    ix_holiday == 3 ~ "Mid-year holidays"
   )) |> 
   ungroup()  |> 
-  mutate(holiday_name = factor(holiday_name, c("Summer holidays", "Autumn holidays", "Winter holidays", "Spring holidays"))) |> 
+  mutate(holiday_name = factor(holiday_name, c("Summer holidays", "Mid-year holidays"))) |> 
   ggplot() +
   geom_vline(xintercept = 1, linetype = "22",
              alpha = 0.5) +

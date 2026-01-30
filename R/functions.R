@@ -1,4 +1,10 @@
-1
+
+library(tidyverse)
+library(tidybayes)
+library(bayesplot)
+library(patchwork)
+library(arrow)
+
 
 source("R/holidays.R")
 source("R/plotting_functions.R")
@@ -326,11 +332,11 @@ process_counts <- function(
 
 get_season_sigma <- function(x_pathogen) {
   if(x_pathogen == "RSV") {
-    return(0.05)
-  } else if(x_pathogen == "flu") {
     return(0.15)
-  } else if(x_pathogen == "SARSCOV2") {
+  } else if(x_pathogen == "flu") {
     return(0.25)
+  } else if(x_pathogen == "SARSCOV2") {
+    return(0.35)
   }
 }
 
@@ -378,6 +384,19 @@ create_stan_data <- function(
   )
   
   return(data_list)
+}
+
+compress_fit <- function(fit_file, out_file) {
+  draws <- tidy_draws(read_rds(fit_file))
+  
+  target_schema <- schema(lapply(draws_reduced, function(x) {
+    if (is.numeric(x) && !is.integer(x)) float32() else infer_type(Array$create(x))
+  }))
+  
+  draws_reduced |>
+    filter(.draw %% 4 == 0) |>
+    as_arrow_table(schema = target_schema) |>
+    write_parquet(out_file, compression = "zstd")
 }
 
 fit_model <- function(data_list) {

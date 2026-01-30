@@ -197,12 +197,10 @@ plot_holiday_effects <- function(fit, public_holidays) {
     filter(school_holiday_type > 0) |> 
     mutate(holiday_name = case_when(
       school_holiday_type == 1 ~ "Summer holidays",
-      school_holiday_type == 2 ~ "Autumn holidays",
-      school_holiday_type == 3 ~ "Winter holidays",
-      school_holiday_type == 4 ~ "Spring holidays"
+      school_holiday_type == 2 ~ "Between-term holidays"
     )) |> 
     ungroup() |> 
-    mutate(holiday_name = factor(holiday_name, c("Summer holidays", "Autumn holidays", "Winter holidays", "Spring holidays")))
+    mutate(holiday_name = factor(holiday_name, c("Summer holidays", "Between-term holidays")))
   
   
   public_holiday_labels <- public_holidays |> 

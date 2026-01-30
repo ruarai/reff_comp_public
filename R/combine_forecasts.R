@@ -1,7 +1,4 @@
 
-library(tidyverse)
-library(arrow)
-
 source("R/functions.R")
 
 forecasts <- open_dataset("forecast_outputs_raw/")
@@ -12,6 +9,6 @@ for(x_round in rounds) {
   forecasts |> 
     filter(round_id == x_round) |> 
     collect() |> 
-    write_parquet(fs::path("forecast_outputs", str_c(x_round, "-uom-reff-composure.parquet")))
+    write_parquet(fs::path("forecast_outputs", str_c(x_round, "-uom-reff-composure-2.parquet")))
 }
 

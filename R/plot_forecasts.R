@@ -13,7 +13,7 @@ location_pathogens <- forecasts |> distinct(location, pathogen) |> collect()
 
 
 forecast_quants <- forecasts |> 
-  filter(target == "case_incidence_smoothed", horizon > 0) |> 
+  filter(target == "case_incidence_smoothed", horizon > 0, horizon <= 28) |> 
   collect() |> 
   mutate(date = origin_date + horizon) |> 
   make_intervals(c("value"),
@@ -75,7 +75,7 @@ plots <- location_pathogens |>
 
 plots[[1]]
 
-pdf("plots/collected_forecasts_smoothed.pdf", width = 10, height = 6)
+pdf("plots/collected_forecasts_smoothed_2.pdf", width = 10, height = 6)
 
 for(p in plots) {
   plot(p)

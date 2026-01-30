@@ -1,12 +1,7 @@
 
 
-library(tidyverse)
-library(tidybayes)
-library(bayesplot)
-library(patchwork)
 
 source("R/functions.R")
-source("R/plotting_functions.R")
 
 args <- commandArgs(trailingOnly = TRUE)
 
@@ -36,7 +31,9 @@ print(str_c("Performing job ", ix_job, " (", x_location, "-", x_pathogen, ")"))
 
 n_days_ahead <- 365
 
-training_counts <- process_counts(combined_counts, combined_counts_smoothed, x_location, x_pathogen, n_days_ahead)
+training_counts <- process_counts(combined_counts, combined_counts_smoothed, x_location, x_pathogen, n_days_ahead) |> 
+  # Save some extra data in case we need it later
+  mutate(origin_date = origin_date)
 
 data_list <- create_stan_data(training_counts, days_ahead, x_pathogen)
 
@@ -46,7 +43,8 @@ print("Saving fit object and training data")
 
 fs::dir_create(fs::path("results", round_id))
 
-fit$save_object(str_c("results/", round_id, "/", x_pathogen, "_", x_location, ".rds"))
+fit_file <- str_c("results/", round_id, "/", x_pathogen, "_", x_location, ".rds")
+fit$save_object(fit_file)
 arrow::write_parquet(training_counts, str_c("results/", round_id, "/", x_pathogen, "_", x_location, "_training_counts.parquet"))
 
 print("Writing trajectories...")

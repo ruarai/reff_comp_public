@@ -169,13 +169,25 @@ get_school_holidays <- function() {
     "ACT", "2026-04-03", "2026-04-20", "Autumn 2026",
     "ACT", "2026-07-04", "2026-07-20", "Winter 2026",
     "ACT", "2026-09-26", "2026-10-12", "Spring 2026",
-    "ACT", "2026-12-19", "2027-01-31", "Summer 2026/27"
+    "ACT", "2026-12-19", "2027-01-31", "Summer 2026/27",
+    
+    
+    "NZ", "2025-04-12", "2025-04-27", "Autumn 2025",
+    "NZ", "2025-06-28", "2025-07-13", "Winter 2025",
+    "NZ", "2025-09-20", "2025-10-05", "Spring 2025",
+    "NZ", "2025-12-20", "2026-01-27", "Summer 2025/26",
+    "NZ", "2026-04-03", "2026-04-19", "Autumn 2026",
+    "NZ", "2026-07-04", "2026-07-19", "Winter 2026",
+    "NZ", "2026-09-26", "2026-10-11", "Spring 2026",
+    "NZ", "2026-12-19", "2027-01-31", "Summer 2026/27"
   ) |> 
     mutate(
       start_date = ymd(start_date),
       end_date = ymd(end_date),
       school_holiday_type = case_when(
         str_detect(holiday_name, "Summer") ~ 1,
+        
+        # Combine the three mid-year holidays
         str_detect(holiday_name, "Autumn") ~ 2,
         str_detect(holiday_name, "Winter") ~ 2,
         str_detect(holiday_name, "Spring") ~ 2,

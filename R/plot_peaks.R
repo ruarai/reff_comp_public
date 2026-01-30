@@ -1,4 +1,4 @@
-
+`
 library(tidyverse)
 library(tidybayes)
 library(bayesplot)
@@ -35,8 +35,9 @@ plot_peaks <- function(x_location, x_pathogen, round_id, y_upper) {
     filter(location == x_location)
   
   trajectory_data <- fit |> 
-    spread_draws(latent_cases[ix_t], inf_delayed[ix_t]) |> 
-    mutate(date = training_counts$date[ix_t])
+    spread_draws(latent_cases_log[ix_t], inf_delayed[ix_t]) |> 
+    mutate(date = training_counts$date[ix_t],
+           latent_cases = exp(latent_cases_log))
   
   
   
@@ -121,7 +122,7 @@ plot_peaks <- function(x_location, x_pathogen, round_id, y_upper) {
 
 
 make_peaks_gif <- function(x_location, x_pathogen, y_upper) {
-  rounds <- ymd("2025-05-08") + weeks(0:22)
+  rounds <- ymd("2025-05-08") + weeks(0:14)
   
   plots <- map(
     rounds,
@@ -167,6 +168,6 @@ make_peaks_gif("NSW", "RSV", 1000)
 make_peaks_gif("NSW", "SARSCOV2", 1000)
 
 
-plot_peaks("NSW", "RSV", ymd("2025-05-08") + weeks(12), y_upper = 2500)
+plot_peaks("WA", "RSV", ymd("2025-05-08"), y_upper = 500)
 
 
