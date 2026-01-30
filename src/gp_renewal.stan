@@ -80,7 +80,7 @@ parameters {
   real<lower=0, upper=21> delay_mean;
   real<lower=1.0> delay_sd;
   
-  real typical_total_inf_log;
+  // real typical_total_inf_log;
 }
 
 transformed parameters {
@@ -193,8 +193,8 @@ model {
   delay_sd ~ lognormal(1, 0.5);
   
   
-  typical_total_inf_log ~ normal(10, 1);
-  total_inf_seasons ~ lognormal(typical_total_inf_log, season_sigma);
+  // typical_total_inf_log ~ normal(10, 1);
+  // total_inf_seasons ~ lognormal(typical_total_inf_log, season_sigma);
   
   y ~ neg_binomial_2_log(latent_cases_weekly_log[1:N_data], phi);
 }
