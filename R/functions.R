@@ -389,11 +389,11 @@ create_stan_data <- function(
 compress_fit <- function(fit_file, out_file) {
   draws <- tidy_draws(read_rds(fit_file))
   
-  target_schema <- schema(lapply(draws_reduced, function(x) {
+  target_schema <- schema(lapply(draws, function(x) {
     if (is.numeric(x) && !is.integer(x)) float32() else infer_type(Array$create(x))
   }))
   
-  draws_reduced |>
+  draws |>
     filter(.draw %% 4 == 0) |>
     as_arrow_table(schema = target_schema) |>
     write_parquet(out_file, compression = "zstd")

@@ -35,15 +35,15 @@ training_counts <- process_counts(combined_counts, combined_counts_smoothed, x_l
 
 data_list <- create_stan_data(training_counts, days_ahead, x_pathogen)
 
-fit <- fit_model(data_list)
+# fit <- fit_model(data_list)
 
-print("Saving fit object and training data")
-
-fs::dir_create(fs::path("results", round_id))
-
+# print("Saving fit object and training data")
+# 
+# fs::dir_create(fs::path("results", round_id))
+# 
 fit_file <- str_c("results/", round_id, "/", x_pathogen, "_", x_location, ".rds")
-fit$save_object(fit_file)
-arrow::write_parquet(training_counts, str_c("results/", round_id, "/", x_pathogen, "_", x_location, "_training_counts.parquet"))
+# fit$save_object(fit_file)
+# arrow::write_parquet(training_counts, str_c("results/", round_id, "/", x_pathogen, "_", x_location, "_training_counts.parquet"))
 
 print("Saving compressed file...")
 

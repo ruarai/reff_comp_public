@@ -340,7 +340,7 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
 
   pars <- c(
     "scaling_annual", "scaling_weekly_asc", "scaling_noise", "ls_noise", "ls_annual", "phi",
-    "delay_mean", "delay_sd", "typical_total_inf_log", "log_R_0"
+    "delay_mean", "delay_sd", "log_R_0"
   )
 
   p_hist <- mcmc_hist(draws |> mutate(chain = .chain), pars = pars) +
