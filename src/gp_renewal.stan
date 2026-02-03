@@ -103,7 +103,7 @@ transformed parameters {
   
   
   vector[N] log_R = log_R_0 +
-    f_annual + 
+    //f_annual + 
     f_noise + 
     school_holiday_Rt_effect[school_holiday_type] +
     public_holiday_Rt_effect[public_holiday_type];

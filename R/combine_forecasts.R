@@ -3,7 +3,7 @@ source("R/functions.R")
 
 forecasts <- open_dataset("forecast_outputs_raw/")
 
-model_name <- "baseline"
+model_name <- "no_school_holidays"
 
 fs::dir_create(fs::path("forecast_outputs", model_name))
 
@@ -14,6 +14,6 @@ for(x_round in rounds) {
   forecasts |> 
     filter(round_id == x_round) |> 
     collect() |> 
-    write_parquet(fs::path("forecast_outputs", "baseline", str_c(x_round, "-uom-reff-composure-", model_name,".parquet")))
+    write_parquet(fs::path("forecast_outputs", model_name, str_c(x_round, "-uom-reff-composure-", model_name,".parquet")))
 }
 
