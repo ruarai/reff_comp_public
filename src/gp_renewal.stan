@@ -1,10 +1,8 @@
 
-functions {
-  // Using GP functions from EpiNow2
-  #include gp_functions.stan
-  
-  #include helper_functions.stan
-}
+// Using GP functions from EpiNow2
+#include gp_functions.stan
+
+#include helper_functions.stan
 
 data {
   int<lower=1> N;

@@ -132,23 +132,7 @@ make_peaks_gif <- function(x_location, x_pathogen, y_upper) {
   )
   
   
-  require(gifski)
   
-  plots_to_gif <- function(plot_list, out_file, width, height) {
-    plot_files <- fs::path(tempdir(), str_c("tmp_", 1:length(plot_list), ".png"))
-    
-    for(i in 1:length(plot_list)) {
-      ggsave(
-        plot_files[[i]],
-        plot_list[[i]],
-        width = width, height = height
-      )
-    }
-    
-    gifski(plot_files, gif_file = out_file, width = width * 120, height = height * 120)
-    
-    file.remove(plot_files)
-  }
   
   out_file <- fs::path("plots", "peak_animations", str_c(x_location, "_", x_pathogen, ".gif"))
   

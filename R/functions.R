@@ -399,6 +399,24 @@ compress_fit <- function(fit_file, out_file) {
     write_parquet(out_file, compression = "zstd")
 }
 
+
+plots_to_gif <- function(plot_list, out_file, width, height, delay = 1) {
+  require(gifski)
+  plot_files <- fs::path(tempdir(), str_c("tmp_", 1:length(plot_list), ".png"))
+  
+  for(i in 1:length(plot_list)) {
+    ggsave(
+      plot_files[[i]],
+      plot_list[[i]],
+      width = width, height = height
+    )
+  }
+  
+  gifski(plot_files, gif_file = out_file, width = width * 120, height = height * 120, delay = delay)
+  
+  file.remove(plot_files)
+}
+
 fit_model <- function(data_list) {
   require(cmdstanr)
   model <- cmdstan_model("src/gp_renewal.stan")
