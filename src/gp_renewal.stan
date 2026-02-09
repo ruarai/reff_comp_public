@@ -187,7 +187,7 @@ model {
   
   beta_offset_weekly ~ std_normal();
   
-  log_I_0 ~ lognormal(3.2, 1);
+  log_I_0 ~ normal(3.2, 1);
   r_0 ~ normal(0, 0.2);
   
   delay_mean ~ lognormal(1, 1);
