@@ -190,7 +190,7 @@ model {
   log_I_0 ~ normal(3.2, 1);
   r_0 ~ normal(0, 0.2);
   
-  delay_mean ~ lognormal(1, 1);
+  delay_mean ~ lognormal(2.0, 0.5);
   delay_sd ~ lognormal(1, 0.5);
   
   

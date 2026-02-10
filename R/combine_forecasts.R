@@ -3,7 +3,7 @@ source("R/functions.R")
 
 forecasts <- open_dataset("forecast_outputs_raw/")
 
-model_name <- "no_annual"
+model_name <- "baseline"
 
 fs::dir_create(fs::path("forecast_outputs", model_name))
 

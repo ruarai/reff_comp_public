@@ -33,7 +33,7 @@ plot_data <- jobs |>
 
 plot_data |> 
   bind_rows() |> 
-  filter(variable == "school_holiday_asc_effect") |> 
+  filter(variable == "school_holiday_Rt_effect") |> 
   mutate(holiday_name = case_when(
     ix_holiday == 2 ~ "Summer holidays",
     ix_holiday == 3 ~ "Mid-year holidays"
@@ -95,15 +95,38 @@ plot_data_delay <- jobs |>
 
 
 plot_data_delay |> 
-  filter(.draw %% 200 == 0) |> 
+  filter(.draw %% 500 == 0) |> 
   ggplot() +
-  geom_step(aes(x = t - 1, y = p, group = .draw),
-            alpha = 0.1) +
+  geom_step(aes(x = t - 1, y = p, group = .draw, colour = factor(.draw)),
+            alpha = 0.5) +
   
   facet_grid(rows = vars(location), cols = vars(pathogen)) +
   
-  theme_bw()
+  theme_bw() +
+  theme(legend.position = "none")
 
+
+# delay_mean ~ lognormal(1, 1);
+# delay_sd ~ lognormal(1, 0.5);
+
+tibble(
+  delay_mean = rlnorm(25, 2.0, 0.5),
+  delay_sd = rlnorm(25, 1.0, 0.5),
+  
+  # delay_mean = rlnorm(25, 1, 1),
+  # delay_sd = rlnorm(25, 1, 0.5)
+) |> 
+  mutate(.draw = row_number(),
+         sigma = sqrt(log(1 + (delay_sd ^ 2) / (delay_mean ^ 2))),
+         mu = log(delay_mean) - 0.5 * sigma ^ 2) |> 
+  
+  expand_grid(t = seq(1, 21, by = 1)) |> 
+  mutate(p = plnorm(t, mu, sigma) - plnorm(t - 1, mu, sigma)) |> 
+  ggplot() +
+  geom_line(aes(x = t - 1, y = p, group = .draw),
+            alpha = 0.1) +
+  
+  theme_bw()
 
 
 
