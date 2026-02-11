@@ -15,3 +15,6 @@ module load R/4.2.1
 export R_LIBS_USER="/home/ruarai/R_libs"
 
 Rscript --vanilla R/forecast_renewal_retro.R ${SLURM_ARRAY_TASK_ID}
+
+# Log this job's resource usage stats
+my-job-stats -a -n -s
