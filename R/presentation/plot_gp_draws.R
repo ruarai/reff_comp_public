@@ -3,7 +3,8 @@ source("R/functions.R")
 source("R/presentation/plot_theme.R")
 
 require(cmdstanr)
-model <- cmdstan_model("src/gp_functions.stan")
+file.remove("src/gp_renewal")
+model <- cmdstan_model("src/gp_renewal.stan")
 
 
 model$expose_functions(global = TRUE)
@@ -177,6 +178,57 @@ plot_lengthscale_periodic(60)
 
 ggsave("test.png", width = 10, height = 5)
 
+
+
+x <- seq(0, 50, by = 1)
+
+rho_m <- 10
+alpha_m <- 0.2
+
+x <- x - mean(x)
+N <- length(x)
+
+M <- calculate_M_matern(c = 1.25, length_scale = rho_m, x = x)
+L <- max(abs(x)) * 1.25
+
+spd_matern <- diagSPD_Matern52(alpha = alpha_m, rho = rho_m, L = L, M = M)
+
+phi_matern <- PHI(N = N, M = M, L = L, x = x)
+
+phi_matern |> 
+  reshape2::melt(c("i", "y")) |> 
+  mutate(t = x[i]) |> 
+  as_tibble() |> 
+  
+  ggplot() +
+  geom_line(aes(x = t, y = value, group = y)) +
+  
+  ylab(NULL) + xlab("x") +
+  
+  facet_wrap(~y, ncol = 4) +
+  
+  plot_theme_pres
+
+
+
+tibble(
+  rho_m = c(5, 10, 15, 25)
+) |> 
+  rowwise() |> 
+  mutate(spd = list(diagSPD_Matern52(alpha = alpha_m, rho = rho_m, L = L, M = M))) |> 
+  unnest(spd) |> 
+  group_by(rho_m) |> 
+  mutate(x = 1:n()) |> 
+  ggplot() +
+  geom_line(aes(x = x, y = spd, group = rho_m, colour = factor(rho_m))) +
+  
+  xlab("Basis function index") +
+  
+  ylab("Variance") +
+  
+  scale_colour_discrete(name = "Length-scale") +
+  
+  plot_theme_pres
 
 
 

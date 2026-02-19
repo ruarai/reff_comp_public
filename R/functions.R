@@ -203,13 +203,41 @@ make_intervals_internal <- function(
 
 
 get_gi <- function(pathogen) {
+  # From ACEFA standards
   gis <- list(
     "SARSCOV2" = make_gi(0.89, rate = 0.27, 0.995),
     "RSV" = make_gi(12.76, 1.7, 0.995),
     "flu" = make_gi(4.00, 1.54, 0.995)
   )
   
+  if(!(pathogen %in% names(gis))) {
+    stop("Invalid pathogen for gi")
+  }
+  
   gi <- gis[[pathogen]]
+}
+
+get_population_size <- function(location) {
+  population_sizes <- list(
+    # December 2021 ERP - ABS
+    "ACT" = 453.3 * 1000,
+    "NSW" = 8095.4 * 1000,
+    "NT" = 249.3 * 1000,
+    "QLD" = 5265.0 * 1000,
+    "SA" = 1806.6 * 1000,
+    "TAS" = 569.8 * 1000,
+    "VIC" = 6559.9 * 1000,
+    "WA" = 2762.2 * 1000,
+    
+    # September 25 ERP - Stats NZ
+    "NZ" = 5334.2 * 1000
+  )
+  
+  if(!(location %in% names(population_sizes))) {
+    stop("Invalid location for population size")
+  }
+  
+  return(population_sizes[[location]])
 }
 
 make_retrospective_jobs <- function() {
@@ -330,20 +358,11 @@ process_counts <- function(
   return(training_counts)
 }
 
-get_season_sigma <- function(x_pathogen) {
-  if(x_pathogen == "RSV") {
-    return(0.15)
-  } else if(x_pathogen == "flu") {
-    return(0.25)
-  } else if(x_pathogen == "SARSCOV2") {
-    return(0.35)
-  }
-}
-
 create_stan_data <- function(
     training_counts,
     days_ahead,
-    x_pathogen
+    x_pathogen,
+    x_location
 ) {
   gi <- get_gi(x_pathogen)
   n_days_data <- nrow(training_counts) - n_days_ahead
@@ -368,19 +387,14 @@ create_stan_data <- function(
     N = nrow(training_counts), N_data = n_days_data,
     N_public_holiday_types = N_public_holiday_types,
     N_school_holiday_types = N_school_holiday_types,
-    N_years = N_years,
-    
-    year_coverage = year_coverage,
-    ix_year_start = year_ranges$ix_year_start,
-    ix_year_end = year_ranges$ix_year_end,
     
     M_annual = 40,
     M_noise = calculate_M_matern(c = 1.25, length_scale = 10.0, x = training_counts$x),
     c_factor = 1.25,
     
-    season_sigma = get_season_sigma(x_pathogen),
+    gi_reversed = rev(gi), N_gi = length(gi),
     
-    gi_reversed = rev(gi), N_gi = length(gi)
+    population_size = get_population_size(x_location)
   )
   
   return(data_list)
@@ -423,7 +437,7 @@ fit_model <- function(data_list) {
   
   fit <- model$sample(
     data = data_list,
-    seed = 5,
+    seed = 1,
     chains = 4,
     parallel_chains = 4,
     refresh = 50,
