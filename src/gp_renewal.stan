@@ -27,8 +27,6 @@ data {
   int<lower=1> M_noise; 
   
   real<lower=1.0> c_factor;
-  
-  real<lower=0> population_size;
 }
 
 transformed data {
@@ -62,9 +60,6 @@ parameters {
   
   sum_to_zero_vector[7] beta_offset_weekly;
   
-  
-  vector[N] obs_noise;
-  
   real r_0;
   real log_I_0;
   
@@ -78,17 +73,9 @@ parameters {
   
   real<lower=0, upper=21> delay_mean;
   real<lower=1.0> delay_sd;
-  
-  real<lower=0, upper=1> initial_immunity_prop;
-  real<lower=0, upper=0.01> alpha;
-  
-  real<lower=45, upper=400> immunity_half_life;
 }
 
 transformed parameters {
-  
-  real lambda = exp(log(0.5) / immunity_half_life);
-  
   real ls_annual_rad = ls_annual * (2 * pi() / 365.25);
 
   // Use the radian lengthscale for the SPD
@@ -120,14 +107,6 @@ transformed parameters {
   vector[N] inf;
   vector[N] inf_delayed;
   
-  vector[N] R_t;
-  
-  vector[N] accumulated_immunity = rep_vector(0.0, N);
-  accumulated_immunity[1] = initial_immunity_prop * population_size;
-  
-  vector[N] immune_effect;
-  
-  
   {
     matrix[N, N_delay] inf_lagged;
     vector[N_total] inf_full = rep_vector(0.0, N_total);
@@ -136,18 +115,11 @@ transformed parameters {
     inf_full[1:N_delay] = exp(log_I_0 + r_0 * linspaced_vector(N_delay, -N_delay + 1, 0));
     
     for(t in 1:N) {
-      immune_effect[t] = alpha * accumulated_immunity[t];
-      R_t[t] = exp(log_R[t] - immune_effect[t]);
+      real R_t = exp(log_R[t]);
       
-      real new_infections = R_t[t] * dot_product(gi_reversed, segment(inf_full, t, N_delay));
+      real new_infections = R_t * dot_product(gi_reversed, segment(inf_full, t, N_delay));
       
       inf_full[t + N_delay] = new_infections;
-      
-      if(t < N) {
-        accumulated_immunity[t + 1] = accumulated_immunity[t] * lambda + new_infections;
-      }
-      
-      
     }
     
     inf = segment(inf_full, N_delay + 1, N);
@@ -165,18 +137,16 @@ transformed parameters {
   vector[N_public_holiday_types + 1] public_holiday_asc_effect = rep_vector(0.0, N_public_holiday_types + 1);
   public_holiday_asc_effect[2:(N_public_holiday_types + 1)] = public_holiday_asc_effect_raw;
   
-  vector[N] latent_cases_log = log(inf_delayed + 1e-10) + 
+  vector[N] latent_cases_log = log(inf_delayed) + 
     school_holiday_asc_effect[school_holiday_type] +
-    public_holiday_asc_effect[public_holiday_type] +
-    obs_noise;
+    public_holiday_asc_effect[public_holiday_type];
   
   vector[N] latent_cases_weekly_log = obs_offset_weekly[day_of_week] + latent_cases_log;
-  
 }
 
 model {
-  scaling_annual ~ normal(0, 0.1);
-  scaling_noise  ~ normal(0, 0.1);
+  scaling_annual ~ exponential(1.0);
+  scaling_noise  ~ exponential(1.0);
   
   scaling_weekly_asc ~ exponential(1.0);
   
@@ -198,7 +168,7 @@ model {
   beta_annual ~ std_normal();
   beta_noise  ~ std_normal();
   
-  log_R_0 ~ normal(0, 0.1);
+  log_R_0 ~ normal(0, 0.5);
   
   beta_offset_weekly ~ std_normal();
   
@@ -207,14 +177,6 @@ model {
   
   delay_mean ~ lognormal(2.0, 0.5);
   delay_sd ~ lognormal(1, 0.5);
-  
-  initial_immunity_prop ~ beta(1, 10);
-  alpha ~ lognormal(-5, 1.0);
-  
-  // find_inv_gamma_params(90.0, 360.0)
-  immunity_half_life ~ inv_gamma(11.83, 1913.642);
-  
-  obs_noise ~ cauchy(0, 0.1);
   
   y ~ neg_binomial_2_log(latent_cases_weekly_log[1:N_data], phi);
 }
