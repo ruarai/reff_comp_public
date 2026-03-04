@@ -53,27 +53,31 @@ n_years <- 3
 
 
 
-p_ex_matern <- tibble(t = 0:(365 * n_years)) |>
-  mutate(y_noise = simulate_matern(t, 0.2, 14, seed = 2)) |> 
+p_ex_matern <- tibble(t = 0:150) |>
+  mutate(y_noise = simulate_matern(t, 0.2, 14, seed = 3)) |> 
   
   ggplot() +
   geom_line(aes(x = t, y = y_noise),
             linewidth = 0.75) +
   
-  scale_x_continuous(breaks = seq(0, 365 * n_years, by = 365),
-                     labels = ~ . / 365) +
+  # scale_x_continuous(breaks = seq(0, 365 * n_years, by = 365),
+  #                    labels = ~ . / 365) +
   
-  scale_y_continuous(breaks = c(-1, 0, 1)) +
+  scale_x_continuous(breaks = scales::breaks_extended())  +
+  
+  scale_y_continuous(breaks = c(-0.5, 0, 0.5)) +
   
   ylab("f") +
   
-  xlab("Time (years)") +
+  xlab("Time (days)") +
   
-  coord_cartesian(ylim = c(-1, 1)) +
+  coord_cartesian(ylim = c(-0.5, 0.5)) +
   
   ggtitle("Example trajectory") +
   
   plot_theme_pres
+
+p_ex_matern
 
 
 
@@ -100,11 +104,12 @@ p_ex_periodic <- tibble(t = 0:(365 * n_years)) |>
   plot_theme_pres
 
 
-p_covar_matern <- tibble(x = seq(0, 150, by = 0.1), l = 14.0, alpha = 1.0) |> 
+p_covar_matern <- tibble(x = seq(0, 150, by = 0.1), l = 14, alpha = 1.0) |> 
   mutate(covar = alpha * (1 + (sqrt(5) * x) / l + (5 * x^2) / (3 * l^2)) * exp(-sqrt(5) * x / l)) |> 
   
   ggplot() +
-  geom_line(aes(x = x, y = covar)) +
+  geom_line(aes(x = x, y = covar),
+            linewidth = 0.75) +
   
   ylab("Covariance") + xlab("Time difference (days)") +
   
@@ -121,11 +126,13 @@ p_covar_periodic <- tibble(x = seq(0, 365 * n_years, by = 0.1), omega = 2 * pi /
   mutate(covar = alpha * exp(- 2 * (sin(omega * x / 2)^2) / l)) |> 
   
   ggplot() +
-  geom_line(aes(x = x, y = covar)) +
+  geom_line(aes(x = x, y = covar),
+            linewidth = 0.75) +
   
-  ylab("Covariance") + xlab("Time difference (days)") +
+  ylab("Covariance") + xlab("Time difference (years)") +
   
-  scale_x_continuous(breaks = seq(0, 365 * n_years, by = 365))  +
+  scale_x_continuous(breaks = seq(0, 365 * n_years, by = 365),
+                     labels = ~ . / 365)  +
   scale_y_continuous(breaks = c(0, 0.5, 1)) +
   
   ggtitle("Covariance") +

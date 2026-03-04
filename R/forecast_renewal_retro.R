@@ -33,21 +33,22 @@ training_counts <- process_counts(combined_counts, combined_counts_smoothed, x_l
   # Save some extra data in case we need it later
   mutate(origin_date = origin_date)
 
-data_list <- create_stan_data(training_counts, days_ahead, x_pathogen, x_location)
+if(file.exists(str_c("results/", round_id, "/", x_pathogen, "_", x_location, "_performance.parquet"))) {
+  print("Perf exists, exiting early")
+  q("no")
+}
 
-fit <- fit_model(data_list)
+# data_list <- create_stan_data(training_counts, days_ahead, x_pathogen, x_location)
 
-print("Saving fit object and training data")
+# fit <- fit_model(data_list)
 
-fs::dir_create(fs::path("results", round_id))
+# print("Saving fit object and training data")
 
-fit_file <- str_c("results/", round_id, "/", x_pathogen, "_", x_location, ".rds")
-fit$save_object(fit_file)
-arrow::write_parquet(training_counts, str_c("results/", round_id, "/", x_pathogen, "_", x_location, "_training_counts.parquet"))
+# fs::dir_create(fs::path("results", round_id))
 
-print("Saving compressed file...")
-
-compress_fit(fit_file, str_c("results/", round_id, "/", x_pathogen, "_", x_location, "_reduced_draws.parquet"))
+# fit_file <- str_c("results/", round_id, "/", x_pathogen, "_", x_location, ".rds")
+# fit$save_object(fit_file)
+# arrow::write_parquet(training_counts, str_c("results/", round_id, "/", x_pathogen, "_", x_location, "_training_counts.parquet"))
 
 print("Writing trajectories...")
 
@@ -56,6 +57,10 @@ write_forecast_file(round_id, x_pathogen, x_location, origin_date)
 print("Making plots...")
 
 make_fit_plots(round_id, x_pathogen, x_location)
+
+print("Calculating performance metrics...")
+
+calculate_performance_metrics(round_id, x_pathogen, x_location)
 
 print("Complete")
 

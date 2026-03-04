@@ -286,7 +286,7 @@ write_forecast_file <- function(round_id, x_pathogen, x_location, origin_date) {
   round_results <- fs::path("results", round_id)
   
   fit <- read_rds(str_c(round_results, "/", x_pathogen, "_", x_location, ".rds"))
-  training_counts <- arrow::read_parquet(str_c(round_results, "/", x_pathogen, "_", x_location, "_training_counts.parquet"))
+  training_counts <- read_parquet(str_c(round_results, "/", x_pathogen, "_", x_location, "_training_counts.parquet"))
   
   case_trajectories <- fit |> 
     spread_draws(cases[ix_x], inf_delayed[ix_x]) |> 
@@ -308,7 +308,10 @@ write_forecast_file <- function(round_id, x_pathogen, x_location, origin_date) {
       output_type = "sample",
       location = x_location,
       pathogen = x_pathogen,
-      value = as.integer(value)
+      
+      # We get NA values sometimes where rng freaks out (high variance)
+      # replace with zero as a stop-gap.
+      value = as.integer(replace_na(value, 0)),
     ) |> 
     
     filter(horizon >= -7, horizon <= 7 * 12) |> 
@@ -322,7 +325,7 @@ write_forecast_file <- function(round_id, x_pathogen, x_location, origin_date) {
       value
     )
   
-  output_file <- fs::path("forecast_outputs_raw", str_c(round_id, "-", x_location, "-", x_pathogen, "-uom-gp-reff.parquet"))
+  output_file <- str_c(round_results, "/", x_pathogen, "_", x_location, "_uom-gp-reff.parquet")
   
   arrow::write_parquet(forecast_data, output_file)
 }
@@ -344,7 +347,7 @@ process_counts <- function(
     left_join(training_dates) |> 
     filter(notification_date >= cutoff_date) |> 
     filter(location == x_location, pathogen == x_pathogen) |> 
-    mutate(outlier = abs(log(cases_trend_and_remainder + 0.5) - log(cases_trend + 0.5)) > 1.38 & cases_trend > 20) |> 
+    # mutate(outlier = abs(log(cases_trend_and_remainder + 0.5) - log(cases_trend + 0.5)) > 1.38 & cases_trend > 20) |> 
     
     filter(
       # Drop the last day of data (often issues)
@@ -400,19 +403,6 @@ create_stan_data <- function(
   return(data_list)
 }
 
-compress_fit <- function(fit_file, out_file) {
-  draws <- tidy_draws(read_rds(fit_file))
-  
-  target_schema <- schema(lapply(draws, function(x) {
-    if (is.numeric(x) && !is.integer(x)) float32() else infer_type(Array$create(x))
-  }))
-  
-  draws |>
-    filter(.draw %% 4 == 0) |>
-    as_arrow_table(schema = target_schema) |>
-    write_parquet(out_file, compression = "zstd")
-}
-
 
 plots_to_gif <- function(plot_list, out_file, width, height, delay = 1) {
   require(gifski)
@@ -429,6 +419,57 @@ plots_to_gif <- function(plot_list, out_file, width, height, delay = 1) {
   gifski(plot_files, gif_file = out_file, width = width * 120, height = height * 120, delay = delay)
   
   file.remove(plot_files)
+}
+
+
+
+calculate_performance_metrics <- function(
+    round_id, x_pathogen, x_location
+) {
+  
+  eval_counts <- read_csv("data/combined-count-2026-01-15.csv", show_col_types = FALSE) |> 
+    left_join(read_csv("data/combined-count-smoothed-2026-01-15.csv", show_col_types = FALSE),
+              by = join_by(notification_date, location, pathogen)) |> 
+    filter(location == x_location, pathogen == x_pathogen) |> 
+    make_training_counts(x_location, x_pathogen) |> 
+    
+    select(date, cases_true = y)
+  
+  round_results <- fs::path("results", round_id)
+  
+  fit <- read_rds(str_c(round_results, "/", x_pathogen, "_", x_location, ".rds"))
+  training_counts <- arrow::read_parquet(str_c(round_results, "/", x_pathogen, "_", x_location, "_training_counts.parquet"))
+  
+  perf_data <- fit |> 
+    spread_draws(latent_cases_weekly_log[ix_t], cases[ix_t], phi) |> 
+    mutate(date = training_counts$date[ix_t],
+           
+           # Replace NA values for RNG cases with zero (rng freaks out at high phi)
+           cases = replace_na(cases, 0)) |> 
+    left_join(eval_counts) |> 
+    drop_na(cases_true) |> 
+    
+    mutate(log_likelihood = dnbinom(cases_true, mu = exp(latent_cases_weekly_log), size = phi, log = TRUE),
+           is_overpredict = cases > cases_true) |>
+    group_by(date) |> 
+    mutate(log_cases = log(cases + 1),
+           log_cases_true = log(cases_true + 1)) |> 
+    summarise(
+      cases_true = cases_true[1], log_cases_true = log_cases_true[1],
+      elpd = matrixStats::logSumExp(log_likelihood) - log(n()),
+      bias = sum(is_overpredict) / n(),
+      crps = scoringRules::crps_sample(cases_true, cases),
+      crps_log = scoringRules::crps_sample(log_cases_true, log_cases),
+      med_ae = abs(median(cases) - cases_true),
+      med_ae_log = abs(median(log_cases) - log_cases_true),
+      .groups = "drop"
+    ) |> 
+    mutate(location = x_location, pathogen = x_pathogen,
+           round_id = round_id, origin_date = training_counts$origin_date[[1]],
+           .before = 1)
+  
+  perf_data |> 
+    write_parquet(str_c(round_results, "/", x_pathogen, "_", x_location, "_performance.parquet"))
 }
 
 fit_model <- function(data_list) {

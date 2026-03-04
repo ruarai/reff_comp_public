@@ -336,7 +336,11 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
   
   
   draws <- fit |>
-    tidybayes::tidy_draws()
+    tidybayes::tidy_draws() |> 
+    
+    # NA cases values can cause issues with bayesplot, so
+    # drop the columns early
+    select(-starts_with("cases"))
 
   pars <- c(
     "scaling_annual", "scaling_weekly_asc", "scaling_noise", "ls_noise", "ls_annual", "phi",
@@ -369,7 +373,9 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
                  cases[ix_t], f_annual[ix_t], f_noise[ix_t],
                  latent_cases_log[ix_t]) |> 
     mutate(date = training_counts$date[ix_t],
-           latent_cases = exp(latent_cases_log))
+           latent_cases = exp(latent_cases_log),
+           
+           cases = replace_na(cases, 0))
   
   p_reff <- plot_reff_components(trajectory_data, origin_date, school_holidays, public_holidays) +
     xlim(c(ymd(min(trajectory_data$date)), ymd(origin_date + days(365))))
