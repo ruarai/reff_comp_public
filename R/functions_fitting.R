@@ -247,12 +247,9 @@ create_stan_data <- function(
   
   year_ranges <- training_counts |> group_by(year) |> summarise(ix_year_start = min(x) + 1, ix_year_end = max(x) + 1)
   
-  N_weeks <- max(training_counts$week)
-  
   data_list <- list(
     x = training_counts$x,
     day_of_week = training_counts$day_of_week,
-    week = training_counts$week, x_week = unique(training_counts$week),
     is_weekend = training_counts$is_weekend,
     school_holiday_type = training_counts$school_holiday_type,
     
@@ -262,11 +259,9 @@ create_stan_data <- function(
     N = nrow(training_counts), N_data = n_days_data,
     N_public_holiday_types = N_public_holiday_types,
     N_school_holiday_types = N_school_holiday_types,
-    N_weeks = N_weeks,
     
     M_annual = 40,
     M_noise = calculate_M_matern(c = 1.25, length_scale = 10.0, x = training_counts$x),
-    M_weekly = calculate_M_matern(c = 1.25, length_scale = 4.0, x = training_counts$week),
     c_factor = 1.25,
     
     gi_reversed = rev(gi), N_gi = length(gi)
