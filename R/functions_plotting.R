@@ -29,7 +29,7 @@ plot_reff_components <- function(trajectory_data, origin_date, school_holidays, 
     
     geom_rug(aes(x = date), public_holidays) +
     
-    pammtools::geom_stepribbon(aes(x = date, ymin = exp(lower), ymax = exp(upper),
+    pammtools::geom_stepribbon(aes(x = date - 0.5, ymin = exp(lower), ymax = exp(upper),
                     group = quant, alpha = quant, fill = variable)) +
     
     geom_line(aes(x = date, y = exp(value), group = .draw, colour = variable),
@@ -81,12 +81,12 @@ plot_latent_inf <- function(trajectory_data, training_counts, origin_date, schoo
     
     geom_rug(aes(x = date), public_holidays) +
     
-    geom_ribbon(aes(x = date, ymin = lower, ymax = upper,
+    pammtools::geom_stepribbon(aes(x = date - 0.5, ymin = lower, ymax = upper,
                     group = quant, alpha = quant),
                 plot_quants,
                 fill = ggokabeito::palette_okabe_ito(1)) +
     
-    geom_ribbon(aes(x = date, ymin = lower, ymax = upper,
+    pammtools::geom_stepribbon(aes(x = date - 0.5, ymin = lower, ymax = upper,
                     group = quant, alpha = quant),
                 plot_quants_delayed,
                 fill = ggokabeito::palette_okabe_ito(5)) +
@@ -130,7 +130,7 @@ plot_cases <- function(trajectory_data, training_counts, origin_date, school_hol
     
     geom_rug(aes(x = date), public_holidays) +
     
-    geom_ribbon(aes(x = date, ymin = lower, ymax = upper,
+    pammtools::geom_stepribbon(aes(x = date - 0.5, ymin = lower, ymax = upper,
                     group = quant, alpha = quant),
                 fill = ggokabeito::palette_okabe_ito(5)) +
     
@@ -142,8 +142,8 @@ plot_cases <- function(trajectory_data, training_counts, origin_date, school_hol
     
     geom_vline(xintercept = origin_date, linetype = "44") +
     
-    geom_line(aes(x = date, y = y),
-              training_counts) +
+    geom_line(aes(x = date, y = y), training_counts) +
+    geom_point(aes(x = date, y = y), size = 0.5, training_counts) +
     
     xlab("Notification date") + ylab("Count") +
     
@@ -343,7 +343,7 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
     select(-starts_with("cases"))
 
   pars <- c(
-    "scaling_annual", "scaling_weekly_asc", "scaling_noise", "ls_noise", "ls_annual", "phi",
+    "scaling_annual", "scaling_noise", "ls_noise", "ls_annual", "phi",
     "delay_mean", "delay_sd", "log_R_0"
   )
 

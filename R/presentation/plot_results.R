@@ -5,8 +5,7 @@ source("R/presentation/plot_theme.R")
 
 
 
-# TODO redo with all draws
-results <- arrow::read_parquet("results_baseline/2025-10-09/flu_VIC_reduced_draws.parquet")
+results <- read_rds("results_baseline/2025-10-09/flu_VIC.rds")
 
 
 p_Rt <- results |> 
@@ -86,7 +85,7 @@ public_holidays <- get_public_holidays() |>
   mutate(public_holiday_type = match(holiday_name, unique(holiday_name))) |> 
   distinct(public_holiday_type, holiday_name)
 
-results |> 
+p_asc <- results |> 
   spread_draws(public_holiday_asc_effect_raw[public_holiday_type]) |> 
   
   left_join(public_holidays) |> 
@@ -103,7 +102,7 @@ results |>
   
   plot_theme_pres
 
-results |> 
+p_Rt <- results |> 
   spread_draws(public_holiday_Rt_effect_raw[public_holiday_type]) |> 
   
   left_join(public_holidays) |> 
@@ -120,6 +119,7 @@ results |>
   
   plot_theme_pres
 
+p_asc | p_Rt
 
 round_results <- "results_baseline/2025-10-09"
 x_pathogen <- "flu"
@@ -136,7 +136,7 @@ trajectory_data <- results |>
 
 
 date_range <- c(ymd("2024-06-01"), ymd("2024-08-01"))
-y_range <- c(-0.3, 0.3)
+y_range <- c(-0.25, 0.25)
 
 library(pammtools)
 
@@ -171,7 +171,12 @@ p_Rt <- ggplot(trajectory_data) +
   
   theme(legend.position = "none") +
   
-  ggtitle(NULL, "Composed log R(t)")
+  ggtitle(NULL, "Composed log R(<i>t</i>)")  +
+  
+  plot_theme_pres +
+  
+  theme(legend.position = "none",
+        plot.subtitle = ggtext::element_markdown())
 
 p_noise <- ggplot(trajectory_data) +
   
@@ -188,11 +193,12 @@ p_noise <- ggplot(trajectory_data) +
   
   xlab(NULL) + ylab("Additive effect") +
   
+  ggtitle(NULL, "Noise <i>f</i><sub>noise</sub>(<i>t</i>)")  +
+  
   plot_theme_pres +
   
-  theme(legend.position = "none") +
-  
-  ggtitle(NULL, "Noise f_noise(t)")
+  theme(legend.position = "none",
+        plot.subtitle = ggtext::element_markdown())
 
 p_ann <- ggplot(trajectory_data) +
   
@@ -213,7 +219,12 @@ p_ann <- ggplot(trajectory_data) +
   
   theme(legend.position = "none") +
   
-  ggtitle(NULL, "Annual periodic variation f_ann(t)")
+  ggtitle(NULL, "Annual variation <i>f</i><sub>ann</sub>(<i>t</i>)")  +
+  
+  plot_theme_pres +
+  
+  theme(legend.position = "none",
+        plot.subtitle = ggtext::element_markdown())
 
 p_holiday <- ggplot(trajectory_data) +
   
@@ -243,7 +254,12 @@ p_holiday <- ggplot(trajectory_data) +
   
   theme(legend.position = "none") +
   
-  ggtitle(NULL, "Holiday effects")
+  ggtitle(NULL, "Holiday effects")  +
+  
+  plot_theme_pres +
+  
+  theme(legend.position = "none",
+        plot.subtitle = ggtext::element_markdown())
 
 (p_holiday | p_noise | p_ann)
 
@@ -273,7 +289,12 @@ p_inf <- ggplot(trajectory_data) +
   
   theme(legend.position = "none") +
   
-  ggtitle(NULL, "Infection incidence z(t)")
+  ggtitle(NULL, "Latent infection incidence <i>z</i>(<i>t</i>)")  +
+  
+  plot_theme_pres +
+  
+  theme(legend.position = "none",
+        plot.subtitle = ggtext::element_markdown())
 
 p_delayed_inf <- ggplot(trajectory_data) +
   
@@ -319,11 +340,12 @@ p_latent_case <- ggplot(trajectory_data) +
   
   xlab(NULL) + ylab("Incidence") +
   
+  ggtitle(NULL, "Latent case incidence <i>y</i>(<i>t</i>)")  +
+  
   plot_theme_pres +
   
-  theme(legend.position = "none") +
-  
-  ggtitle(NULL, "Latent case incidence y(t)")
+  theme(legend.position = "none",
+        plot.subtitle = ggtext::element_markdown())
 
 
 p_case <- ggplot(trajectory_data) +
@@ -356,9 +378,6 @@ p_case <- ggplot(trajectory_data) +
   theme(legend.position = "none") +
   
   ggtitle(NULL, "Reported case incidence")
-
-
-(p_Rt | p_inf) / (p_latent_case | p_case | plot_spacer())
 
 patchwork::wrap_plots(p_Rt, p_inf, p_latent_case, p_case, ncol = 2)
 

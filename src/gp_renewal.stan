@@ -11,13 +11,17 @@ data {
   int<lower=1> N;
   int<lower=1> N_data;
   
+  int<lower=1> N_weeks;
+  
   int<lower=1> N_public_holiday_types;
   int<lower=1> N_school_holiday_types;
   
   array[N] int day_of_week;
+  array[N] int week;
   array[N] int school_holiday_type;
   array[N] int public_holiday_type;
   vector[N] x;
+  vector[N_weeks] x_week;
   array[N_data] int y;
   
   
@@ -25,6 +29,7 @@ data {
 
   int<lower=1> M_annual;
   int<lower=1> M_noise; 
+  int<lower=1> M_weekly;
   
   real<lower=1.0> c_factor;
 }
@@ -37,6 +42,13 @@ transformed data {
   
   matrix[N, M_noise] phi_noise = PHI(N, M_noise, L, x_centered);
   
+  vector[N_weeks] x_week_centered = x_week - mean(x_week);
+  real L_week = c_factor * max(abs(x_week_centered));
+  
+  matrix[N_weeks, M_weekly] phi_weekly = PHI(N_weeks, M_weekly, L_week, x_week_centered);
+  
+  matrix[7, 6] weekly_QR = qr_weekly();
+  
   int N_delay = 21;
   
   int N_total = N + N_delay;
@@ -45,11 +57,11 @@ transformed data {
 parameters {
   real<lower=0> scaling_annual;
   real<lower=0> scaling_noise;
-  
-  real<lower=0> scaling_weekly_asc;
+  real<lower=0> scaling_weekly;
   
   real<lower=0, upper=365> ls_annual;
   real<lower=0, upper=120> ls_noise;
+  real<lower=0> ls_weekly;
   
   real log_R_0;
   
@@ -58,7 +70,7 @@ parameters {
   vector[2 * M_annual] beta_annual;
   vector[M_noise] beta_noise;
   
-  sum_to_zero_vector[7] beta_offset_weekly;
+  matrix[6, M_weekly] beta_weekly;
   
   real r_0;
   real log_I_0;
@@ -83,6 +95,8 @@ transformed parameters {
   
   vector[M_noise] diag_SPD_noise = diagSPD_Matern52(scaling_noise, ls_noise, L, M_noise);
   
+  vector[M_weekly] diag_SPD_weekly = diagSPD_Matern52(scaling_weekly, ls_weekly, L_week, M_weekly);
+  
   
   vector[N] f_annual = phi_annual * (diag_SPD_annual .* beta_annual);
   vector[N] f_noise  = phi_noise * (diag_SPD_noise .* beta_noise);
@@ -96,11 +110,23 @@ transformed parameters {
   
   vector[N] log_R = log_R_0 +
     f_annual +
-    f_noise + 
+    f_noise +
     school_holiday_Rt_effect[school_holiday_type] +
     public_holiday_Rt_effect[public_holiday_type];
   
-  vector[7] obs_offset_weekly = beta_offset_weekly * scaling_weekly_asc;
+  vector[N] obs_offset_weekly_t;
+  {
+    matrix[6, N_weeks] f_weekly_raw;
+    for(i in 1:6) {
+      f_weekly_raw[i, ] = (phi_weekly * (diag_SPD_weekly .* beta_weekly[i, ]'))';
+    }
+    
+    matrix[7, N_weeks] f_weekly = weekly_QR * f_weekly_raw * sqrt(7.0 / 6.0);
+    
+    for (t in 1:N) {
+      obs_offset_weekly_t[t] = f_weekly[day_of_week[t], week[t]];
+    }
+  }
   
   vector[N_delay] delay_dist = construct_delay_dist(delay_mean, delay_sd, N_delay);
   
@@ -141,14 +167,13 @@ transformed parameters {
     school_holiday_asc_effect[school_holiday_type] +
     public_holiday_asc_effect[public_holiday_type];
   
-  vector[N] latent_cases_weekly_log = obs_offset_weekly[day_of_week] + latent_cases_log;
+  vector[N] latent_cases_weekly_log = obs_offset_weekly_t + latent_cases_log;
 }
 
 model {
   scaling_annual ~ exponential(1.0);
   scaling_noise  ~ exponential(1.0);
-  
-  scaling_weekly_asc ~ exponential(1.0);
+  scaling_weekly ~ exponential(1.0);
   
   school_holiday_Rt_effect_raw ~ std_normal();
   school_holiday_asc_effect_raw ~ std_normal();
@@ -159,18 +184,23 @@ model {
   // Inv-gamma priors derived from:
   // find_inv_gamma_params(7.0, 90.0)
   // find_inv_gamma_params(14.0, 90.0)
+  // find_inv_gamma_params(4.0, 26.0) (ls_weekly is on weekly scale)
   // as in Betancourt approach.
   
   ls_noise ~ inv_gamma(3.858, 68.729);
   ls_annual ~ inv_gamma(6.809, 200.117);
+  ls_weekly ~ inv_gamma(6.735, 56.747); 
+  
   phi ~ gamma(2, 0.1);
 
   beta_annual ~ std_normal();
   beta_noise  ~ std_normal();
   
-  log_R_0 ~ normal(0, 0.5);
+  for(i in 1:6) {
+    beta_weekly[i,] ~ std_normal();
+  }
   
-  beta_offset_weekly ~ std_normal();
+  log_R_0 ~ normal(0, 0.5);
   
   log_I_0 ~ normal(3.2, 1);
   r_0 ~ normal(0, 0.2);

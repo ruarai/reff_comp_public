@@ -1,15 +1,11 @@
 
 
-perf_files <- fs::dir_ls("results", glob = "*_performance.parquet", recurse = TRUE)
-
-length(perf_files)
-
-perf_data <- arrow::open_dataset(perf_files)
+perf_files <- fs::dir_ls("results_baseline", glob = "*_performance.parquet", recurse = TRUE)
+perf_data <- collect(arrow::open_dataset(perf_files)) |> 
+  mutate(horizon = as.numeric(date - origin_date))
 
 
 perf_data |> 
-  collect() |> 
-  mutate(horizon = as.numeric(date - origin_date)) |> 
   filter(horizon > 21, horizon <= 28) |> 
   group_by(location, pathogen, round_id) |> 
   summarise(crps_log = mean(crps_log)) |> 
@@ -22,8 +18,6 @@ perf_data |>
   theme_bw()
 
 perf_data |> 
-  collect() |> 
-  mutate(horizon = as.numeric(date - origin_date)) |> 
   filter(horizon > 21, horizon <= 28) |> 
   group_by(location, pathogen, round_id) |>
   summarise(elpd = mean(elpd)) |>
@@ -37,8 +31,6 @@ perf_data |>
 
 
 perf_data |> 
-  collect() |> 
-  mutate(horizon = as.numeric(date - origin_date)) |> 
   filter(horizon > 0,  horizon <= 7 * 8) |> 
   
   ggplot() +
@@ -52,8 +44,6 @@ perf_data |>
 
 
 perf_data |> 
-  collect() |> 
-  mutate(horizon = as.numeric(date - origin_date)) |> 
   filter(horizon > 21, horizon <= 28) |> 
   
   ggplot() +
@@ -65,3 +55,8 @@ perf_data |>
   coord_cartesian(ylim = c(0, 1)) +
   
   theme_bw()
+
+
+
+
+

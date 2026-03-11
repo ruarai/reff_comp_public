@@ -47,7 +47,9 @@ simulate_periodic <- function(x, alpha_p, rho_p, seed = 0) {
   phi_periodic %*% beta_periodic
 }
 
-plot(simulate_periodic(1:365, 1.0, 28))
+tibble(x = 1:60) |> mutate(y = simulate_matern(x, 1.0, 4)) |> 
+  ggplot() +
+  geom_line(aes(x,y))
 
 n_years <- 3
 
