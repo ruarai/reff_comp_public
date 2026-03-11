@@ -48,7 +48,7 @@ arrow::write_parquet(training_counts, str_c("results/", round_id, "/", x_pathoge
 
 print("Writing trajectories...")
 
-write_forecast_file(round_id, x_pathogen, x_location, origin_date)
+write_forecast_file(round_id, x_pathogen, x_location)
 
 print("Making plots...")
 

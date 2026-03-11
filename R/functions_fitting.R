@@ -24,11 +24,13 @@ get_origin_date <- function(combined_counts, x_pathogen, x_location) {
     max()
 }
 
-write_forecast_file <- function(round_id, x_pathogen, x_location, origin_date) {
-  round_results <- fs::path("results", round_id)
+write_forecast_file <- function(round_id, x_pathogen, x_location) {
+  round_results <- fs::path("results_baseline", round_id)
   
   fit <- read_rds(str_c(round_results, "/", x_pathogen, "_", x_location, ".rds"))
   training_counts <- read_parquet(str_c(round_results, "/", x_pathogen, "_", x_location, "_training_counts.parquet"))
+  
+  origin_date <- training_counts$origin_date[[1]]
   
   case_trajectories <- fit |> 
     spread_draws(cases[ix_x], inf_delayed[ix_x]) |> 
@@ -67,7 +69,7 @@ write_forecast_file <- function(round_id, x_pathogen, x_location, origin_date) {
       value
     )
   
-  output_file <- str_c(round_results, "/", x_pathogen, "_", x_location, "_uom-gp-reff.parquet")
+  output_file <- str_c(round_results, "/", x_pathogen, "_", x_location, "_forecast-trajectories.parquet")
   
   arrow::write_parquet(forecast_data, output_file)
 }

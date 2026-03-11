@@ -1,21 +1,23 @@
 
 source("R/functions.R")
 
-forecasts <- open_dataset("forecast_outputs_raw/")
+round_id <- "2025-05-08"
 
-model_name <- "baseline"
+forecast_trajectories <- fs::dir_ls(str_c("results_baseline/", round_id), glob = "*forecast-trajectories.parquet")
+
+forecasts <- open_dataset(forecast_trajectories)
+
+model_name <- "uom-reff-composure"
 
 fs::dir_create(fs::path("forecast_outputs", model_name))
 
 rounds <- forecasts |> distinct(round_id) |> collect() |> pull(round_id) |> as.character()
 
+output_path <- fs::path("forecast_outputs", model_name)
 
-for(x_round in rounds) {
-  print(x_round)
-  forecasts |> 
-    filter(round_id == x_round) |> 
-    collect() |> 
-    write_parquet(fs::path("forecast_outputs", model_name, str_c(x_round, "-uom-reff-composure-", model_name,".parquet")))
-}
+forecasts |> 
+  collect() |> 
+  write_parquet(fs::path(output_path, str_c(x_round, "-", model_name,".parquet")))
 
-fs::file_delete(fs::dir_ls("forecast_outputs_raw/"))
+
+fs::dir_copy(output_path, "../forecast-hub/model-output/")
