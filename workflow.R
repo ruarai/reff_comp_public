@@ -12,7 +12,7 @@ run("git", c("switch", "main"), wd = repo_dir, echo = TRUE)
 run("git", c("pull"), wd = repo_dir, echo = TRUE)
 
 # TODO test this
-run("sbatch", c(str_c("--export=ALL,ROUND_ID=",round_id), "run_forecasts.slurm"))
+run("sbatch", c(str_c("--export=ALL,round_id=",round_id), "run_forecasts.slurm"))
 
 # Wait for the above to complete
 # Switch to model branch and push new changes
