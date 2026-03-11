@@ -76,20 +76,18 @@ write_forecast_file <- function(round_id, x_pathogen, x_location, origin_date) {
 
 
 process_counts <- function(
-    combined_counts, combined_counts_smoothed,
+    combined_counts,
     x_location, x_pathogen,
     n_days_ahead
 ) {
   training_dates <- get_training_dates()
   
-  all_counts <- combined_counts |> 
-    left_join(combined_counts_smoothed)
-  
-  reduced_counts <- all_counts |> 
+  # Filter the counts for our given location and pathogen
+  # and drop data prior to the training date
+  reduced_counts <- combined_counts |> 
     left_join(training_dates) |> 
     filter(notification_date >= cutoff_date) |> 
     filter(location == x_location, pathogen == x_pathogen) |> 
-    # mutate(outlier = abs(log(cases_trend_and_remainder + 0.5) - log(cases_trend + 0.5)) > 1.38 & cases_trend > 20) |> 
     
     filter(
       # Drop the last day of data (often issues)
@@ -134,7 +132,7 @@ make_training_counts <- function(
     select(date, location, public_holiday_type)
   
   training_counts <- reduced_counts |> 
-    select(location, pathogen, date = notification_date, y = cases, y_smooth = cases_trend_and_remainder) |> 
+    select(location, pathogen, date = notification_date, y = cases) |> 
     complete(date = seq(min(date), max(date), by = "days"), fill = list(location = x_location, pathogen = x_pathogen)) |>
     arrange(date)
   
@@ -171,16 +169,14 @@ make_training_counts <- function(
       is_weekend = if_else(day_of_week == 1 | day_of_week == 7, 1, 0),
       year = as.integer(
         interval(min(floor_date(date, "year")), floor_date(date, "year")) / years(1)
-      ) + 1,
-      week = floor_date(date, "week", week_start = 7),
-      week = match(week, unique(week))
+      ) + 1
     ) |> 
     left_join(school_holidays_location, by = join_by(date, location)) |> 
     left_join(public_holidays_location, by = join_by(date, location)) |> 
     mutate(school_holiday_type = replace_na(school_holiday_type, 0) + 1,
            public_holiday_type = replace_na(public_holiday_type, 0) + 1)
   
-  
+  # Make sure we have a complete sequence of dates
   n_diff <- diff(training_counts_full$x) |> table() |> unique() |> length()
   
   stopifnot(n_diff == 1)

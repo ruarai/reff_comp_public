@@ -23,13 +23,12 @@ round_id <- job$round_id[[1]]
 print(str_c("Performing job ", ix_job, " (", round_id, ": ", x_location, "-", x_pathogen, ")"))
 
 combined_counts <- read_csv(str_c("../forecast-hub/processed-data/2025/", round_id, "/combined-count-", round_id, ".csv"))
-combined_counts_smoothed <- read_csv(str_c("../forecast-hub/processed-data/2025/", round_id, "/combined-count-smoothed-", round_id, ".csv"))
 
 origin_date <- get_origin_date(combined_counts, x_pathogen, x_location)
 
 n_days_ahead <- 365
 
-training_counts <- process_counts(combined_counts, combined_counts_smoothed, x_location, x_pathogen, n_days_ahead) |> 
+training_counts <- process_counts(combined_counts, x_location, x_pathogen, n_days_ahead) |> 
   # Save some extra data in case we need it later
   mutate(origin_date = origin_date)
 

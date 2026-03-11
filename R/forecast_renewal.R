@@ -9,11 +9,10 @@ ix_job <- as.integer(args[1])
 round_id <- str_trim(args[2])
 
 combined_counts <- read_csv(str_c("../forecast-hub/processed-data/2025/", round_id, "/combined-count-", round_id, ".csv"))
-combined_counts_smoothed <- read_csv(str_c("../forecast-hub/processed-data/2025/", round_id, "/combined-count-smoothed-", round_id, ".csv"))
 
 jobs <- distinct(combined_counts, location, pathogen)
 
-print(str_c("Generated ", nrow(jobs), " jobs from combined_counts_smoothed"))
+print(str_c("Generated ", nrow(jobs), " jobs from combined_counts"))
 
 if(ix_job > nrow(jobs)) {
   print("Exiting without completing a job (ix_job > nrow(jobs))")
@@ -31,7 +30,7 @@ print(str_c("Performing job ", ix_job, " (", x_location, "-", x_pathogen, ")"))
 
 n_days_ahead <- 365
 
-training_counts <- process_counts(combined_counts, combined_counts_smoothed, x_location, x_pathogen, n_days_ahead) |> 
+training_counts <- process_counts(combined_counts, x_location, x_pathogen, n_days_ahead) |> 
   # Save some extra data in case we need it later
   mutate(origin_date = origin_date)
 

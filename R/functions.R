@@ -107,10 +107,9 @@ make_retrospective_jobs <- function() {
     round_dir = rounds
   ) |> 
     mutate(round_id = str_extract(round_dir, "\\d{4}-\\d{2}-\\d{2}"),
-           counts_file = fs::path(round_dir, str_c("combined-count-", round_id, ".csv")),
-           smoothed_file = fs::path(round_dir, str_c("combined-count-smoothed-", round_id, ".csv"))) |> 
+           counts_file = fs::path(round_dir, str_c("combined-count-", round_id, ".csv"))) |> 
     
-    filter(fs::file_exists(counts_file), fs::file_exists(smoothed_file)) |> 
+    filter(fs::file_exists(counts_file)) |> 
     
     rowwise() |> 
     mutate(counts = list(read_csv(counts_file, show_col_types = FALSE)), 
@@ -159,8 +158,6 @@ calculate_performance_metrics <- function(
 ) {
   
   eval_counts <- read_csv("data/combined-count-2026-01-15.csv", show_col_types = FALSE) |> 
-    left_join(read_csv("data/combined-count-smoothed-2026-01-15.csv", show_col_types = FALSE),
-              by = join_by(notification_date, location, pathogen)) |> 
     filter(location == x_location, pathogen == x_pathogen) |> 
     make_training_counts(x_location, x_pathogen) |> 
     

@@ -95,12 +95,12 @@ plot_latent_inf <- function(trajectory_data, training_counts, origin_date, schoo
               alpha = 0.3,
               trajectory_trace) +
     
-    geom_line(aes(x = date, y = y_smooth),
-              training_counts) +
+    # geom_line(aes(x = date, y = y),
+    #           training_counts) +
     
     geom_vline(xintercept = origin_date, linetype = "44") +
     
-    coord_cartesian(ylim = c(0, max(training_counts$y_smooth, na.rm = TRUE) * 1.5)) +
+    # coord_cartesian(ylim = c(0, max(training_counts$y_smooth, na.rm = TRUE) * 1.5)) +
     
     xlab("Notification date") + ylab("Count") +
     
@@ -138,7 +138,7 @@ plot_cases <- function(trajectory_data, training_counts, origin_date, school_hol
               alpha = 0.3,
               trajectory_trace) +
     
-    coord_cartesian(ylim = c(0, max(training_counts$y_smooth, na.rm = TRUE) * 1.5)) +
+    # coord_cartesian(ylim = c(0, max(training_counts$y_smooth, na.rm = TRUE) * 1.5)) +
     
     geom_vline(xintercept = origin_date, linetype = "44") +
     
@@ -170,8 +170,8 @@ make_forecast_plot <- function(trajectory_data, training_counts, eval_counts, or
     
     xlim(forecast_plot_window) +
     
-    geom_line(aes(x = date, y = y_smooth), colour = "orangered",
-              eval_counts) +
+    # geom_line(aes(x = date, y = y_smooth), colour = "orangered",
+    #           eval_counts) +
     
     geom_vline(xintercept = origin_date + days(4 * 7), linetype = "24")
   
@@ -382,8 +382,8 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
   
   p_latent_inf <- plot_latent_inf(trajectory_data, training_counts, origin_date, school_holidays, public_holidays) +
     
-    geom_line(aes(x = date, y = y_smooth), colour = "orangered",
-              eval_counts) +
+    # geom_line(aes(x = date, y = y_smooth), colour = "orangered",
+    #           eval_counts) +
     xlim(c(ymd(min(trajectory_data$date)), ymd(origin_date + days(365))))
   
   p_reff / p_latent_inf
