@@ -117,6 +117,8 @@ get_gi <- function(pathogen) {
   }
   
   gi <- gis[[pathogen]]
+  
+  return(gi)
 }
 
 
