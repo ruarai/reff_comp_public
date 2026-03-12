@@ -230,7 +230,7 @@ find_inv_gamma_params <- function(l, u, tail_prob = 0.01) {
 
 create_stan_data <- function(
     training_counts,
-    days_ahead,
+    n_days_ahead,
     x_pathogen,
     x_location
 ) {

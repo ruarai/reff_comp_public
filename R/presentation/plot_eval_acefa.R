@@ -3,7 +3,7 @@ source("R/functions.R")
 
 source("R/presentation/plot_theme.R")
 
-perf_files <- fs::dir_ls("results_baseline", glob = "*_performance.parquet", recurse = TRUE)
+perf_files <- fs::dir_ls("results_baseline/", glob = "*_performance.parquet", recurse = TRUE)
 perf_data <- collect(open_dataset(perf_files)) |> 
   mutate(.model = "uom-reff-comp", .before = 1)
 
@@ -261,4 +261,43 @@ perf_data_full |>
   theme(legend.position = "none") +
   
   ggtitle("Forecasting skill (higher is better)")
+
+
+c("snaive", "dstg-RV_model", "UQ-DD", "UQ-renewal_global", 
+  "UQ-renewal_i", "uom-multiwalk", "ensemble-mixture", "ensemble-quantile", 
+  "uom-reff-comp")
+
+perf_data_full |> 
+  filter(horizon > 21, horizon <= 28) |>
+  
+  group_by(location, pathogen, round_id, date) |> 
+  mutate(crps_log_snaive = crps_log[.model == "snaive"]) |> 
+  filter(.model == "uom-reff-comp") |> 
+  
+  group_by(location, pathogen, round_id) |> 
+  
+  summarise(skill_score = 1 - sum(crps_log) / sum(crps_log_snaive),
+            date = first(date)) |> 
+  
+  ggplot() +
+  geom_hline(yintercept = 0, linetype = 22, linewidth = 0.5) +
+  geom_linerange(aes(x = date, ymin = 0, ymax = skill_score, colour = skill_score > 0),
+                 linewidth = 2.0) +
+  
+  ggokabeito::scale_colour_okabe_ito(order = c(6, 3)) +
+  ylab("Model") + xlab("Skill score") +
+  
+  facet_grid(rows = vars(location), cols = vars(pathogen)) +
+  
+  scale_y_continuous(trans = log1minus_trans(),
+                     breaks = c(-3, -1, 0, 0.5, 0.75)) +
+  
+  coord_cartesian(ylim = c(-3, 0.75)) +
+  
+  theme_bw() +
+  
+  theme(legend.position = "none",
+        panel.grid = element_blank()) +
+  
+  ggtitle("Forecasting skill (against naive model)")
 

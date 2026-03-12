@@ -205,3 +205,23 @@ label_pathogens <- function(df) {
     pathogen = factor(pathogen, c("RSV", "flu", "SARSCOV2"), c("RSV", "Influenza", "SARS-CoV-2"))
   ) 
 }
+
+
+combine_forecasts <- function(round_id) {
+  forecast_trajectories <- fs::dir_ls(str_c("results_baseline/", round_id), glob = "*forecast-trajectories.parquet")
+  
+  forecasts <- open_dataset(forecast_trajectories)
+  
+  model_name <- "uom-reff-composure"
+  
+  fs::dir_create(fs::path("forecast_outputs", model_name))
+  
+  output_path <- fs::path("forecast_outputs", model_name)
+  
+  forecasts |> 
+    collect() |> 
+    write_parquet(fs::path(output_path, str_c(round_id, "-", model_name,".parquet")))
+  
+  
+  fs::dir_copy(output_path, "../forecast-hub/model-output/")
+}

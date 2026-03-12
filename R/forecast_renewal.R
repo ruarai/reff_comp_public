@@ -34,7 +34,7 @@ training_counts <- process_counts(combined_counts, x_location, x_pathogen, n_day
   # Save some extra data in case we need it later
   mutate(origin_date = origin_date)
 
-data_list <- create_stan_data(training_counts, days_ahead, x_pathogen, x_location)
+data_list <- create_stan_data(training_counts, n_days_ahead, x_pathogen, x_location)
 
 fit <- fit_model(data_list)
 

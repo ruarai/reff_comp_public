@@ -403,3 +403,12 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
   ggsave(str_c(round_results, "/", x_pathogen, "_", x_location, "_holiday_effects.png"), width = 12, height = 8)
   
 }
+
+log1minus_trans <- function() {
+  scales::trans_new(
+    name = "log1minus",
+    transform = function(y) -log(1 - y),
+    inverse = function(x) 1 - exp(-x),
+    domain = c(-Inf, 0.999999)
+  )
+}
