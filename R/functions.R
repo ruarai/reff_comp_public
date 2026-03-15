@@ -207,12 +207,16 @@ label_pathogens <- function(df) {
 }
 
 
-combine_forecasts <- function(round_id) {
-  forecast_trajectories <- fs::dir_ls(str_c("results_baseline/", round_id), glob = "*forecast-trajectories.parquet")
+combine_forecasts <- function(round_id, dir = "results") {
+  forecast_trajectories <- fs::dir_ls(fs::path(dir, round_id), glob = "*forecast-trajectories.parquet")
+  
+  if(length(forecast_trajectories) == 0) {
+    stop("No forecast trajectories found.")
+  }
   
   forecasts <- open_dataset(forecast_trajectories)
   
-  model_name <- "uom-reff-composure"
+  model_name <- "uom-reff_comp"
   
   fs::dir_create(fs::path("forecast_outputs", model_name))
   
@@ -220,8 +224,6 @@ combine_forecasts <- function(round_id) {
   
   forecasts |> 
     collect() |> 
-    write_parquet(fs::path(output_path, str_c(round_id, "-", model_name,".parquet")))
-  
-  
-  fs::dir_copy(output_path, "../forecast-hub/model-output/")
+    filter(origin_date > ymd("2026-01-01"), horizon <= 7 * 8) |> 
+    write_parquet(fs::path(output_path, str_c(round_id, "-", model_name, ".parquet")))
 }

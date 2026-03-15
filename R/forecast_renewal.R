@@ -7,8 +7,9 @@ args <- commandArgs(trailingOnly = TRUE)
 
 ix_job <- as.integer(args[1])
 round_id <- str_trim(args[2])
+year <- as.character(year(round_id))
 
-combined_counts <- read_csv(str_c("../forecast-hub/processed-data/2025/", round_id, "/combined-count-", round_id, ".csv"))
+combined_counts <- read_csv(str_c("../forecast-hub/processed-data/", year, "/", round_id, "/combined-count-", round_id, ".csv"))
 
 jobs <- distinct(combined_counts, location, pathogen)
 
@@ -35,16 +36,16 @@ training_counts <- process_counts(combined_counts, x_location, x_pathogen, n_day
   mutate(origin_date = origin_date)
 
 data_list <- create_stan_data(training_counts, n_days_ahead, x_pathogen, x_location)
-
-fit <- fit_model(data_list)
-
-print("Saving fit object and training data")
-
-fs::dir_create(fs::path("results", round_id))
-
-fit_file <- str_c("results/", round_id, "/", x_pathogen, "_", x_location, ".rds")
-fit$save_object(fit_file)
-arrow::write_parquet(training_counts, str_c("results/", round_id, "/", x_pathogen, "_", x_location, "_training_counts.parquet"))
+# 
+# fit <- fit_model(data_list)
+# 
+# print("Saving fit object and training data")
+# 
+# fs::dir_create(fs::path("results", round_id))
+# 
+# fit_file <- str_c("results/", round_id, "/", x_pathogen, "_", x_location, ".rds")
+# fit$save_object(fit_file)
+# arrow::write_parquet(training_counts, str_c("results/", round_id, "/", x_pathogen, "_", x_location, "_training_counts.parquet"))
 
 print("Writing trajectories...")
 

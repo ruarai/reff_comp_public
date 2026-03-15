@@ -25,7 +25,7 @@ get_origin_date <- function(combined_counts, x_pathogen, x_location) {
 }
 
 write_forecast_file <- function(round_id, x_pathogen, x_location) {
-  round_results <- fs::path("results_baseline", round_id)
+  round_results <- fs::path("results", round_id)
   
   fit <- read_rds(str_c(round_results, "/", x_pathogen, "_", x_location, ".rds"))
   training_counts <- read_parquet(str_c(round_results, "/", x_pathogen, "_", x_location, "_training_counts.parquet"))
@@ -58,7 +58,7 @@ write_forecast_file <- function(round_id, x_pathogen, x_location) {
       value = as.integer(replace_na(value, 0)),
     ) |> 
     
-    filter(horizon >= -7, horizon <= 7 * 12) |> 
+    filter(horizon >= -7, horizon <= 7 * 8) |> 
     
     select(
       round_id, origin_date,
