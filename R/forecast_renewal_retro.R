@@ -5,7 +5,8 @@ args <- commandArgs(trailingOnly = TRUE)
 
 ix_job <- as.integer(args[1])
 
-jobs <- make_retrospective_jobs()
+jobs <- make_retrospective_jobs() |> 
+  filter(round_id >= "2025-05-08", round_id <= "2025-10-09")
 
 print(str_c("Generated ", nrow(jobs), " jobs"))
 

@@ -120,18 +120,6 @@ make_retrospective_jobs <- function() {
     select(round_id, location, pathogen)
 }
 
-calculate_M_matern <- function(c, length_scale, x) {
-  x_centered <- x - mean(x) 
-  S <- max(abs(x_centered))
-  
-  # Formula of Riutort-Mayol 2023
-  M <- 2.65 * (c * S) / length_scale
-  
-  M <- max(10, M)
-  
-  return(round(M))
-}
-
 
 
 plots_to_gif <- function(plot_list, out_file, width, height, delay = 1) {

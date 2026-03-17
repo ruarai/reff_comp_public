@@ -3,7 +3,7 @@ source("R/functions.R")
 
 source("R/presentation/plot_theme.R")
 
-perf_files <- fs::dir_ls("results_baseline/", glob = "*_performance.parquet", recurse = TRUE)
+perf_files <- fs::dir_ls("saved_results/results_baseline/", glob = "*_performance.parquet", recurse = TRUE)
 perf_data <- collect(open_dataset(perf_files)) |> 
   mutate(.model = "uom-reff-comp", .before = 1)
 
@@ -73,7 +73,7 @@ perf_data_ranking |>
                  linewidth = 2.0) +
   
   ggokabeito::scale_colour_okabe_ito(
-    order = c(9, 9, 9, 9, 9, 3),
+    order = c(9, 9, 9, 9, 9, 9, 3),
     name = "Model"
   ) +
   
@@ -120,6 +120,28 @@ perf_data_full |>
   ggtitle("Mean 22–28 day CRPS\n(lower is better)") +
   
   plot_theme_pres +
+  
+  theme(legend.position = "none")
+
+perf_data_full |> 
+  filter(horizon > 21, horizon <= 28,
+         !str_detect(.model, "ensemble")) |> 
+  group_by(.model, location, pathogen) |> 
+  summarise(crps_log = mean(crps_log)) |> 
+  
+  ggplot() +
+  geom_linerange(aes(y = .model, xmin = 0, xmax = crps_log, colour = .model == "uom-reff-comp"),
+                 linewidth = 1) +
+  
+  ylab(NULL) + xlab("CRPS") +
+  
+  ggokabeito::scale_colour_okabe_ito(order = c(9, 2)) +
+  
+  facet_grid(location ~ pathogen) +
+  
+  ggtitle("Mean 22–28 day CRPS\n(lower is better)") +
+  
+  theme_bw() +
   
   theme(legend.position = "none")
 

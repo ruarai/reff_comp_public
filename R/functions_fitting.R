@@ -89,13 +89,14 @@ process_counts <- function(
   reduced_counts <- combined_counts |> 
     left_join(training_dates) |> 
     filter(notification_date >= cutoff_date) |> 
-    filter(location == x_location, pathogen == x_pathogen) |> 
+    filter(location == x_location, pathogen == x_pathogen)# |> 
     
-    filter(
-      # Drop the last day of data (often issues)
-      # If this improves, remove this line
-      notification_date < max(notification_date)
-    )
+  # TODO re-add
+    # filter(
+    #   # Drop the last day of data (often issues)
+    #   # If this improves, remove this line
+    #   notification_date < max(notification_date)
+    # )
   
   training_counts <- reduced_counts |> 
     make_training_counts(x_location, x_pathogen, n_days_ahead)
@@ -228,6 +229,20 @@ find_inv_gamma_params <- function(l, u, tail_prob = 0.01) {
                  result$termcd, result$message))
   }
 }
+
+
+calculate_M_matern <- function(c, length_scale, x) {
+  x_centered <- x - mean(x) 
+  S <- max(abs(x_centered))
+  
+  # Formula of Riutort-Mayol 2023
+  M <- 2.65 * (c * S) / length_scale
+  
+  M <- max(10, M)
+  
+  return(round(M))
+}
+
 
 
 create_stan_data <- function(

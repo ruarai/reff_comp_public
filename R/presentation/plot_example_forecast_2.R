@@ -11,8 +11,8 @@ round_id <- "2025-07-03"
 # round_id <- "2025-10-09"
 x_pathogen <- "flu"
 x_location <- "VIC"
-training_counts <- arrow::read_parquet(str_c("results_baseline/", round_id, "/", x_pathogen, "_", x_location, "_training_counts.parquet"))
-eval_counts <- arrow::read_parquet(str_c("results_baseline/2025-10-09/", x_pathogen, "_", x_location, "_training_counts.parquet"))
+training_counts <- arrow::read_parquet(str_c("saved_results/results_baseline/", round_id, "/", x_pathogen, "_", x_location, "_training_counts.parquet"))
+eval_counts <- arrow::read_parquet(str_c("saved_results/results_baseline/2025-10-09/", x_pathogen, "_", x_location, "_training_counts.parquet"))
 
 origin_date <- training_counts$origin_date[[1]]
 
@@ -22,7 +22,7 @@ school_holidays <- get_school_holidays() |>
 public_holidays <- get_public_holidays() |> 
   filter(location == x_location)
 
-results <- read_rds(str_c("results_baseline/", round_id, "/", x_pathogen, "_", x_location, ".rds"))
+results <- read_rds(str_c("saved_results/results_baseline/", round_id, "/", x_pathogen, "_", x_location, ".rds"))
 
 date_range <- c(ymd("2025-05-15"), ymd("2025-09-10"))
 date_range <- c(ymd("2023-12-01", ymd("2025-12-01")))
@@ -198,7 +198,7 @@ p_Rt_exp_forecast <- ggplot(trajectory_data |> filter(date >= date_range[1], dat
   coord_cartesian(xlim = date_range, ylim = c(0.6, 1.4)) +
   scale_y_continuous(breaks = c(0.75, 1, 1.25)) +
   
-  scale_x_date(breaks = scales::date_breaks(width = "3 months"),
+  scale_x_date(breaks = scales::date_breaks(width = "1 months"),
                labels = scales::label_date_short()) +
   
   xlab(NULL) + ylab("R(t)") +
@@ -210,7 +210,7 @@ p_Rt_exp_forecast <- ggplot(trajectory_data |> filter(date >= date_range[1], dat
         panel.grid.major.x = element_blank(),
         plot.margin = margin(t = 0.25, b = 0.25, l = 0.1, r = 0.1, unit = "cm")) +
   
-  ggtitle(NULL, "Latent reproduction number <i>R</i>(<i>t</i>)")
+  ggtitle(NULL, "Instantaneous reproduction number <i>R</i>(<i>t</i>)")
 
 
 (p_case_inc + theme(axis.text.x = element_blank())) / p_Rt_exp_forecast

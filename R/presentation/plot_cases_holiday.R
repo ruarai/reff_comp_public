@@ -35,6 +35,8 @@ data |>
   
   xlab("Date") + ylab("Case incidence") +
   
+  scale_x_date(labels = scales::label_date_short()) +
+  
   coord_cartesian(ylim = c(0, NA)) +
   
   ggtitle("RSV case incidence — New South Wales") +
