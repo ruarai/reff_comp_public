@@ -9,7 +9,7 @@ results
 slurm_out
 forecast_outputs
 forecast_outputs_raw
-plots
+/plots/
 forecast_outputs_old
 results*
 Rplots.pdf
