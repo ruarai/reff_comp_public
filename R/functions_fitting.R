@@ -1,6 +1,6 @@
 
 fit_model <- function(data_list) {
-  require(cmdstanr)
+  library(cmdstanr)
   model <- cmdstan_model("src/gp_renewal.stan")
   
   fit <- model$sample(
@@ -89,14 +89,13 @@ process_counts <- function(
   reduced_counts <- combined_counts |> 
     left_join(training_dates) |> 
     filter(notification_date >= cutoff_date) |> 
-    filter(location == x_location, pathogen == x_pathogen)# |> 
+    filter(location == x_location, pathogen == x_pathogen) |> 
     
-  # TODO re-add
-    # filter(
-    #   # Drop the last day of data (often issues)
-    #   # If this improves, remove this line
-    #   notification_date < max(notification_date)
-    # )
+    filter(
+      # Drop the last day of data (often issues)
+      # If this improves, remove this line
+      notification_date < max(notification_date)
+    )
   
   training_counts <- reduced_counts |> 
     make_training_counts(x_location, x_pathogen, n_days_ahead)
@@ -108,9 +107,9 @@ process_counts <- function(
 get_gi <- function(pathogen) {
   # From ACEFA standards
   gis <- list(
-    "SARSCOV2" = make_gi(0.89, rate = 0.27, 0.995),
-    "RSV" = make_gi(12.76, 1.7, 0.995),
-    "flu" = make_gi(4.00, 1.54, 0.995)
+    "SARSCOV2" = make_gi(0.89, rate = 0.27),
+    "RSV" = make_gi(12.76, 1.7),
+    "flu" = make_gi(4.00, 1.54)
   )
   
   if(!(pathogen %in% names(gis))) {
@@ -143,7 +142,7 @@ make_training_counts <- function(
   
   n_na <- sum(is.na(training_counts$y))
   
-  print(str_c(n_na, " NA values to be imputed"))
+  message(str_c(n_na, " NA values to be imputed"))
   
   if(n_na > 0) {
     training_counts |> 
@@ -190,7 +189,7 @@ make_training_counts <- function(
 }
 
 
-make_gi <- function(shape, rate, p_threshold) {
+make_gi <- function(shape, rate) {
   cdf_gi <- pgamma(0:21, shape = shape, rate = rate)
   
   discrete_gi <- diff(cdf_gi)
@@ -217,12 +216,12 @@ find_inv_gamma_params <- function(l, u, tail_prob = 0.01) {
   
   initial_guess <- c(log(5.0), log(5.0))
   
-  require(nleqslv)
+  library(nleqslv)
   result <- nleqslv(initial_guess, f)
   
   if (result$termcd %in% c(1, 2)) {
     sol <- exp(result$x)
-    print(str_c("inv_gamma(", round(sol[1], digits = 3), ", ", round(sol[2], digits = 3), ")"))
+    message(glue::glue("inv_gamma({round(sol[1], 3)}, {round(sol[2], 3)})"))
     return(list(alpha = sol[1], theta = sol[2]))
   } else {
     stop(sprintf("Solver failed to converge. Return code: %d, Message: %s", 
