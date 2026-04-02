@@ -173,7 +173,8 @@ make_training_counts <- function(
       is_weekend = if_else(day_of_week == 1 | day_of_week == 7, 1, 0),
       year = as.integer(
         interval(min(floor_date(date, "year")), floor_date(date, "year")) / years(1)
-      ) + 1
+      ) + 1,
+      day_of_year = yday(date)
     ) |> 
     left_join(school_holidays_location, by = join_by(date, location)) |> 
     left_join(public_holidays_location, by = join_by(date, location)) |> 
@@ -242,6 +243,29 @@ calculate_M_matern <- function(c, length_scale, x) {
   return(round(M))
 }
 
+get_population_size <- function(location) {
+  population_sizes <- list(
+    # December 2021 ERP - ABS
+    "ACT" = 453.3 * 1000,
+    "NSW" = 8095.4 * 1000,
+    "NT" = 249.3 * 1000,
+    "QLD" = 5265.0 * 1000,
+    "SA" = 1806.6 * 1000,
+    "TAS" = 569.8 * 1000,
+    "VIC" = 6559.9 * 1000,
+    "WA" = 2762.2 * 1000,
+    
+    # September 25 ERP - Stats NZ
+    "NZ" = 5334.2 * 1000
+  )
+  
+  if(!(location %in% names(population_sizes))) {
+    stop("Invalid location for population size")
+  }
+  
+  return(population_sizes[[location]])
+}
+
 
 
 create_stan_data <- function(
@@ -264,6 +288,7 @@ create_stan_data <- function(
   data_list <- list(
     x = training_counts$x,
     day_of_week = training_counts$day_of_week,
+    day_of_year = training_counts$day_of_year,
     is_weekend = training_counts$is_weekend,
     school_holiday_type = training_counts$school_holiday_type,
     
@@ -278,7 +303,12 @@ create_stan_data <- function(
     M_noise = calculate_M_matern(c = 1.25, length_scale = 10.0, x = training_counts$x),
     c_factor = 1.25,
     
-    gi_reversed = rev(gi), N_gi = length(gi)
+    population_size = get_population_size(x_location),
+    
+    gi_reversed = rev(gi), N_gi = length(gi),
+    
+    # Immunity model params
+    k = 8, init_factor = 0.5e-2
   )
   
   return(data_list)

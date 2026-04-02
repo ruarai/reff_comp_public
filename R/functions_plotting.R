@@ -95,8 +95,8 @@ plot_latent_inf <- function(trajectory_data, training_counts, origin_date, schoo
               alpha = 0.3,
               trajectory_trace) +
     
-    # geom_line(aes(x = date, y = y),
-    #           training_counts) +
+    geom_line(aes(x = date, y = y_smooth),
+              training_counts |> mutate(y_smooth = zoo::rollmean(y, k = 7, fill = NA))) +
     
     geom_vline(xintercept = origin_date, linetype = "44") +
     
@@ -332,6 +332,7 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
     mutate(outlier = FALSE, cases = cases_trend_and_remainder * exp(cases_season_week)) |> 
     filter(location == x_location, pathogen == x_pathogen) |> 
     make_training_counts(x_location, x_pathogen) |> 
+    mutate(y_smooth = zoo::rollmean(y, k = 7, fill = NA)) |> 
     filter(date > origin_date)
   
   
@@ -382,8 +383,8 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
   
   p_latent_inf <- plot_latent_inf(trajectory_data, training_counts, origin_date, school_holidays, public_holidays) +
     
-    # geom_line(aes(x = date, y = y_smooth), colour = "orangered",
-    #           eval_counts) +
+    geom_line(aes(x = date, y = y_smooth), colour = "orangered",
+              eval_counts) +
     xlim(c(ymd(min(trajectory_data$date)), ymd(origin_date + days(365))))
   
   p_reff / p_latent_inf
