@@ -215,3 +215,13 @@ combine_forecasts <- function(round_id, dir = "results") {
     filter(origin_date > ymd("2026-01-01"), horizon <= 7 * 8) |> 
     write_parquet(fs::path(output_path, str_c(round_id, "-", model_name, ".parquet")))
 }
+
+save_plots_to_pdf <- function(plot_list, file_path, width = 8, height = 6) {
+  pdf(file = file_path, width = width, height = height)
+  
+  for (plot in plot_list) {
+    print(plot)
+  }
+  
+  dev.off()
+}

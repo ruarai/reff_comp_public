@@ -1,9 +1,15 @@
 
 library(tidyverse)
 library(processx)
+library(gert)
 source("R/functions.R")
 
 round_id <- "2025-05-08"
+
+is_clean <- nrow(git_status()) == 0
+if (!is_clean) {
+  print("Working directory is not clean. Don't continue until all changes have been committed.")
+}
 
 
 repo_dir <- "../forecast-hub"

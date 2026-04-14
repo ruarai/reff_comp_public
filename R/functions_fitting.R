@@ -1,7 +1,7 @@
 
-fit_model <- function(data_list) {
+fit_model <- function(data_list, model_file = "src/gp_renewal.stan") {
   library(cmdstanr)
-  model <- cmdstan_model("src/gp_renewal.stan")
+  model <- cmdstan_model(model_file)
   
   fit <- model$sample(
     data = data_list,
@@ -33,17 +33,47 @@ write_forecast_file <- function(round_id, x_pathogen, x_location) {
   origin_date <- training_counts$origin_date[[1]]
   
   case_trajectories <- fit |> 
-    spread_draws(cases[ix_x], inf_delayed[ix_x]) |> 
-    mutate(date = training_counts$date[ix_x])
+    spread_draws(cases[ix_x], latent_cases_log[ix_x]) |> 
+    mutate(date = training_counts$date[ix_x],
+           latent_cases = exp(latent_cases_log))
+  
+  peak_forecasts <- case_trajectories |> 
+    filter(year(date) == year(round_id)) |> 
+    group_by(.draw) |> 
+    summarise(peak_case_incidence = max(latent_cases),
+              peak_date = first(date[latent_cases == max(latent_cases)])) |> 
+    ungroup() |> 
+    transmute(
+      output_type = "sample",
+      output_type_id = .draw,
+      peak_case_incidence, 
+      peak_day_of_year = yday(peak_date),
+      location = x_location,
+      pathogen = x_pathogen,
+      round_id = ymd(round_id),
+      horizon = 0,
+      origin_date = origin_date
+    ) |> 
+    pivot_longer(c(peak_case_incidence, peak_day_of_year),
+                 names_to = "target", values_to = "value") |> 
+    mutate(value = as.integer(round(value))) |> 
+    
+    select(
+      round_id, origin_date,
+      target, horizon, location, pathogen,
+      
+      output_type, output_type_id,
+      
+      value
+    )
   
   
-  forecast_data <- case_trajectories |> 
+  case_forecasts <- case_trajectories |> 
     ungroup() |> 
     select(output_type_id = .draw,
            notification_date = date,
-           case_incidence = cases,
-           case_incidence_smoothed = inf_delayed) |> 
-    pivot_longer(c(case_incidence, case_incidence_smoothed),
+           case_incidence = cases) |> 
+    pivot_longer(c(case_incidence),
                  names_to = "target") |> 
     mutate(
       horizon = as.integer(notification_date - origin_date),
@@ -68,6 +98,11 @@ write_forecast_file <- function(round_id, x_pathogen, x_location) {
       
       value
     )
+  
+  forecast_data <- bind_rows(
+    case_forecasts,
+    peak_forecasts
+  )
   
   output_file <- str_c(round_results, "/", x_pathogen, "_", x_location, "_forecast-trajectories.parquet")
   
@@ -285,6 +320,10 @@ create_stan_data <- function(
   
   year_ranges <- training_counts |> group_by(year) |> summarise(ix_year_start = min(x) + 1, ix_year_end = max(x) + 1)
   
+  humidity_data <- read_csv("data/modelled_humidity.csv", show_col_types = FALSE) |> 
+    filter(location == x_location) |> 
+    arrange(day_of_year)
+  
   data_list <- list(
     x = training_counts$x,
     day_of_week = training_counts$day_of_week,
@@ -308,7 +347,9 @@ create_stan_data <- function(
     gi_reversed = rev(gi), N_gi = length(gi),
     
     # Immunity model params
-    k = 8, init_factor = 0.5e-2
+    k = 5, init_factor = 0.5e-2,
+    humidity = humidity_data$humidity_scaled,
+    sample_from_prior = 0, log_R_0 = 0.33
   )
   
   return(data_list)

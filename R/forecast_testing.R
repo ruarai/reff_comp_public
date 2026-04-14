@@ -6,17 +6,18 @@ source("R/functions.R")
 
 round_id <- "2025-05-08"
 
-x_location <- "VIC"
+x_location <- "QLD"
 x_pathogen <- "RSV"
 
 year <- as.character(year(round_id))
 combined_counts <- read_csv(str_c("../forecast-hub/processed-data/", year, "/", round_id, "/combined-count-", round_id, ".csv"))
 
+origin_date <- get_origin_date(combined_counts, x_pathogen, x_location)
+
 eval_counts <- read_csv("data/combined-count-smoothed-2026-01-15.csv") |> 
   filter(notification_date > origin_date, location == x_location, pathogen == x_pathogen)
 
 
-origin_date <- get_origin_date(combined_counts, x_pathogen, x_location)
 
 n_days_ahead <- 365
 
@@ -28,24 +29,17 @@ data_list <- create_stan_data(training_counts, n_days_ahead, x_pathogen, x_locat
 
 
 library(cmdstanr)
-model <- cmdstan_model("src/gp_renewal.stan")
-
-data_list$k <- 8
-data_list$init_factor <- 0.5e-2
-
-
-data_list$rel_hum <- mean_weather$rel_hum[,1]
-data_list$abs_hum <- mean_weather$abs_hum[,1]
+model <- cmdstan_model("src/gp_renewal_immunity.stan")
 
 fit <- model$optimize(
-  data = data_list, seed = 5, iter = 1e4, init = 0.1
+  data = data_list, seed = 3, iter = 1e4, init = 0.1
 )
 fit <- model$pathfinder(
-  data = data_list, seed = 8, init = 0.01
+  data = data_list, seed = 6, init = 0.5
 )
 fit <- model$variational(
-  data = data_list, seed = 10, iter = 3e4,
-  algorithm="fullrank"
+  data = data_list, seed = 10, iter = 5e4,
+  init = fit
 )
 
 fit <- model$sample(
@@ -55,7 +49,10 @@ fit <- model$sample(
   parallel_chains = 4,
   refresh = 50,
   iter_warmup = 1000, iter_sampling = 1000
+  # init = fit
 )
+
+stan_pairplot(fit, "scaling_humidity", c(pars, "r_0", "initial_immunity_prop[1]", "alpha", "immunity_half_life"))
 
 
 draws <- fit |>
@@ -63,51 +60,58 @@ draws <- fit |>
   select(-starts_with("cases"))
 
 pars <- c(
-  "scaling_annual", "scaling_noise", "ls_noise", "ls_annual", "phi",
-  "delay_mean", "delay_sd", "log_R_0"
+  "scaling_noise", "ls_noise", "phi", "scaling_humidity", 
+  "delay_mean", "delay_sd"
 )
 
 p_hist <- mcmc_hist(draws |> mutate(chain = .chain), pars = pars) +
   theme_bw()
 
+p_hist
+
 p_trace <- mcmc_trace(draws |> mutate(chain = .chain), pars = pars) +
   theme_bw()
-
-p_hist | p_trace
+p_trace
 
 mcmc_trace(draws |> mutate(chain = .chain),
-           pars = c("alpha", "rel_hum_factor", "abs_hum_factor", "immunity_half_life")) +
+           pars = c("alpha", "immunity_half_life")) +
   theme_bw()
 
 mcmc_pairs(draws |> mutate(chain = .chain),
-           pars = c("alpha", "rel_hum_factor", "abs_hum_factor", "immunity_half_life"))
+           pars = c("alpha", "immunity_half_life"))
+
+
+# mcmc_pairs(draws |> mutate(chain = .chain), pars = pars)
 
 
 
+trajectory_data_imm <- fit|> 
+  spread_draws(immune_effect[ix_t], alpha, humidity_effect[ix_t]) |> 
+  mutate(date = training_counts$date[ix_t],
+         )
 
-trajectory_data_imm <- fit |> 
-  spread_draws(accumulated_immunity[ix_t, k], alpha) |> 
-  mutate(date = training_counts$date[ix_t])
-
-ggplot(trajectory_data_imm |> group_by(date, .draw) |> summarise(y = sum(accumulated_immunity) * alpha)) + 
-  fastribbon::stat_fastribbon(aes(x = date, y = y)) +
+ggplot(trajectory_data_imm) + 
+  fastribbon::stat_fastribbon(aes(x = date, y = immune_effect)) +
   
   scale_fill_brewer()
 
-
 ggplot(trajectory_data_imm) + 
-  fastribbon::stat_fastribbon(aes(x = date, y = accumulated_immunity * alpha)) +
+  fastribbon::stat_fastribbon(aes(x = date, y = humidity_effect)) +
   
-  facet_wrap(~k)
+  scale_fill_brewer()
 
+data_list$humidity
 
 
 trajectory_data <- fit |> 
   spread_draws(log_R[ix_t], R_t[ix_t], inf[ix_t], inf_delayed[ix_t],
-               cases[ix_t], f_annual[ix_t], f_noise[ix_t],
-               latent_cases_log[ix_t]) |> 
+               cases[ix_t], f_noise[ix_t],
+               latent_cases_log[ix_t],
+               # log_R_0
+               ) |> 
   mutate(date = training_counts$date[ix_t],
          latent_cases = exp(latent_cases_log),
+         # log_R_0 = cut(log_R_0, 4),
          
          cases = replace_na(cases, 0))
 
@@ -124,29 +128,32 @@ ggplot(trajectory_data) +
   fastribbon::stat_fastribbon(aes(x = date, y = exp(log_R)),
                               alpha = 0.2) +
   
+  # facet_wrap(~log_R_0) +
+  
   scale_fill_brewer()
 
+trajectory_data |> 
+  filter(.draw %% 222 == 0) |>
+  ggplot() +
+  geom_line(aes(x = date, y = latent_cases, group = .draw)) +
+  geom_line(aes(x = notification_date, y = cases_trend), eval_counts,
+            colour = "orangered") +
+  geom_line(aes(x = date, y = y_smooth), training_counts |> mutate(y_smooth = zoo::rollmean(y, 7, fill = NA)),
+            colour = "blue")
 
 ggplot(trajectory_data) + 
   fastribbon::stat_fastribbon(aes(x = date, y = latent_cases),
                               linewidth = 1) +
+  geom_line(aes(x = date, y = y_smooth), training_counts |> mutate(y_smooth = zoo::rollmean(y, 7, fill = NA)),
+            colour = "blue") +
   geom_line(aes(x = notification_date, y = cases_trend), eval_counts,
             colour = "orangered") + 
   
-  scale_fill_brewer()
-
-
-p_reff <- plot_reff_components(trajectory_data, origin_date, school_holidays, public_holidays) +
-  xlim(c(ymd(min(trajectory_data$date)), ymd(origin_date + days(365))))
-
-p_latent_inf <- plot_latent_inf(trajectory_data, training_counts, origin_date, school_holidays, public_holidays) +
-  geom_line(aes(x = notification_date, y = cases_trend), eval_counts,
-            colour = "orangered") +
+  # facet_wrap(~log_R_0) +
   
-  xlim(c(ymd(min(trajectory_data$date)), ymd(origin_date + days(365))))
-
-p_reff / p_latent_inf
-
-
-
+  coord_cartesian(ylim = c(5, 300)) +
+  
+  scale_y_log10() +
+  
+  scale_fill_brewer()
 

@@ -37,7 +37,7 @@ training_counts <- process_counts(combined_counts, x_location, x_pathogen, n_day
 
 data_list <- create_stan_data(training_counts, n_days_ahead, x_pathogen, x_location)
 
-fit <- fit_model(data_list)
+fit <- fit_model(data_list, model_file = "src/gp_renewal_immunity.stan")
 
 print("Saving fit object and training data")
 

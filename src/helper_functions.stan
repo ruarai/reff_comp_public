@@ -33,3 +33,7 @@ vector get_effect(matrix effect_raw, int N, int ix_loc) {
   
   return effect;
 }
+
+real sigmoid(real x, real k, real x0, real S) {
+  return S * inv_logit(k * (x - x0));
+}
