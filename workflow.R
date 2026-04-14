@@ -1,16 +1,11 @@
 
 library(tidyverse)
 library(processx)
-library(gert)
 source("R/functions.R")
 
 round_id <- "2025-05-08"
 
-is_clean <- nrow(git_status()) == 0
-if (!is_clean) {
-  print("Working directory is not clean. Don't continue until all changes have been committed.")
-}
-
+check_and_log_git_status(round_id)
 
 repo_dir <- "../forecast-hub"
 
@@ -41,3 +36,4 @@ run("git", c("push", "-u", "origin", "uom-reff_comp"), wd = repo_dir, echo = TRU
 
 # Return to main branch
 run("git", c("switch", "main"), wd = repo_dir, echo = TRUE)
+
