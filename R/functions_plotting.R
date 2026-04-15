@@ -315,26 +315,19 @@ plot_holiday_effects <- function(fit, public_holidays) {
 }
 
 
-make_fit_plots <- function(round_id, x_pathogen, x_location) {
+make_fit_plots <- function(round_id, x_pathogen, x_location, x_target) {
   round_results <- fs::path("results", round_id)
   
-  fit <- read_rds(str_c(round_results, "/", x_pathogen, "_", x_location, ".rds"))
-  training_counts <- arrow::read_parquet(str_c(round_results, "/", x_pathogen, "_", x_location, "_training_counts.parquet"))
+  job_name <- str_c(x_pathogen, "_", x_location, "_", x_target)
+  
+  fit <- read_rds(str_c(round_results, "/", job_name, ".rds"))
+  training_counts <- read_parquet(str_c(round_results, "/", job_name, "_training_counts.parquet"))
   
   
   origin_date <- training_counts |> 
     drop_na(y) |> 
     pull(date) |> 
     max()
-  
-  eval_counts <- read_csv("data/combined-count-smoothed-2026-01-15.csv") |> 
-    group_by(location, pathogen) |> 
-    mutate(outlier = FALSE, cases = cases_trend_and_remainder * exp(cases_season_week)) |> 
-    filter(location == x_location, pathogen == x_pathogen) |> 
-    make_training_counts(x_location, x_pathogen) |> 
-    mutate(y_smooth = zoo::rollmean(y, k = 7, fill = NA)) |> 
-    filter(date > origin_date)
-  
   
   draws <- fit |>
     tidybayes::tidy_draws() |> 
@@ -389,7 +382,7 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
   
   p_reff / p_latent_inf
   
-  ggsave(str_c(round_results, "/", x_pathogen, "_", x_location, "_plot_latent_inf.png"), width = 14, height = 8)
+  ggsave(str_c(round_results, "/", job_name, "_plot_latent_inf.png"), width = 14, height = 8)
   
   
   make_forecast_plot(
@@ -397,11 +390,11 @@ make_fit_plots <- function(round_id, x_pathogen, x_location) {
     school_holidays, public_holidays, x_location, x_pathogen
   )
   
-  ggsave(str_c(round_results, "/", x_pathogen, "_", x_location, "_plot_forecast.png"), width = 10, height = 10)
+  ggsave(str_c(round_results, "/", job_name, "_plot_forecast.png"), width = 10, height = 10)
   
   plot_holiday_effects(fit, public_holidays)
   
-  ggsave(str_c(round_results, "/", x_pathogen, "_", x_location, "_holiday_effects.png"), width = 12, height = 8)
+  ggsave(str_c(round_results, "/", job_name, "_holiday_effects.png"), width = 12, height = 8)
   
 }
 

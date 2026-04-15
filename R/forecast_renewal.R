@@ -11,7 +11,9 @@ year <- as.character(year(round_id))
 
 combined_counts <- read_csv(str_c("../forecast-hub/processed-data/", year, "/", round_id, "/combined-count-", round_id, ".csv"))
 
-jobs <- distinct(combined_counts, location, pathogen)
+jobs <- distinct(combined_counts, location, pathogen, target) |> 
+  
+  filter(location == "VIC")
 
 print(str_c("Generated ", nrow(jobs), " jobs from combined_counts"))
 
@@ -24,36 +26,37 @@ job <- jobs[ix_job, ]
 
 x_location <- job$location[[1]]
 x_pathogen <- job$pathogen[[1]]
+x_target <- job$target[[1]]
 
-origin_date <- get_origin_date(combined_counts, x_pathogen, x_location)
+origin_date <- get_origin_date(combined_counts, x_pathogen, x_location, x_target)
 
 print(str_c("Performing job ", ix_job, " (", x_location, "-", x_pathogen, ")"))
 
 n_days_ahead <- 365
 
-training_counts <- process_counts(combined_counts, x_location, x_pathogen, n_days_ahead) |> 
+training_counts <- process_counts(combined_counts, x_location, x_pathogen, x_target, n_days_ahead) |> 
   # Save some extra data in case we need it later
   mutate(origin_date = origin_date)
 
 data_list <- create_stan_data(training_counts, n_days_ahead, x_pathogen, x_location)
 
-fit <- fit_model(data_list, model_file = "src/gp_renewal_immunity.stan")
+fit <- fit_model(data_list, model_file = "src/gp_renewal.stan")
 
 print("Saving fit object and training data")
 
 fs::dir_create(fs::path("results", round_id))
 
-fit_file <- str_c("results/", round_id, "/", x_pathogen, "_", x_location, ".rds")
+fit_file <- str_c("results/", round_id, "/", x_pathogen, "_", x_location, "_", x_target, ".rds")
 fit$save_object(fit_file)
-arrow::write_parquet(training_counts, str_c("results/", round_id, "/", x_pathogen, "_", x_location, "_training_counts.parquet"))
+arrow::write_parquet(training_counts, str_c("results/", round_id, "/", x_pathogen, "_", x_location, "_", x_target, "_training_counts.parquet"))
 
 print("Writing trajectories...")
 
-write_forecast_file(round_id, x_pathogen, x_location)
+write_forecast_file(round_id, x_pathogen, x_location, x_target)
 
 print("Making plots...")
 
-make_fit_plots(round_id, x_pathogen, x_location)
+make_fit_plots(round_id, x_pathogen, x_location, x_target)
 
 print("Complete")
 

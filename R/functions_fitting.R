@@ -17,18 +17,19 @@ fit_model <- function(data_list, model_file = "src/gp_renewal.stan") {
 }
 
 
-get_origin_date <- function(combined_counts, x_pathogen, x_location) {
+get_origin_date <- function(combined_counts, x_pathogen, x_location, x_target) {
   combined_counts |> 
-    filter(location == x_location, pathogen == x_pathogen) |> 
+    filter(location == x_location, pathogen == x_pathogen, target == x_target,
+           is_complete) |> 
     pull(notification_date) |> 
     max()
 }
 
-write_forecast_file <- function(round_id, x_pathogen, x_location) {
+write_forecast_file <- function(round_id, x_pathogen, x_location, x_target) {
   round_results <- fs::path("results", round_id)
   
-  fit <- read_rds(str_c(round_results, "/", x_pathogen, "_", x_location, ".rds"))
-  training_counts <- read_parquet(str_c(round_results, "/", x_pathogen, "_", x_location, "_training_counts.parquet"))
+  fit <- read_rds(str_c(round_results, "/", x_pathogen, "_", x_location, "_", x_target, ".rds"))
+  training_counts <- read_parquet(str_c(round_results, "/", x_pathogen, "_", x_location, "_", x_target, "_training_counts.parquet"))
   
   origin_date <- training_counts$origin_date[[1]]
   
@@ -72,9 +73,7 @@ write_forecast_file <- function(round_id, x_pathogen, x_location) {
     ungroup() |> 
     select(output_type_id = .draw,
            notification_date = date,
-           case_incidence = cases) |> 
-    pivot_longer(c(case_incidence),
-                 names_to = "target") |> 
+           value = cases) |> 
     mutate(
       horizon = as.integer(notification_date - origin_date),
       origin_date = origin_date,
@@ -82,6 +81,7 @@ write_forecast_file <- function(round_id, x_pathogen, x_location) {
       output_type = "sample",
       location = x_location,
       pathogen = x_pathogen,
+      target = x_target,
       
       # We get NA values sometimes where rng freaks out (high variance)
       # replace with zero as a stop-gap.
@@ -101,7 +101,7 @@ write_forecast_file <- function(round_id, x_pathogen, x_location) {
   
   forecast_data <- bind_rows(
     case_forecasts,
-    peak_forecasts
+    peak_forecasts |> filter(x_target == "case_incidence")
   )
   
   output_file <- str_c(round_results, "/", x_pathogen, "_", x_location, "_forecast-trajectories.parquet")
@@ -114,7 +114,7 @@ write_forecast_file <- function(round_id, x_pathogen, x_location) {
 
 process_counts <- function(
     combined_counts,
-    x_location, x_pathogen,
+    x_location, x_pathogen, x_target,
     n_days_ahead
 ) {
   training_dates <- get_training_dates()
@@ -124,7 +124,8 @@ process_counts <- function(
   reduced_counts <- combined_counts |> 
     left_join(training_dates) |> 
     filter(notification_date >= cutoff_date) |> 
-    filter(location == x_location, pathogen == x_pathogen) |> 
+    filter(location == x_location, pathogen == x_pathogen, target == x_target) |> 
+    filter(is_complete) |> 
     
     filter(
       # Drop the last day of data (often issues)
@@ -171,8 +172,8 @@ make_training_counts <- function(
     select(date, location, public_holiday_type)
   
   training_counts <- reduced_counts |> 
-    select(location, pathogen, date = notification_date, y = cases) |> 
-    complete(date = seq(min(date), max(date), by = "days"), fill = list(location = x_location, pathogen = x_pathogen)) |>
+    select(location, pathogen, target, date = notification_date, y = value) |> 
+    complete(date = seq(min(date), max(date), by = "days"), fill = list(location = x_location, pathogen = x_pathogen, target = x_target)) |>
     arrange(date)
   
   n_na <- sum(is.na(training_counts$y))
@@ -194,7 +195,7 @@ make_training_counts <- function(
       tibble(
         date = seq(max(training_counts$date) + days(1), max(training_counts$date) + days(days_ahead), by = "days"),
         
-        location = x_location, pathogen = x_pathogen
+        location = x_location, pathogen = x_pathogen, target = x_target
       )
     )
   }
