@@ -39,11 +39,11 @@ ggplot(gp_draws |> filter(location != "NZ", year(date) == 2024, location != "SA"
   
   facet_grid(rows = vars(location), cols = vars(pathogen)) +
   
-  scale_x_date(labels = scales::label_date_short()) +
+  scale_x_date(labels = scales::label_date_short(format = c("", "%b"))) +
   
   scale_fill_brewer() +
   
-  theme_bw() +
+  plot_theme_pres + xlab(NULL) + ylab(NULL) +
   theme(legend.position = "none")
 
 
