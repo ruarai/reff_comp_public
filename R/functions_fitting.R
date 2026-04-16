@@ -1,5 +1,8 @@
 
 fit_model <- function(data_list, model_file = "src/gp_renewal.stan") {
+  
+  print(str_c("Fitting model ", model_file))
+  
   library(cmdstanr)
   model <- cmdstan_model(model_file)
   

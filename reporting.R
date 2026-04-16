@@ -11,6 +11,7 @@ peak_forecasts <- forecasts |>
   pivot_wider(names_from = "target")
 
 peak_date_range <- c(floor_date(ymd(round_id), "year"), floor_date(ymd(round_id), "year") + years(1))
+plot_date_range <- c(floor_date(ymd(round_id), "year") - years(1), floor_date(ymd(round_id), "year") + years(1))
 
 plots <- peak_forecasts |> 
   distinct(x_location = location, x_pathogen = pathogen, x_model = .model) |> 
@@ -19,12 +20,12 @@ plots <- peak_forecasts |>
   pmap(
     function(x_location, x_pathogen, x_model) {
       
-      training_counts <- read_parquet(fs::path("results", round_id, str_c(x_pathogen, "_", x_location, "_training_counts.parquet")))
+      training_counts <- read_parquet(fs::path("results", round_id, str_c(x_pathogen, "_", x_location, "_case_incidence_training_counts.parquet")))
       
       origin_date <- training_counts$origin_date[[1]]
       
       plot_data_training <- training_counts |> 
-        filter(year(date) == year(round_id))
+        filter(date >= plot_date_range[1])
       
       peak_data <- peak_forecasts |> 
         filter(location == x_location,
@@ -59,7 +60,7 @@ plots <- peak_forecasts |>
         
         xlab(NULL) + ylab("Case incidence") +
         
-        coord_cartesian(xlim = peak_date_range) +
+        coord_cartesian(xlim = plot_date_range) +
         
         # scale_fill_brewer(palette = "Blues") +
         scale_fill_manual(values = c("transparent", RColorBrewer::brewer.pal(5, "Blues"))) +
@@ -81,7 +82,7 @@ plots <- peak_forecasts |>
         
         xlab(NULL) + ylab(NULL) +
         
-        coord_cartesian(xlim = peak_date_range) +
+        coord_cartesian(xlim = plot_date_range) +
         
         theme_bw()
       
@@ -107,4 +108,68 @@ plots <- peak_forecasts |>
     }
   )
 
-save_plots_to_pdf(plots, fs::path("plots", str_c(round_id, "_peaks.pdf")), width = 10, height = 7)
+plots[[3]]
+
+save_plots_to_pdf(plots, fs::path("plots", str_c(round_id, "_peaks.pdf")), width = 12, height = 7)
+
+plot_theme <- list(
+  xlab(NULL), ylab(NULL),
+  theme_minimal(),
+  theme(
+    panel.grid.minor = element_blank(),
+    legend.position = "none",
+    panel.background = element_rect(colour = "grey70", linewidth = 0.25)
+  )
+)
+
+
+plot_model_ribbon <- function(forecasts, combined_counts) {
+  model_submissions <- forecasts |> 
+    filter(target == "case_incidence", horizon <= 28) |> 
+    collect()
+  
+  
+  origin_dates <- forecasts |> 
+    distinct(origin_date, pathogen, location) |> 
+    collect()
+  
+  observations <- combined_counts |> 
+    left_join(origin_dates, by = join_by(location, pathogen)) |> 
+    filter(notification_date > origin_date - 7 * 8)
+  
+  library(pammtools)
+  library(ggh4x)
+  library(ufs)
+  
+  ggplot() +
+    
+    fastribbon::stat_fastribbon(aes(x = origin_date + horizon, y = value),
+                                model_submissions,
+                                geom = "stepribbon",
+                                linewidth = 0.0) +
+    
+    geom_line(aes(x = notification_date, y = value),
+              observations) +
+    
+    facet_wrap(~location * pathogen, ncol = 3, scales = "free_y") +
+    
+    ggh4x::facet_grid2(rows = vars(location), cols = vars(pathogen),
+                       scales = "free_y", independent = "y") +
+
+    geom_vline(aes(xintercept = origin_date),
+               origin_dates, linetype = "44") +
+    
+    scale_y_continuous(breaks = scales::breaks_extended(3)) +
+    
+    coord_cartesian(ylim = c(0, NA)) +
+    
+    plot_theme +
+    
+    scale_fill_brewer()
+}
+
+year <- as.character(year(round_id))
+
+combined_counts <- read_csv(str_c("../forecast-hub/processed-data/", year, "/", round_id, "/combined-count-", round_id, ".csv"))
+
+plot_model_ribbon(forecasts, combined_counts)

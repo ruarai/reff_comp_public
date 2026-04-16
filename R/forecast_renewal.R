@@ -11,9 +11,7 @@ year <- as.character(year(round_id))
 
 combined_counts <- read_csv(str_c("../forecast-hub/processed-data/", year, "/", round_id, "/combined-count-", round_id, ".csv"))
 
-jobs <- distinct(combined_counts, location, pathogen, target) |> 
-  
-  filter(location == "VIC")
+jobs <- distinct(combined_counts, location, pathogen, target)
 
 print(str_c("Generated ", nrow(jobs), " jobs from combined_counts"))
 

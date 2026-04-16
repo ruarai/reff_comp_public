@@ -4,7 +4,7 @@
 #SBATCH --partition=cascade,sapphire
 #SBATCH --cpus-per-task=4
 #SBATCH --mem-per-cpu=6G
-#SBATCH --array=1-50
+#SBATCH --array=1-28
 #SBATCH --job-name=periodicgpcast
 #SBATCH -o ./slurm_out/periodicgpcast_dist_%a.txt # STDOUT
 

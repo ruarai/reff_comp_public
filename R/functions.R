@@ -205,14 +205,15 @@ combine_forecasts <- function(round_id, dir = "results") {
   forecasts <- open_dataset(forecast_trajectories)
   
   model_name <- "uom-reff_comp"
-  
-  fs::dir_create(fs::path("forecast_outputs", model_name))
-  
   output_path <- fs::path("forecast_outputs", model_name)
+  
+  fs::dir_create(output_path)
+  
   
   forecasts |> 
     collect() |> 
-    filter(origin_date > ymd("2026-01-01"), horizon <= 7 * 8) |> 
+    mutate(horizon = as.integer(horizon)) |>  # Hack
+    filter(horizon <= 7 * 8) |> 
     write_parquet(fs::path(output_path, str_c(round_id, "-", model_name, ".parquet")))
 }
 
