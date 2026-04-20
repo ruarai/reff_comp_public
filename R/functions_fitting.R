@@ -60,50 +60,52 @@ write_forecast_file <- function(round_id, x_pathogen, x_location, x_target) {
     ) |> 
     pivot_longer(c(peak_case_incidence, peak_day_of_year),
                  names_to = "target", values_to = "value") |> 
-    mutate(value = as.integer(round(value))) |> 
     
-    select(
+    transmute(
       round_id, origin_date,
       target, horizon, location, pathogen,
       
       output_type, output_type_id,
       
-      value
+      value = as.integer(round(value))
     )
   
   
-  case_forecasts <- case_trajectories |> 
-    ungroup() |> 
-    select(output_type_id = .draw,
-           notification_date = date,
-           value = cases) |> 
-    mutate(
-      horizon = as.integer(notification_date - origin_date),
-      origin_date = origin_date,
+  case_forecasts <- case_trajectories |>
+    ungroup() |>
+    transmute(
       round_id = ymd(round_id),
-      output_type = "sample",
+      origin_date = origin_date,
+      target = x_target,
+      horizon = as.integer(date - origin_date),
       location = x_location,
       pathogen = x_pathogen,
-      target = x_target,
-      
-      # We get NA values sometimes where rng freaks out (high variance)
-      # replace with zero as a stop-gap.
-      value = as.integer(replace_na(value, 0)),
-    ) |> 
-    
-    filter(horizon >= -7, horizon <= 7 * 8) |> 
-    
-    select(
-      round_id, origin_date,
-      target, horizon, location, pathogen,
-      
-      output_type, output_type_id,
-      
-      value
-    )
+      output_type = "sample",
+      output_type_id = .draw,
+      value = as.integer(replace_na(cases, 0))
+    ) |>
+    filter(horizon >= -7, horizon <= 7 * 8)
+  
+  case_forecasts_smoothed <- case_trajectories |>
+    ungroup() |>
+    transmute(
+      round_id = ymd(round_id),
+      origin_date = origin_date,
+      target = "case_incidence_smoothed",
+      horizon = as.integer(date - origin_date),
+      location = x_location,
+      pathogen = x_pathogen,
+      output_type = "sample",
+      output_type_id = .draw,
+      value = as.integer(replace_na(latent_cases, 0))
+    ) |>
+    filter(horizon >= -7, horizon <= 7 * 8)
   
   forecast_data <- bind_rows(
     case_forecasts,
+    
+    # Only include derived targets if target is case_incidence
+    case_forecasts_smoothed |> filter(x_target == "case_incidence"),
     peak_forecasts |> filter(x_target == "case_incidence")
   )
   
@@ -125,8 +127,9 @@ process_counts <- function(
   # Filter the counts for our given location and pathogen
   # and drop data prior to the training date
   reduced_counts <- combined_counts |> 
-    left_join(training_dates) |> 
-    filter(notification_date >= cutoff_date) |> 
+    left_join(training_dates) |>
+    
+    filter(notification_date >= cutoff_date) |>
     filter(location == x_location, pathogen == x_pathogen, target == x_target) |> 
     filter(is_complete) |> 
     
@@ -137,7 +140,7 @@ process_counts <- function(
     )
   
   training_counts <- reduced_counts |> 
-    make_training_counts(x_location, x_pathogen, n_days_ahead)
+    make_training_counts(x_location, x_pathogen, x_target, n_days_ahead)
   
   return(training_counts)
 }
@@ -163,13 +166,14 @@ get_gi <- function(pathogen) {
 
 make_training_counts <- function(
     reduced_counts,
-    x_location, x_pathogen, 
-    days_ahead = 0
+    x_location, x_pathogen, x_target,
+    days_ahead = 0,
+    holidays_cutoff = ymd("2023-01-01")
 ) {
-  school_holidays_location <- get_school_holidays_long() |> 
+  school_holidays_location <- get_school_holidays_long(date_cutoff = holidays_cutoff) |> 
     filter(location == x_location)
   
-  public_holidays_location <- get_public_holidays() |> 
+  public_holidays_location <- get_public_holidays(date_cutoff = holidays_cutoff) |> 
     filter(location == x_location) |> 
     mutate(public_holiday_type = match(holiday_name, unique(holiday_name))) |> 
     select(date, location, public_holiday_type)

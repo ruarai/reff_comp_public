@@ -7,6 +7,28 @@ get_school_holidays <- function() {
   tribble(
     ~location, ~start_date,  ~end_date, ~holiday_name,
     
+    # Questionable AI generated dates
+    "VIC", "2015-03-28", "2015-04-12", "Autumn 2015",
+    "VIC", "2015-06-27", "2015-07-12", "Winter 2015",
+    "VIC", "2015-09-19", "2015-10-04", "Spring 2015",
+    "VIC", "2015-12-19", "2016-01-26", "Summer 2015/16",
+    "VIC", "2016-03-25", "2016-04-10", "Autumn 2016",
+    "VIC", "2016-06-25", "2016-07-10", "Winter 2016",
+    "VIC", "2016-09-17", "2016-10-02", "Spring 2016",
+    "VIC", "2016-12-21", "2017-01-29", "Summer 2016/17",
+    "VIC", "2017-04-01", "2017-04-17", "Autumn 2017",
+    "VIC", "2017-07-01", "2017-07-16", "Winter 2017",
+    "VIC", "2017-09-23", "2017-10-08", "Spring 2017",
+    "VIC", "2017-12-23", "2018-01-28", "Summer 2017/18",
+    "VIC", "2018-03-30", "2018-04-15", "Autumn 2018",
+    "VIC", "2018-06-30", "2018-07-15", "Winter 2018",
+    "VIC", "2018-09-22", "2018-10-07", "Spring 2018",
+    "VIC", "2018-12-22", "2019-01-28", "Summer 2018/19",
+    "VIC", "2019-04-06", "2019-04-22", "Autumn 2019",
+    "VIC", "2019-06-29", "2019-07-14", "Winter 2019",
+    "VIC", "2019-09-21", "2019-10-06", "Spring 2019",
+    "VIC", "2019-12-21", "2020-01-27", "Summer 2019/20",
+    
     # Verified 2026-01-19
     # https://education.nsw.gov.au/schooling/calendars/future-and-past-nsw-term-and-vacation-dates
     "NSW", "2022-12-21", "2023-01-29", "Summer 2022/23", 
@@ -195,19 +217,50 @@ get_school_holidays <- function() {
     )
 }
 
-get_school_holidays_long <- function() {
+get_school_holidays_long <- function(date_cutoff) {
   get_school_holidays() |> 
     rowwise() |> 
     mutate(date = list(seq(start_date, end_date, by = "days"))) |> 
     unnest(date) |> 
-    select(location, date, school_holiday_type)
+    select(location, date, school_holiday_type) |> 
+    filter(date >= date_cutoff)
 }
 
-get_public_holidays <- function() {
+get_public_holidays <- function(date_cutoff = ymd("2023-01-01")) {
   locations_aus <- c("VIC", "NSW", "QLD", "NT", "TAS", "SA", "WA", "ACT")
   
   aus_holidays <- tribble(
     ~date,       ~holiday_name,
+    # Questionable
+    "2015-01-01", "New Year's Day",
+    "2015-01-26", "Australia Day",
+    "2015-04-25", "ANZAC Day",
+    "2015-12-25", "Christmas Day",
+    "2015-12-26", "Boxing Day",
+    "2016-01-01", "New Year's Day",
+    "2016-01-26", "Australia Day",
+    "2016-04-25", "ANZAC Day",
+    "2016-12-25", "Christmas Day",
+    "2016-12-26", "Boxing Day",
+    "2016-12-27", "Christmas Day Holiday",
+    "2017-01-01", "New Year's Day",
+    "2017-01-02", "New Year's Day Holiday",
+    "2017-01-26", "Australia Day",
+    "2017-04-25", "ANZAC Day",
+    "2017-12-25", "Christmas Day",
+    "2017-12-26", "Boxing Day",
+    "2018-01-01", "New Year's Day",
+    "2018-01-26", "Australia Day",
+    "2018-04-25", "ANZAC Day",
+    "2018-12-25", "Christmas Day",
+    "2018-12-26", "Boxing Day",
+    "2019-01-01", "New Year's Day",
+    "2019-01-26", "Australia Day",
+    "2019-01-28", "Australia Day Holiday",
+    "2019-04-25", "ANZAC Day",
+    "2019-12-25", "Christmas Day",
+    "2019-12-26", "Boxing Day",
+    
     "2023-01-01", "New Year's Day", 
     # "2023-01-02", "New Year's Day (Observed)", # Ignoring as it falls too close to the burn-in period
     "2023-01-26", "Australia Day",
@@ -283,6 +336,28 @@ get_public_holidays <- function() {
   
   easter_holidays <- tribble(
     ~date, ~holiday_name,
+    # Questionable
+    "2015-04-03", "Easter",
+    "2015-04-04", "Easter",
+    "2015-04-05", "Easter",
+    "2015-04-06", "Easter",
+    "2016-03-25", "Easter",
+    "2016-03-26", "Easter",
+    "2016-03-27", "Easter",
+    "2016-03-28", "Easter",
+    "2017-04-14", "Easter",
+    "2017-04-15", "Easter",
+    "2017-04-16", "Easter",
+    "2017-04-17", "Easter",
+    "2018-03-30", "Easter",
+    "2018-03-31", "Easter",
+    "2018-04-01", "Easter",
+    "2018-04-02", "Easter",
+    "2019-04-19", "Easter",
+    "2019-04-20", "Easter",
+    "2019-04-21", "Easter",
+    "2019-04-22", "Easter",
+    
     "2023-04-07", "Easter",
     "2023-04-08", "Easter",
     "2023-04-09", "Easter",
@@ -308,6 +383,29 @@ get_public_holidays <- function() {
   
   vic_holidays <- tribble(
     ~location, ~date,          ~holiday_name,
+    #Questionable
+    "VIC", "2015-03-09", "Labour Day",
+    "VIC", "2015-06-08", "Queen's Birthday",
+    "VIC", "2015-10-02", "Friday before the AFL Grand Final",
+    "VIC", "2015-11-03", "Melbourne Cup",
+    "VIC", "2016-03-14", "Labour Day",
+    "VIC", "2016-06-13", "Queen's Birthday",
+    "VIC", "2016-09-30", "Friday before the AFL Grand Final",
+    "VIC", "2016-11-01", "Melbourne Cup",
+    "VIC", "2017-03-13", "Labour Day",
+    "VIC", "2017-06-12", "Queen's Birthday",
+    "VIC", "2017-09-29", "Friday before the AFL Grand Final",
+    "VIC", "2017-11-07", "Melbourne Cup",
+    "VIC", "2018-03-12", "Labour Day",
+    "VIC", "2018-06-11", "Queen's Birthday",
+    "VIC", "2018-09-28", "Friday before the AFL Grand Final",
+    "VIC", "2018-11-06", "Melbourne Cup",
+    "VIC", "2019-03-11", "Labour Day",
+    "VIC", "2019-06-10", "Queen's Birthday",
+    "VIC", "2019-09-27", "Friday before the AFL Grand Final",
+    "VIC", "2019-11-05", "Melbourne Cup",
+    
+    
     "VIC", "2023-03-13", "Labour Day",
     "VIC", "2023-06-12", "King's Birthday",
     "VIC", "2023-09-29", "Friday before the AFL Grand Final",
@@ -477,5 +575,6 @@ get_public_holidays <- function() {
     tas_holidays,
     wa_holidays
   ) |> 
-    arrange(location, date)
+    arrange(location, date) |> 
+    filter(date >= date_cutoff)
 }

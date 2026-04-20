@@ -256,6 +256,30 @@ perf_data_full |>
   
   ggtitle("Forecasting skill (against naive model)")
 
+perf_data_full |> 
+  filter(horizon > 21, horizon <= 28) |>
+  
+  group_by(location, pathogen, round_id, horizon) |> 
+  mutate(crps_log_snaive = crps_log[.model == "snaive"]) |> 
+  filter(.model != "snaive") |> 
+  
+  group_by(.model) |> 
+  
+  summarise(skill_score = 1 - sum(crps_log) / sum(crps_log_snaive)) |> 
+  
+  ggplot() +
+  geom_linerange(aes(xmin = 0, xmax = skill_score, y = .model, colour = skill_score > 0),
+                 linewidth = 2.0) +
+  
+  ggokabeito::scale_colour_okabe_ito(order = c(6, 3)) +
+  ylab("Model") + xlab("Skill score") +
+  
+  plot_theme_pres +
+  
+  theme(legend.position = "none") +
+  
+  ggtitle("Forecasting skill (against naive model)")
+
 
 perf_data_full |> 
   filter(horizon > 21, horizon <= 28) |>

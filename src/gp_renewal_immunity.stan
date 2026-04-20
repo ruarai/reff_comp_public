@@ -36,8 +36,6 @@ data {
   real init_factor;
   real log_R_0;
   
-  int<lower=0, upper=1> sample_from_prior; 
-  
   int k;
 }
 
@@ -55,19 +53,14 @@ transformed data {
 }
 
 parameters {
-  // real<lower=0> scaling_annual;
-  real<lower=0> scaling_noise;
+  real<lower=0.0> scaling_noise;
   
-  real<lower=0> scaling_weekly_asc;
+  real<lower=0.0> scaling_weekly_asc;
   
-  // real<lower=0, upper=365> ls_annual;
-  real<lower=0, upper=120> ls_noise;
+  real<lower=0.0> ls_noise;
   
-  // real log_R_0;
-  
-  real<lower=0.0, upper=200> phi;
+  real<lower=0.0> phi;
 
-  // vector[2 * M_annual] beta_annual;
   vector[M_noise] beta_noise;
   
   sum_to_zero_vector[7] beta_offset_weekly;
@@ -89,21 +82,15 @@ parameters {
   real<lower=1.0> delay_sd;
   
   vector<lower=0, upper=1>[k] initial_immunity_prop;
-  real<lower=0, upper=0.01> alpha;
+  real<lower=0,upper=0.01> alpha;
   
   real<lower=0.225, upper=2> immunity_half_life_200;
 }
 
 transformed parameters {
-  // real ls_annual_rad = ls_annual * (2 * pi() / 365.25);
-
-  // Use the radian lengthscale for the SPD
-  // vector[2 * M_annual] diag_SPD_annual = diagSPD_Periodic(scaling_annual, ls_annual_rad, M_annual);
-  
   vector[M_noise] diag_SPD_noise = diagSPD_Matern52(scaling_noise, ls_noise, L, M_noise);
   
   
-  // vector[N] f_annual = phi_annual * (diag_SPD_annual .* beta_annual);
   vector[N] f_noise  = phi_noise * (diag_SPD_noise .* beta_noise);
   
   vector[N_school_holiday_types + 1] school_holiday_Rt_effect = rep_vector(0.0, N_school_holiday_types + 1);
@@ -115,7 +102,6 @@ transformed parameters {
   vector[N] humidity_effect = humidity[day_of_year] * scaling_humidity;
   
   vector[N] log_R = log_R_0 +
-    // f_annual +
     humidity_effect +
     f_noise +
     school_holiday_Rt_effect[school_holiday_type] +
@@ -183,7 +169,6 @@ transformed parameters {
 }
 
 model {
-  // scaling_annual ~ normal(0, 0.1);
   scaling_noise  ~ normal(0, 0.1);
   
   scaling_weekly_asc ~ exponential(1.0);
@@ -198,17 +183,12 @@ model {
   
   // Inv-gamma priors derived from:
   // find_inv_gamma_params(7.0, 90.0)
-  // find_inv_gamma_params(14.0, 90.0)
   // as in Betancourt approach.
   
   ls_noise ~ inv_gamma(3.858, 68.729);
-  // ls_annual ~ inv_gamma(6.809, 200.117);
   phi ~ gamma(2, 0.1);
 
-  // beta_annual ~ std_normal();
   beta_noise  ~ std_normal();
-  
-  // log_R_0 ~ normal(0, 0.1);
   
   initial_immunity_prop ~ beta(1, 10);
   alpha ~ lognormal(-13, 1.0);
@@ -225,15 +205,7 @@ model {
   delay_mean ~ lognormal(2.0, 0.5);
   delay_sd ~ lognormal(1, 0.5);
   
-  // Penalise unrealistic outcomes
-  for(t in 1:N) {
-    target += sigmoid(latent_cases_log[t], log(10^5), 13, -1e3) + 
-      sigmoid(latent_cases_log[t], log(10^-3), -13, -1e3);
-  }
-  
-  if(sample_from_prior == 0) {
-    y ~ neg_binomial_2_log(latent_cases_weekly_log[1:N_data], phi);
-  }
+  y ~ neg_binomial_2_log(latent_cases_weekly_log[1:N_data], phi);
 }
 
 generated quantities {

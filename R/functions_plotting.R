@@ -95,12 +95,10 @@ plot_latent_inf <- function(trajectory_data, training_counts, origin_date, schoo
               alpha = 0.3,
               trajectory_trace) +
     
-    geom_line(aes(x = date, y = y_smooth),
+    geom_line(aes(x = date, y = y),
               training_counts |> mutate(y_smooth = zoo::rollmean(y, k = 7, fill = NA))) +
     
     geom_vline(xintercept = origin_date, linetype = "44") +
-    
-    # coord_cartesian(ylim = c(0, max(training_counts$y_smooth, na.rm = TRUE) * 1.5)) +
     
     xlab("Notification date") + ylab("Count") +
     

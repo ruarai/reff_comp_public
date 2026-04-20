@@ -11,7 +11,15 @@ year <- as.character(year(round_id))
 
 combined_counts <- read_csv(str_c("../forecast-hub/processed-data/", year, "/", round_id, "/combined-count-", round_id, ".csv"))
 
-jobs <- distinct(combined_counts, location, pathogen, target)
+jobs <- distinct(combined_counts, location, pathogen, target) |> 
+  anti_join(
+    ignore_jobs <- tribble(
+      ~location, ~pathogen, ~target,
+      "NZ", "RSV", "hospital_incidence",
+      "NZ", "flu", "hospital_incidence",
+    ),
+    by = join_by(location, pathogen, target)
+  )
 
 print(str_c("Generated ", nrow(jobs), " jobs from combined_counts"))
 
@@ -28,7 +36,7 @@ x_target <- job$target[[1]]
 
 origin_date <- get_origin_date(combined_counts, x_pathogen, x_location, x_target)
 
-print(str_c("Performing job ", ix_job, " (", x_location, "-", x_pathogen, ")"))
+print(str_c("Performing job ", ix_job, " (", x_location, "-", x_pathogen, "-", x_target, ")"))
 
 n_days_ahead <- 365
 

@@ -109,4 +109,66 @@ make_two_panel_plot("QLD", "flu") |
   make_two_panel_plot("QLD", "SARSCOV2")
 
 
+perf_data_full |> 
+  filter(horizon > 21, horizon <= 28) |>
+  
+  group_by(location, pathogen, round_id, date) |> 
+  mutate(crps_log_snaive = crps_log[.model == "snaive"]) |> 
+  filter(.model == "uom-reff-comp") |> 
+  
+  group_by(location, pathogen) |> 
+  
+  summarise(skill_score = 1 - sum(crps_log) / sum(crps_log_snaive),
+            date = first(date), .groups = "drop") |> 
+  
+  ggplot() +
+  
+  geom_linerange(aes(y = location, xmin = 0, xmax = skill_score,
+                     colour = skill_score > 0),
+                 linewidth = 7.0) +
+  
+  ggokabeito::scale_colour_okabe_ito(order = c(3)) +
+  
+  scale_x_continuous(trans = log1minus_trans(),
+                     breaks = c(-3, -1, 0, 0.5, 0.75)) +
+  
+  plot_theme_pres_2 +
+  
+  facet_wrap(~pathogen) +
+  
+  theme(legend.position = "none") +
+  
+  ylab(NULL) + xlab("Skill score")
+
+perf_data_full |> 
+  
+  group_by(location, pathogen, round_id, date, horizon) |> 
+  mutate(crps_log_snaive = crps_log[.model == "snaive"]) |> 
+  filter(.model == "uom-reff-comp") |> 
+  
+  group_by(location, pathogen, horizon) |> 
+  
+  summarise(skill_score = 1 - sum(crps_log) / sum(crps_log_snaive),
+            date = first(date), .groups = "drop") |> 
+  
+  ggplot() +
+  
+  geom_linerange(aes(x = horizon, ymin = 0, ymax = skill_score,
+                     colour = skill_score > 0),
+                 linewidth = 1.0) +
+  
+  geom_hline(yintercept = 0, linetype = "44") +
+  
+  ggokabeito::scale_colour_okabe_ito(order = c(6, 3)) +
+  
+  scale_y_continuous(trans = log1minus_trans(),
+                     breaks = c(-3, -1, 0, 0.5, 0.75)) +
+  
+  plot_theme_pres_2 +
+  
+  facet_grid(rows = vars(pathogen), cols = vars(location)) +
+  
+  theme(legend.position = "none") +
+  
+  xlab("Horizon (days ahead)") + ylab("Skill score")
 
