@@ -95,7 +95,7 @@ plot_latent_inf <- function(trajectory_data, training_counts, origin_date, schoo
               alpha = 0.3,
               trajectory_trace) +
     
-    geom_line(aes(x = date, y = y),
+    geom_line(aes(x = date, y = y_smooth),
               training_counts |> mutate(y_smooth = zoo::rollmean(y, k = 7, fill = NA))) +
     
     geom_vline(xintercept = origin_date, linetype = "44") +
@@ -166,7 +166,7 @@ make_forecast_plot <- function(trajectory_data, training_counts, origin_date, sc
     trajectory_data |> 
       filter(date > forecast_plot_window[1], date < forecast_plot_window[2]) |> 
       pull(cases) |> 
-      quantile(0.99)
+      quantile(0.95)
   )
   
   p_forecast_components <- plot_reff_components(trajectory_data, origin_date, school_holidays, public_holidays) +
@@ -352,7 +352,9 @@ make_fit_plots <- function(round_id, x_pathogen, x_location, x_target) {
     theme_bw()
 
   p_trace <- mcmc_trace(draws |> mutate(chain = .chain), pars = pars) +
-    theme_bw()
+    theme_bw() +
+    
+    labs(caption = str_c(x_location, " - ", x_pathogen))
 
   p_hist | p_trace
 
@@ -381,9 +383,16 @@ make_fit_plots <- function(round_id, x_pathogen, x_location, x_target) {
   p_reff <- plot_reff_components(trajectory_data, origin_date, school_holidays, public_holidays) +
     xlim(c(ymd(min(trajectory_data$date)), ymd(origin_date + days(365))))
   
+  y_upper_latent <- trajectory_data |> 
+    filter(date <= origin_date + days(26 * 7)) |> 
+    group_by(date) |> summarise(q95 = quantile(latent_cases, 0.95)) |> summarise(q95 = max(q95)) |> pull(q95)
+  
   p_latent_inf <- plot_latent_inf(trajectory_data, training_counts, origin_date, school_holidays, public_holidays) +
     
-    xlim(c(ymd(min(trajectory_data$date)), ymd(origin_date + days(365))))
+    xlim(c(ymd(min(trajectory_data$date)), ymd(origin_date + days(365)))) +
+    coord_cartesian(ylim = c(0, y_upper_latent * 1.25)) +
+    
+    labs(caption = str_c(x_location, " - ", x_pathogen))
   
   p_reff / p_latent_inf
   

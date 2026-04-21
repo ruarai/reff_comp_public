@@ -3,7 +3,7 @@ library(tidyverse)
 library(processx)
 source("R/functions.R")
 
-round_id <- "2025-08-07"
+round_id <- "2026-04-22"
 
 check_and_log_git_status(round_id)
 
@@ -21,6 +21,8 @@ run("sbatch", c(str_c("--export=ALL,round_id=", round_id), "run_forecasts.slurm"
 
 combine_forecasts(round_id)
 
+
+run("git", c("branch", "-D", "uom-reff_comp"), wd = repo_dir, echo = TRUE)
 
 # Switch to model branch and push new changes
 run("git", c("pull", "origin", "uom-reff_comp"), wd = repo_dir, echo = TRUE)
