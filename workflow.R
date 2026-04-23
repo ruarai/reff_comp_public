@@ -17,22 +17,24 @@ run("git", c("pull"), wd = repo_dir, echo = TRUE)
 # Run the forecasts
 run("sbatch", c(str_c("--export=ALL,round_id=", round_id), "run_forecasts.slurm"))
 
+
 # Wait for the above to complete
+message(run("squeue", c("-u", "ruarai"))$stdout)
 
 combine_forecasts(round_id)
 
 
-run("git", c("branch", "-D", "uom-reff_comp"), wd = repo_dir, echo = TRUE)
+# run("git", c("branch", "-D", "uom-reff_comp"), wd = repo_dir, echo = TRUE)
 
 # Switch to model branch and push new changes
 run("git", c("pull", "origin", "uom-reff_comp"), wd = repo_dir, echo = TRUE)
-# run("git", c("reset", "--hard", "origin/uom-reff_comp"), wd = repo_dir, echo = TRUE)
+run("git", c("reset", "--hard", "origin/uom-reff_comp"), wd = repo_dir, echo = TRUE)
 
 run("git", c("switch", "uom-reff_comp"), wd = repo_dir, echo = TRUE)
 
 fs::dir_copy("forecast_outputs/uom-reff_comp/", "../forecast-hub/model-output/uom-reff_comp/", overwrite = TRUE)
 run("git", c("add", "."), wd = repo_dir, echo = TRUE)
-run("git", c("commit", "-m", str_c("Added forecasts for ", round_id)), wd = repo_dir, echo = TRUE)
+run("git", c("commit", "-m", str_c("Add uom-reff_comp forecasts for ", round_id)), wd = repo_dir, echo = TRUE)
 run("git", c("push", "-u", "origin", "uom-reff_comp"), wd = repo_dir, echo = TRUE)
 
 

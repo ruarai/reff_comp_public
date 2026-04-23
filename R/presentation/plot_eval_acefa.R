@@ -308,10 +308,3 @@ perf_data_full |>
   
   ggtitle("Forecasting skill (higher is better)")
 
-
-c("snaive", "dstg-RV_model", "UQ-DD", "UQ-renewal_global", 
-  "UQ-renewal_i", "uom-multiwalk", "ensemble-mixture", "ensemble-quantile", 
-  "uom-reff-comp")
-
-x_location <- "VIC"
-x_pathogen <- "RSV"

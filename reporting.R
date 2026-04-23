@@ -68,7 +68,14 @@ year <- as.character(year(round_id))
 
 combined_counts <- read_csv(str_c("../forecast-hub/processed-data/", year, "/", round_id, "/combined-count-", round_id, ".csv"))
 
-plot_model_ribbon(forecasts, combined_counts)
+plot_model_ribbon(forecasts |> filter(location != "NZ"), combined_counts |> filter(location != "NZ"))
+ribbon_plot_path <- fs::path("plots", str_c("uom-reff_comp_plots-ribbon-", round_id, ".png"))
+
+ggsave(
+  ribbon_plot_path,
+  height = 12,
+  width = 10
+)
 
 library(magick)
 forecast_plot_files <- fs::dir_ls(fs::path("results", round_id), glob = "*plot_forecast.png")
@@ -76,10 +83,17 @@ latent_plot_files <- fs::dir_ls(fs::path("results", round_id), glob = "*plot_lat
 diagnostic_plot_files <- fs::dir_ls(fs::path("results", round_id), glob = "*plot_MCMC.png")
 
 image_write(
-  c(forecast_plot_files, latent_plot_files) |> 
+  c(ribbon_plot_path, forecast_plot_files, latent_plot_files) |> 
     image_read() |> 
     image_resize("50%"),
-  path = "test.pdf", format = "pdf"
+  path = fs::path("plots", str_c("uom-reff_comp_plots-", round_id, ".pdf")), format = "pdf"
+)
+
+image_write(
+  c(diagnostic_plot_files) |> 
+    image_read() |> 
+    image_resize("50%"),
+  path = fs::path("plots", str_c("uom-reff_comp_plots-diagnostic-", round_id, ".pdf")), format = "pdf"
 )
 
 

@@ -12,7 +12,7 @@
 
 cd /data/gpfs/projects/punim1541/periodic_gp_cast/
   
-module load R/4.2.1
+module load R/4.5.0
 
 export R_LIBS_USER="/home/ruarai/R_libs"
 

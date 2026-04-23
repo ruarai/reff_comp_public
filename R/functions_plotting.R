@@ -14,7 +14,7 @@ plot_reff_components <- function(trajectory_data, origin_date, school_holidays, 
   
   trajectory_trace <- trajectory_data |> 
     ungroup() |> 
-    filter(.draw %% 1000 == 0) |>
+    filter(.draw %% 2000 == 0) |>
     select(date, .draw, f_annual, f_noise, log_R) |> 
     pivot_longer(-c(date, .draw)) |> 
     mutate(variable = factor(name, names(labels), labels = labels)) 
@@ -67,7 +67,7 @@ plot_latent_inf <- function(trajectory_data, training_counts, origin_date, schoo
   
   trajectory_trace <- trajectory_data |> 
     ungroup() |> 
-    filter(.draw %% 1000 == 0) |>
+    filter(.draw %% 2000 == 0) |>
     select(date, .draw, inf)
   
   
@@ -118,7 +118,7 @@ plot_cases <- function(trajectory_data, training_counts, origin_date, school_hol
   
   trajectory_trace <- trajectory_data |> 
     ungroup() |> 
-    filter(.draw %% 1000 == 0) |>
+    filter(.draw %% 2000 == 0) |>
     select(date, .draw, cases)
   
   ggplot(plot_quants) +
@@ -153,7 +153,7 @@ plot_cases <- function(trajectory_data, training_counts, origin_date, school_hol
 
 make_forecast_plot <- function(trajectory_data, training_counts, origin_date, school_holidays, public_holidays, x_location, x_pathogen) {
   
-  forecast_plot_window <- c(origin_date - days(7 * 4), origin_date + days(7 * 12))
+  forecast_plot_window <- c(origin_date - days(7 * 8), origin_date + days(7 * 8))
   
   y_max <- training_counts |> 
     filter(date > forecast_plot_window[1]) |> 
@@ -354,16 +354,16 @@ make_fit_plots <- function(round_id, x_pathogen, x_location, x_target) {
   p_trace <- mcmc_trace(draws |> mutate(chain = .chain), pars = pars) +
     theme_bw() +
     
-    labs(caption = str_c(x_location, " - ", x_pathogen))
+    labs(caption = job_name)
 
   p_hist | p_trace
 
-  ggsave(str_c(round_results, "/", x_pathogen, "_", x_location, "_plot_MCMC.png"), width = 14, height = 10)
+  ggsave(str_c(round_results, "/", job_name, "_plot_MCMC.png"), width = 14, height = 10)
   
 
   p_pairs <- mcmc_pairs(draws |> mutate(chain = .chain), pars = pars, off_diag_args = list(size = 0.3, alpha = 0.5))
 
-  ggsave(str_c(round_results, "/", x_pathogen, "_", x_location, "_plot_MCMC_pairs.png"), p_pairs, width = 16, height = 16)
+  ggsave(str_c(round_results, "/", job_name, "_plot_MCMC_pairs.png"), p_pairs, width = 16, height = 16)
   
   school_holidays <- get_school_holidays() |> 
     filter(location == x_location)
@@ -392,7 +392,7 @@ make_fit_plots <- function(round_id, x_pathogen, x_location, x_target) {
     xlim(c(ymd(min(trajectory_data$date)), ymd(origin_date + days(365)))) +
     coord_cartesian(ylim = c(0, y_upper_latent * 1.25)) +
     
-    labs(caption = str_c(x_location, " - ", x_pathogen))
+    labs(caption = job_name)
   
   p_reff / p_latent_inf
   

@@ -12,7 +12,7 @@ fit_model <- function(data_list, model_file = "src/gp_renewal.stan") {
     chains = 4,
     parallel_chains = 4,
     refresh = 50,
-    iter_warmup = 1000, iter_sampling = 1000,
+    iter_warmup = 3000, iter_sampling = 1000,
     init = 0.5
   )
   
@@ -87,6 +87,7 @@ write_forecast_file <- function(round_id, x_pathogen, x_location, x_target) {
     filter(horizon >= -7, horizon <= 7 * 8)
   
   case_forecasts_smoothed <- case_trajectories |>
+    add_forecast_noise(training_counts) |> 
     ungroup() |>
     transmute(
       round_id = ymd(round_id),
@@ -97,7 +98,7 @@ write_forecast_file <- function(round_id, x_pathogen, x_location, x_target) {
       pathogen = x_pathogen,
       output_type = "sample",
       output_type_id = .draw,
-      value = as.integer(replace_na(latent_cases, 0))
+      value = as.integer(replace_na(count, 0))
     ) |>
     filter(horizon >= -7, horizon <= 7 * 8)
   
@@ -120,7 +121,8 @@ write_forecast_file <- function(round_id, x_pathogen, x_location, x_target) {
 process_counts <- function(
     combined_counts,
     x_location, x_pathogen, x_target,
-    n_days_ahead
+    n_days_ahead,
+    origin_date
 ) {
   training_dates <- get_training_dates()
   
@@ -140,7 +142,9 @@ process_counts <- function(
     )
   
   training_counts <- reduced_counts |> 
-    make_training_counts(x_location, x_pathogen, x_target, n_days_ahead)
+    make_training_counts(x_location, x_pathogen, x_target, n_days_ahead) |> 
+    # Save some extra data in case we need it later
+    mutate(origin_date = origin_date)
   
   return(training_counts)
 }
@@ -179,7 +183,8 @@ make_training_counts <- function(
     select(date, location, public_holiday_type)
   
   training_counts <- reduced_counts |> 
-    select(location, pathogen, target, date = notification_date, y = value) |> 
+    select(location, pathogen, target, date = notification_date, 
+           y = value, y_trend = value_trend, y_trend_and_remainder = value_trend_and_remainder) |> 
     complete(date = seq(min(date), max(date), by = "days"), fill = list(location = x_location, pathogen = x_pathogen, target = x_target)) |>
     arrange(date)
   
