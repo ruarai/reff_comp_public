@@ -46,6 +46,7 @@ transformed data {
   real L = c_factor * max(abs(x_centered));
   
   matrix[N, M_noise] phi_noise = PHI(N, M_noise, L, x_centered);
+  matrix[N, M_noise] phi_asc = PHI(N, M_noise, L, x_centered);
   
   int N_delay = 21;
   
@@ -54,19 +55,24 @@ transformed data {
 
 parameters {
   real<lower=0.0> scaling_noise;
+  real<lower=0.0> scaling_asc;
   
   real<lower=0.0> scaling_weekly_asc;
   
   real<lower=0.0> ls_noise;
+  real<lower=0.0> ls_asc;
   
   real<lower=0.0> phi;
 
   vector[M_noise] beta_noise;
+  vector[M_noise] beta_asc;
   
   sum_to_zero_vector[7] beta_offset_weekly;
   
   real r_0;
   real log_I_0;
+  
+  real<lower=0.0> f_asc_mean;
   
   real scaling_humidity;
   
@@ -89,9 +95,11 @@ parameters {
 
 transformed parameters {
   vector[M_noise] diag_SPD_noise = diagSPD_Matern52(scaling_noise, ls_noise, L, M_noise);
+  vector[M_noise] diag_SPD_asc = diagSPD_Matern52(scaling_asc, ls_asc, L, M_noise);
   
   
   vector[N] f_noise  = phi_noise * (diag_SPD_noise .* beta_noise);
+  vector[N] f_asc = phi_asc * (diag_SPD_asc .* beta_asc);
   
   vector[N_school_holiday_types + 1] school_holiday_Rt_effect = rep_vector(0.0, N_school_holiday_types + 1);
   school_holiday_Rt_effect[2:(N_school_holiday_types + 1)] = school_holiday_Rt_effect_raw;
@@ -161,7 +169,10 @@ transformed parameters {
   vector[N_public_holiday_types + 1] public_holiday_asc_effect = rep_vector(0.0, N_public_holiday_types + 1);
   public_holiday_asc_effect[2:(N_public_holiday_types + 1)] = public_holiday_asc_effect_raw;
   
+  vector[N] log_ascertainment_rate = log_inv_logit(f_asc + f_asc_mean);
+  
   vector[N] latent_cases_log = log(inf_delayed + 1e-3) + 
+    log_ascertainment_rate +
     school_holiday_asc_effect[school_holiday_type] +
     public_holiday_asc_effect[public_holiday_type];
   
@@ -169,7 +180,8 @@ transformed parameters {
 }
 
 model {
-  scaling_noise  ~ normal(0, 0.1);
+  scaling_noise  ~ normal(0, 0.01);
+  scaling_asc  ~ normal(0, 1.0);
   
   scaling_weekly_asc ~ exponential(1.0);
   
@@ -183,12 +195,15 @@ model {
   
   // Inv-gamma priors derived from:
   // find_inv_gamma_params(7.0, 90.0)
+  // find_inv_gamma_params(30.0, 360.0)
   // as in Betancourt approach.
   
   ls_noise ~ inv_gamma(3.858, 68.729);
+  ls_asc ~ inv_gamma(4.047, 303.601);
   phi ~ gamma(2, 0.1);
 
   beta_noise  ~ std_normal();
+  beta_asc  ~ std_normal();
   
   initial_immunity_prop ~ beta(1, 10);
   alpha ~ lognormal(-13, 1.0);
@@ -201,6 +216,8 @@ model {
   
   log_I_0 ~ normal(3.2, 1);
   r_0 ~ normal(0, 0.2);
+  
+  f_asc_mean ~ normal(0, 1);
   
   delay_mean ~ lognormal(2.0, 0.5);
   delay_sd ~ lognormal(1, 0.5);

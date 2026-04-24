@@ -173,6 +173,72 @@ check_and_log_git_status <- function(round_id) {
   }
 }
 
+
+make_intervals <- function(
+    tbl,
+    vars,
+    sample_var = rlang::sym(".draw"),
+    date_var = rlang::sym("date"),
+    group_vars = "",
+    probs = c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9),
+    na.rm = FALSE
+) {
+  tbl |> 
+    ungroup() |> 
+    select(!!date_var, !!sample_var, all_of(vars), any_of(group_vars)) |> 
+    pivot_longer(
+      cols = c(-!!sample_var, -!!date_var, -any_of(group_vars)), 
+      names_to = "variable", 
+      values_to = "value"
+    ) |> 
+    pivot_wider(
+      names_from = !!sample_var, 
+      names_prefix = "sample_", 
+      values_from = value
+    ) |> 
+    make_intervals_internal(probs = probs, na.rm = na.rm)
+}
+
+make_intervals_internal <- function(
+    tbl, 
+    probs = c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9), 
+    prefix = "sample_", 
+    na.rm = FALSE
+) {
+  data_matrix <- tbl |> 
+    select(starts_with(prefix)) |> 
+    as.matrix()
+  
+  id_tbl <- tbl |> 
+    select(!starts_with(prefix))
+  
+  medians <- data_matrix |> 
+    matrixStats::rowMedians(na.rm = na.rm)
+  
+  quant_probs <- c(rev(1 - probs) / 2, 0.5 + probs / 2)
+  quant_labels <- as.character(probs * 100)
+  
+  quant_names <- c(
+    str_c("lower_", rev(quant_labels)), 
+    str_c("upper_", quant_labels)
+  )
+  
+  quants <- data_matrix |> 
+    matrixStats::rowQuantiles(probs = quant_probs, na.rm = na.rm)
+  
+  colnames(quants) <- quant_names
+  
+  bind_cols(id_tbl, median = medians, as_tibble(quants)) |> 
+    pivot_longer(
+      cols = all_of(quant_names),
+      names_to = c(".value", "quant"),
+      names_pattern = "(lower|upper)_(.*)"
+    ) |> 
+    mutate(
+      quant = factor(quant, levels = quant_labels) |> fct_rev()
+    )
+}
+
 add_forecast_noise <- function(case_trajectories, training_counts) {
   fit_data <- training_counts |> 
     filter(date < origin_date) |> 
@@ -190,8 +256,8 @@ add_forecast_noise <- function(case_trajectories, training_counts) {
   
   smoothed_forecast <- case_trajectories |> 
     mutate(horizon = as.integer(date - origin_date)) |> 
-    filter(horizon >= -7, horizon <= 7 * 8) |> 
-    rename(count = latent_cases)
+    filter(horizon >= -7, horizon <= 7 * 8) |>
+    rename(count = inf_delayed)
   
   forecast_noisy <- smoothed_forecast |> 
     ungroup() |> 

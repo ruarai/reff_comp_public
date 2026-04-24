@@ -11,20 +11,16 @@ x_pathogen <- "RSV"
 x_target <- "case_incidence"
 
 year <- as.character(year(round_id))
-combined_counts <- read_csv(str_c("../forecast-hub/processed-data/", year, "/", round_id, "/combined-count-", round_id, ".csv"))
+combined_counts <- read_csv(str_c("../forecast-hub/processed-data/", year, "/", round_id, "/combined-count-smoothed-", round_id, ".csv"))
 
 origin_date <- get_origin_date(combined_counts, x_pathogen, x_location, x_target)
 
 eval_counts <- read_csv("data/combined-count-smoothed-2026-04-15.csv") |> 
   filter(notification_date > origin_date, location == x_location, pathogen == x_pathogen)
 
-
-
 n_days_ahead <- 365
 
-training_counts <- process_counts(combined_counts, x_location, x_pathogen, x_target, n_days_ahead) |> 
-  # Save some extra data in case we need it later
-  mutate(origin_date = origin_date)
+training_counts <- process_counts(combined_counts, x_location, x_pathogen, x_target, n_days_ahead, origin_date)
 
 data_list <- create_stan_data(training_counts, n_days_ahead, x_pathogen, x_location)
 
@@ -33,7 +29,7 @@ library(cmdstanr)
 model <- cmdstan_model("src/gp_renewal_immunity.stan")
 
 fit <- model$optimize(
-  data = data_list, seed = 3, iter = 5e4, init = 0.1,
+  data = data_list, seed = 4, iter = 2e4, init = 0.1,
   
   algorithm = "lbfgs",
   tol_obj     = 1e-15,
@@ -54,8 +50,8 @@ fit <- model$pathfinder(
   data = data_list, seed = 4, init = 0.5
 )
 fit <- model$variational(
-  data = data_list, seed = 6, iter = 5e4,
-  # init = fit, 
+  data = data_list, seed = 5, iter = 5e4,
+  # init = fit,
   algorithm="fullrank",
 )
 
@@ -65,7 +61,7 @@ fit <- model$sample(
   chains = 4,
   parallel_chains = 4,
   refresh = 50,
-  iter_warmup = 1000, iter_sampling = 1000
+  iter_warmup = 250, iter_sampling = 250
 )
 
 
@@ -75,6 +71,7 @@ draws <- fit |>
 
 pars <- c(
   "scaling_noise", "ls_noise", "phi", "scaling_humidity", 
+  "scaling_asc", "ls_asc", "f_asc_mean",
   "delay_mean", "delay_sd"
 )
 
@@ -121,6 +118,7 @@ trajectory_data <- fit |>
   spread_draws(log_R[ix_t], R_t[ix_t], inf[ix_t], inf_delayed[ix_t],
                cases[ix_t], f_noise[ix_t],
                latent_cases_log[ix_t],
+               log_ascertainment_rate[ix_t],
                # log_R_0
                ) |> 
   mutate(date = training_counts$date[ix_t],
@@ -136,32 +134,53 @@ ggplot(trajectory_data) +
   fastribbon::stat_fastribbon(aes(x = date, y = exp(log_R)),
                               alpha = 0.2) +
   
+  scale_fill_brewer()
+
+
+p_f_noise <- ggplot(trajectory_data) + 
+  fastribbon::stat_fastribbon(aes(x = date, y = f_noise))  + 
+  
+  scale_fill_brewer()
+
+p_cases <- ggplot(trajectory_data) + 
+  fastribbon::stat_fastribbon(aes(x = date, y = inf_delayed))  + 
+  fastribbon::stat_fastribbon(aes(x = date, y = latent_cases),
+                              alpha = 0.2) +
+  
+  geom_line(aes(x = notification_date, y = value_trend), eval_counts,
+            colour = "orangered")  +
+  
   # facet_wrap(~log_R_0) +
   
   scale_fill_brewer()
 
+p_f_noise / p_cases
+
+ggplot(trajectory_data) + 
+  fastribbon::stat_fastribbon(aes(x = date, y = exp(log_ascertainment_rate)))  + 
+  
+  scale_fill_brewer()
+
 trajectory_data |> 
-  filter(.draw %% 222 == 0) |>
+  filter((.draw - 1) %% 100 == 0) |>
   ggplot() +
   geom_line(aes(x = date, y = latent_cases, group = .draw)) +
+  geom_line(aes(x = date, y = y_trend), training_counts,
+            colour = "blue") +
+  
   geom_line(aes(x = notification_date, y = value_trend), eval_counts,
-            colour = "orangered") +
-  geom_line(aes(x = date, y = y_smooth), training_counts |> mutate(y_smooth = zoo::rollmean(y, 7, fill = NA)),
-            colour = "blue")
+            colour = "orangered")
 
 ggplot(trajectory_data) + 
   fastribbon::stat_fastribbon(aes(x = date, y = latent_cases),
                               linewidth = 1) +
-  geom_line(aes(x = date, y = y_smooth), training_counts |> mutate(y_smooth = zoo::rollmean(y, 7, fill = NA)),
+  geom_line(aes(x = date, y = y_trend), training_counts,
             colour = "black") +
+  
   geom_line(aes(x = notification_date, y = value_trend), eval_counts,
-            colour = "orangered") + 
+            colour = "orangered") +
   
-  # facet_wrap(~log_R_0) +
-  
-  coord_cartesian(ylim = c(5, 300)) +
-  
-  # scale_y_log10() +
+  coord_cartesian(ylim = c(0, 400)) +
   
   scale_fill_brewer()
 
@@ -169,18 +188,16 @@ ggplot(trajectory_data) +
 library(pammtools)
 ggplot(trajectory_data) + 
   fastribbon::stat_fastribbon(aes(x = date, y = cases),
-                              geom = "stepribbon",
-                              linewidth = 0) +
-  geom_line(aes(x = date, y = y), training_counts |> mutate(y_smooth = zoo::rollmean(y, 7, fill = NA)),
+                              geom = "stepribbon") +
+  
+  geom_line(aes(x = date, y = cases, group = .draw),
+            trajectory_data |> filter((.draw - 1) %% 1000 == 0)) +
+  geom_line(aes(x = date, y = y), training_counts,
             colour = "black") +
   geom_line(aes(x = notification_date, y = value), eval_counts,
-            colour = "orangered") + 
+            colour = "orange") +
   
-  # facet_wrap(~log_R_0) +
-  
-  coord_cartesian(ylim = c(5, 300), xlim = c(ymd("2025-03-01"), ymd("2025-07-01"))) +
-  
-  # scale_y_log10() +
+  coord_cartesian(ylim = c(5, 300), xlim = c(origin_date - days(28), origin_date + days(7 * 8))) +
   
   scale_fill_brewer()
 

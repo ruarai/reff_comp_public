@@ -95,8 +95,8 @@ plot_latent_inf <- function(trajectory_data, training_counts, origin_date, schoo
               alpha = 0.3,
               trajectory_trace) +
     
-    geom_line(aes(x = date, y = y_smooth),
-              training_counts |> mutate(y_smooth = zoo::rollmean(y, k = 7, fill = NA))) +
+    geom_line(aes(x = date, y = y_trend_and_remainder),
+              training_counts) +
     
     geom_vline(xintercept = origin_date, linetype = "44") +
     
@@ -157,8 +157,7 @@ make_forecast_plot <- function(trajectory_data, training_counts, origin_date, sc
   
   y_max <- training_counts |> 
     filter(date > forecast_plot_window[1]) |> 
-    mutate(y_smooth = zoo::rollmean(y, k = 7, fill = NA)) |> 
-    pull(y_smooth) |> 
+    pull(y_trend) |> 
     max(na.rm = TRUE)
   
   y_max <- max(
