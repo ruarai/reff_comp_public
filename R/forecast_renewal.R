@@ -44,7 +44,10 @@ training_counts <- process_counts(combined_counts, x_location, x_pathogen, x_tar
 
 data_list <- create_stan_data(training_counts, n_days_ahead, x_pathogen, x_location)
 
-fit <- fit_model(data_list, model_file = "src/gp_renewal.stan")
+
+data_list$M_annual <- 10
+
+fit <- fit_model(data_list, model_file = "src/gp_renewal_time.stan")
 
 print("Saving fit object and training data")
 

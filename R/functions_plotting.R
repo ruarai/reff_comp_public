@@ -151,7 +151,7 @@ plot_cases <- function(trajectory_data, training_counts, origin_date, school_hol
           legend.position = "none")
 }
 
-make_forecast_plot <- function(trajectory_data, training_counts, origin_date, school_holidays, public_holidays, x_location, x_pathogen) {
+make_forecast_plot <- function(trajectory_data, training_counts, origin_date, school_holidays, public_holidays, eval_counts, job_name) {
   
   forecast_plot_window <- c(origin_date - days(7 * 8), origin_date + days(7 * 8))
   
@@ -178,6 +178,8 @@ make_forecast_plot <- function(trajectory_data, training_counts, origin_date, sc
     
     xlim(forecast_plot_window) +
     
+    geom_line(aes(x = notification_date, y = value_trend), eval_counts, colour = "orangered") +
+    
     coord_cartesian(ylim = c(0, y_max * 1.5)) +
     
     geom_vline(xintercept = origin_date + days(4 * 7), linetype = "24")
@@ -188,9 +190,11 @@ make_forecast_plot <- function(trajectory_data, training_counts, origin_date, sc
     
     geom_vline(xintercept = origin_date + days(4 * 7), linetype = "24") +
     
+    geom_line(aes(x = notification_date, y = value), eval_counts, colour = "orangered") +
+    
     coord_cartesian(ylim = c(0, y_max * 1.5)) +
     
-    labs(caption = str_c(x_location, " - ", x_pathogen))
+    labs(caption = str_c(job_name))
   
   p_forecast_components / p_forecast_latent / p_forecast_cases
 }
@@ -320,6 +324,60 @@ plot_holiday_effects <- function(fit, public_holidays) {
     (p_school_asc / p_public_asc) + plot_layout(heights = c(1, 2), axis_titles = "collect")
 }
 
+plot_timewarp <- function(fit, round_results, job_name, school_holidays, public_holidays) {
+  if(fit$metadata()$model_name != "gp_renewal_time_model") {
+    return(NULL)
+  }
+  
+  
+  trajectory_data_f <- fit |> 
+    spread_draws(f_annual[ix_t], f_timewarp[ix_t], f_annual_nowarp[ix_t]) |> 
+    mutate(date = training_counts$date[ix_t])
+  
+  p_warp <- ggplot(trajectory_data_f) + 
+    
+    fastribbon::stat_fastribbon(aes(x = date, y = f_timewarp * 10)) + 
+    scale_fill_brewer() +
+    xlab(NULL) + ylab("f_warp") +
+    
+    geom_hline(yintercept = 0, linetype = "44") +
+    geom_vline(xintercept = origin_date, linetype = "44") +
+    
+    geom_rect(aes(xmin = start_date, xmax = end_date, ymin = -Inf, ymax = Inf),
+              school_holidays, alpha = 0.1) +
+    
+    geom_rug(aes(x = date), public_holidays) +
+    
+    theme_bw() +
+    theme(legend.position = "none")
+  
+  p_ann <- ggplot(trajectory_data_f) + 
+    fastribbon::stat_fastribbon(aes(x = date, y = f_annual),
+                                fill = ggokabeito::palette_okabe_ito(5),
+                                alpha = 0.5,
+                                .width = 0.9) +
+    fastribbon::stat_fastribbon(aes(x = date, y = f_annual_nowarp), 
+                                fill = ggokabeito::palette_okabe_ito(3),
+                                alpha = 0.5,
+                                .width = 0.9) +
+    
+    geom_vline(xintercept = origin_date, linetype = "44") +
+
+    xlab(NULL) + ylab("f_ann-warp") +
+    
+    geom_rect(aes(xmin = start_date, xmax = end_date, ymin = -Inf, ymax = Inf),
+              school_holidays, alpha = 0.1) +
+    
+    geom_rug(aes(x = date), public_holidays) +
+    
+    theme_bw() +
+    theme(legend.position = "none")
+  
+  p_warp / p_ann
+  
+  ggsave(str_c(round_results, "/", job_name, "_plot_timewarp.png"), width = 10, height = 10)
+}
+
 
 make_fit_plots <- function(round_id, x_pathogen, x_location, x_target) {
   round_results <- fs::path("results", round_id)
@@ -334,6 +392,9 @@ make_fit_plots <- function(round_id, x_pathogen, x_location, x_target) {
     drop_na(y) |> 
     pull(date) |> 
     max()
+  
+  eval_counts <- read_csv("data/combined-count-smoothed-2026-04-22.csv", show_col_types = FALSE) |> 
+    filter(notification_date > origin_date, location == x_location, pathogen == x_pathogen)
   
   draws <- fit |>
     tidybayes::tidy_draws() |> 
@@ -391,6 +452,8 @@ make_fit_plots <- function(round_id, x_pathogen, x_location, x_target) {
     xlim(c(ymd(min(trajectory_data$date)), ymd(origin_date + days(365)))) +
     coord_cartesian(ylim = c(0, y_upper_latent * 1.25)) +
     
+    geom_line(aes(x = notification_date, y = value_trend), eval_counts, colour = "orangered") +
+    
     labs(caption = job_name)
   
   p_reff / p_latent_inf
@@ -400,7 +463,8 @@ make_fit_plots <- function(round_id, x_pathogen, x_location, x_target) {
   
   make_forecast_plot(
     trajectory_data, training_counts, origin_date,
-    school_holidays, public_holidays, x_location, x_pathogen
+    school_holidays, public_holidays, eval_counts,
+    job_name
   )
   
   ggsave(str_c(round_results, "/", job_name, "_plot_forecast.png"), width = 10, height = 10)
@@ -409,6 +473,7 @@ make_fit_plots <- function(round_id, x_pathogen, x_location, x_target) {
   
   ggsave(str_c(round_results, "/", job_name, "_holiday_effects.png"), width = 12, height = 8)
   
+  plot_timewarp(fit, round_results, job_name, school_holidays, public_holidays)
 }
 
 log1minus_trans <- function() {

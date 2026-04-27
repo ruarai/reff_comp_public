@@ -6,7 +6,7 @@ source("R/functions.R")
 
 round_id <- "2025-05-08"
 
-x_location <- "VIC"
+x_location <- "ACT"
 x_pathogen <- "RSV"
 x_target <- "case_incidence"
 
@@ -15,7 +15,7 @@ combined_counts <- read_csv(str_c("../forecast-hub/processed-data/", year, "/", 
 
 origin_date <- get_origin_date(combined_counts, x_pathogen, x_location, x_target)
 
-eval_counts <- read_csv("data/combined-count-smoothed-2026-04-15.csv") |> 
+eval_counts <- read_csv("../forecast-hub/processed-data/2026/2026-04-22/combined-count-smoothed-2026-04-22.csv") |> 
   filter(notification_date > origin_date, location == x_location, pathogen == x_pathogen)
 
 n_days_ahead <- 365
@@ -24,6 +24,13 @@ training_counts <- process_counts(combined_counts, x_location, x_pathogen, x_tar
 
 data_list <- create_stan_data(training_counts, n_days_ahead, x_pathogen, x_location)
 
+
+# data_list$humidity <- training_counts |> left_join(humidity_data) |> 
+#   mutate(rel_hum_smooth = avg_relative_humidity) |> 
+#   fill(rel_hum_smooth, .direction = "downup") |> 
+#   pull(rel_hum_smooth) |> 
+#   scale() |> 
+#   as.vector()
 
 library(cmdstanr)
 model <- cmdstan_model("src/gp_renewal_immunity.stan")
@@ -50,10 +57,10 @@ fit <- model$pathfinder(
   data = data_list, seed = 4, init = 0.5
 )
 fit <- model$variational(
-  data = data_list, seed = 5, iter = 5e4,
-  # init = fit,
-  algorithm="fullrank",
+  data = data_list, seed = 5, iter = 1e4
 )
+
+
 
 fit <- model$sample(
   data = data_list,
@@ -64,6 +71,7 @@ fit <- model$sample(
   iter_warmup = 250, iter_sampling = 250
 )
 
+fit <- read_rds(str_c(fs::path("results", round_id), "/", str_c(x_pathogen, "_", x_location, "_", x_target), ".rds"))
 
 draws <- fit |>
   tidybayes::tidy_draws() |> 
@@ -197,7 +205,7 @@ ggplot(trajectory_data) +
   geom_line(aes(x = notification_date, y = value), eval_counts,
             colour = "orange") +
   
-  coord_cartesian(ylim = c(5, 300), xlim = c(origin_date - days(28), origin_date + days(7 * 8))) +
+  coord_cartesian(ylim = c(0, 600), xlim = c(origin_date - days(28), origin_date + days(7 * 8))) +
   
   scale_fill_brewer()
 

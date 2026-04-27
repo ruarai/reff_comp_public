@@ -12,7 +12,9 @@ fit_model <- function(data_list, model_file = "src/gp_renewal.stan") {
     chains = 4,
     parallel_chains = 4,
     refresh = 50,
-    iter_warmup = 3000, iter_sampling = 1000,
+    
+    # TODO increase back to 3000
+    iter_warmup = 1000, iter_sampling = 1000,
     init = 0.5
   )
   
@@ -37,8 +39,8 @@ write_forecast_file <- function(round_id, x_pathogen, x_location, x_target) {
   origin_date <- training_counts$origin_date[[1]]
   
   case_trajectories <- fit |> 
-    spread_draws(cases[ix_x], latent_cases_log[ix_x]) |> 
-    mutate(date = training_counts$date[ix_x],
+    spread_draws(cases[ix_t], latent_cases_log[ix_t], inf_delayed[ix_t]) |> 
+    mutate(date = training_counts$date[ix_t],
            latent_cases = exp(latent_cases_log))
   
   peak_forecasts <- case_trajectories |> 
