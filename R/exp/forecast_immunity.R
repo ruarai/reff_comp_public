@@ -4,7 +4,7 @@
 source("R/functions.R")
 
 
-round_id <- "2025-05-08"
+round_id <- "2025-06-12"
 
 x_location <- "ACT"
 x_pathogen <- "RSV"
@@ -71,7 +71,7 @@ fit <- model$sample(
   iter_warmup = 250, iter_sampling = 250
 )
 
-fit <- read_rds(str_c(fs::path("results", round_id), "/", str_c(x_pathogen, "_", x_location, "_", x_target), ".rds"))
+fit <- read_rds(str_c(fs::path("results", str_c(round_id, "_immunity")), "/", str_c(x_pathogen, "_", x_location, "_", x_target), ".rds"))
 
 draws <- fit |>
   tidybayes::tidy_draws() |> 
@@ -160,6 +160,8 @@ p_cases <- ggplot(trajectory_data) +
   
   # facet_wrap(~log_R_0) +
   
+  coord_cartesian(ylim = c(0, 500)) +
+  
   scale_fill_brewer()
 
 p_f_noise / p_cases
@@ -181,14 +183,14 @@ trajectory_data |>
 
 ggplot(trajectory_data) + 
   fastribbon::stat_fastribbon(aes(x = date, y = latent_cases),
-                              linewidth = 1) +
+                              linewidth = 0) +
   geom_line(aes(x = date, y = y_trend), training_counts,
             colour = "black") +
   
   geom_line(aes(x = notification_date, y = value_trend), eval_counts,
             colour = "orangered") +
   
-  coord_cartesian(ylim = c(0, 400)) +
+  coord_cartesian(ylim = c(0, 50)) +
   
   scale_fill_brewer()
 
@@ -208,5 +210,57 @@ ggplot(trajectory_data) +
   coord_cartesian(ylim = c(0, 600), xlim = c(origin_date - days(28), origin_date + days(7 * 8))) +
   
   scale_fill_brewer()
+
+
+
+
+
+x_location <- "NT"
+
+fit <- read_rds(str_c(fs::path("results", str_c(round_id, "_immunity")), "/", str_c(x_pathogen, "_", x_location, "_", x_target), ".rds"))
+
+fit <- read_rds("saved_results/results_baseline/2025-06-12/RSV_NT.rds")
+
+eval_counts <- read_csv("../forecast-hub/processed-data/2026/2026-04-22/combined-count-smoothed-2026-04-22.csv") |> 
+  filter(notification_date > origin_date, location == x_location, pathogen == x_pathogen)
+
+training_counts <- process_counts(combined_counts, x_location, x_pathogen, x_target, n_days_ahead, origin_date)
+
+
+trajectory_data_plot <- fit |> 
+  spread_draws(latent_cases_log[ix_t]) |> 
+  mutate(date = training_counts$date[ix_t],
+         latent_cases = exp(latent_cases_log))
+
+school_holidays <- get_school_holidays() |> 
+  filter(location == x_location)
+
+public_holidays <- get_public_holidays() |> 
+  filter(location == x_location)
+
+ggplot(trajectory_data_plot) +
+  
+  geom_rect(aes(xmin = start_date, xmax = end_date, ymin = 0, ymax = Inf),
+            school_holidays, alpha = 0.1) +
+  
+  geom_rug(aes(x = date), public_holidays) +
+  
+  
+  fastribbon::stat_fastribbon(aes(x = date, y = latent_cases), linewidth = 0.0) +
+  
+  geom_line(aes(x = date, y = y_trend),
+            training_counts) +
+  
+  geom_line(aes(x = notification_date, y = value_trend), eval_counts,
+            colour = "orangered") +
+  geom_vline(xintercept = origin_date, linetype = "44") +
+  
+  theme_bw() +
+  
+  coord_cartesian(ylim = c(0, 50),
+                  xlim = c(ymd("2023-01-01"), max(trajectory_data$date))) +
+  
+  scale_fill_brewer()
+
 
 

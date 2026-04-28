@@ -324,45 +324,50 @@ plot_holiday_effects <- function(fit, public_holidays) {
     (p_school_asc / p_public_asc) + plot_layout(heights = c(1, 2), axis_titles = "collect")
 }
 
+327
+
 plot_timewarp <- function(fit, round_results, job_name, school_holidays, public_holidays) {
   if(fit$metadata()$model_name != "gp_renewal_time_model") {
     return(NULL)
   }
   
-  
   trajectory_data_f <- fit |> 
+    
     spread_draws(f_annual[ix_t], f_timewarp[ix_t], f_annual_nowarp[ix_t]) |> 
+    
     mutate(date = training_counts$date[ix_t])
   
   p_warp <- ggplot(trajectory_data_f) + 
     
     fastribbon::stat_fastribbon(aes(x = date, y = f_timewarp * 10)) + 
     scale_fill_brewer() +
-    xlab(NULL) + ylab("f_warp") +
     
+    xlab(NULL) + ylab("f_warp") +
     geom_hline(yintercept = 0, linetype = "44") +
+    
     geom_vline(xintercept = origin_date, linetype = "44") +
     
     geom_rect(aes(xmin = start_date, xmax = end_date, ymin = -Inf, ymax = Inf),
               school_holidays, alpha = 0.1) +
-    
     geom_rug(aes(x = date), public_holidays) +
-    
     theme_bw() +
+    
     theme(legend.position = "none")
   
   p_ann <- ggplot(trajectory_data_f) + 
+    
     fastribbon::stat_fastribbon(aes(x = date, y = f_annual),
                                 fill = ggokabeito::palette_okabe_ito(5),
                                 alpha = 0.5,
                                 .width = 0.9) +
+    
     fastribbon::stat_fastribbon(aes(x = date, y = f_annual_nowarp), 
                                 fill = ggokabeito::palette_okabe_ito(3),
                                 alpha = 0.5,
                                 .width = 0.9) +
     
     geom_vline(xintercept = origin_date, linetype = "44") +
-
+    
     xlab(NULL) + ylab("f_ann-warp") +
     
     geom_rect(aes(xmin = start_date, xmax = end_date, ymin = -Inf, ymax = Inf),
@@ -371,6 +376,7 @@ plot_timewarp <- function(fit, round_results, job_name, school_holidays, public_
     geom_rug(aes(x = date), public_holidays) +
     
     theme_bw() +
+    
     theme(legend.position = "none")
   
   p_warp / p_ann
@@ -406,7 +412,8 @@ make_fit_plots <- function(round_id, x_pathogen, x_location, x_target) {
   pars <- c(
     "scaling_annual", "scaling_noise", "ls_noise", "ls_annual", "phi",
     "delay_mean", "delay_sd", "log_R_0"
-  )
+  ) |> 
+    intersect(fit$metadata()$model_params)
 
   p_hist <- mcmc_hist(draws |> mutate(chain = .chain), pars = pars) +
     theme_bw()
@@ -426,15 +433,16 @@ make_fit_plots <- function(round_id, x_pathogen, x_location, x_target) {
   ggsave(str_c(round_results, "/", job_name, "_plot_MCMC_pairs.png"), p_pairs, width = 16, height = 16)
   
   school_holidays <- get_school_holidays() |> 
-    filter(location == x_location)
+    filter(location == x_location, end_date >= ymd("2023-01-01"), start_date <= origin_date + 365)
   
   public_holidays <- get_public_holidays() |> 
-    filter(location == x_location)
+    filter(location == x_location, date >= ymd("2023-01-01"), date <= origin_date + 365)
   
   trajectory_data <- fit |> 
     spread_draws(log_R[ix_t], inf[ix_t], inf_delayed[ix_t],
                  cases[ix_t], f_annual[ix_t], f_noise[ix_t],
                  latent_cases_log[ix_t]) |> 
+    
     mutate(date = training_counts$date[ix_t],
            latent_cases = exp(latent_cases_log),
            
