@@ -3,20 +3,19 @@ library(tidyverse)
 library(processx)
 source("R/functions.R")
 
-round_id <- "2025-05-08"
+round_id <- "2026-04-29"
 
 check_and_log_git_status(round_id)
 
 repo_dir <- "../forecast-hub"
 
 # Switch to main branch and pull latest changes
-run("git", c("fetch"), wd = repo_dir, echo = TRUE);
-run("git", c("switch", "main"), wd = repo_dir, echo = TRUE)
-run("git", c("pull"), wd = repo_dir, echo = TRUE)
+message(run("git", c("fetch"), wd = repo_dir, echo = TRUE)$stdout)
+message(run("git", c("switch", "main"), wd = repo_dir, echo = TRUE)$stdout)
+message(run("git", c("pull"), wd = repo_dir, echo = TRUE)$stdout)
 
 # Run the forecasts
-run("sbatch", c(str_c("--export=ALL,round_id=", round_id), "run_forecasts.slurm"))
-
+message(run("sbatch", c(str_c("--export=ALL,round_id=", round_id), "run_forecasts.slurm"))$stdout)
 
 # Wait for the above to complete
 message(run("squeue", c("-u", "ruarai"))$stdout)

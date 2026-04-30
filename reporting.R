@@ -64,12 +64,74 @@ plot_model_ribbon <- function(forecasts, combined_counts) {
     scale_fill_brewer()
 }
 
+
+plot_model_ribbon_smooth <- function(forecasts, combined_counts) {
+  model_submissions <- forecasts |> 
+    filter(target == "case_incidence_smoothed", horizon <= 28) |> 
+    collect()
+  
+  
+  origin_dates <- forecasts |> 
+    distinct(origin_date, pathogen, location) |> 
+    collect()
+  
+  observations <- combined_counts |> 
+    left_join(origin_dates, by = join_by(location, pathogen)) |> 
+    filter(notification_date > origin_date - 7 * 8)
+  
+  library(pammtools)
+  library(ggh4x)
+  library(ufs)
+  
+  ggplot() +
+    
+    fastribbon::stat_fastribbon(aes(x = origin_date + horizon, y = value),
+                                model_submissions,
+                                geom = "stepribbon",
+                                linewidth = 0.0) +
+    
+    geom_line(aes(x = notification_date, y = value_trend_and_remainder),
+              observations) +
+    
+    facet_wrap(~location * pathogen, ncol = 3, scales = "free_y") +
+    
+    ggh4x::facet_grid2(rows = vars(location), cols = vars(pathogen),
+                       scales = "free_y", independent = "y") +
+    
+    geom_vline(aes(xintercept = origin_date),
+               origin_dates, linetype = "44") +
+    
+    scale_y_continuous(breaks = scales::breaks_extended(3)) +
+    
+    coord_cartesian(ylim = c(0, NA)) +
+    
+    plot_theme +
+    
+    scale_fill_brewer()
+}
+
 year <- as.character(year(round_id))
 
-combined_counts <- read_csv(str_c("../forecast-hub/processed-data/", year, "/", round_id, "/combined-count-", round_id, ".csv"))
+combined_counts <- read_csv(str_c("../forecast-hub/processed-data/", year, "/", round_id, "/combined-count-smoothed-", round_id, ".csv"))
 
 plot_model_ribbon(forecasts |> filter(location != "NZ"), combined_counts |> filter(location != "NZ"))
 ribbon_plot_path <- fs::path("plots", str_c("uom-reff_comp_plots-ribbon-", round_id, ".png"))
+
+ggsave(
+  ribbon_plot_path,
+  height = 12,
+  width = 10
+)
+
+plot_model_ribbon_smooth(forecasts |> filter(location != "NZ"), combined_counts |> filter(location != "NZ"))
+
+smooth_ribbon_plot_path <- fs::path("plots", str_c("uom-reff_comp_plots-ribbon-smoothed-", round_id, ".png"))
+
+ggsave(
+  smooth_ribbon_plot_path,
+  height = 12,
+  width = 10
+)
 
 ggsave(
   ribbon_plot_path,

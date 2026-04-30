@@ -1,6 +1,5 @@
 
 source("R/functions.R")
-
 source("R/presentation/plot_theme.R")
 
 perf_files <- fs::dir_ls("saved_results/results_baseline/", glob = "*_performance.parquet", recurse = TRUE)
@@ -17,9 +16,18 @@ acefa_perf_data <- read_rds("data/case_forecast_measures.rds") |>
   rename(crps = natural, crps_log = log)
 
 
+autogp_perf_data <- read_rds("data/autogp_measures.rds") |> 
+  filter(measure_name == "crps", target == "case_incidence") |> 
+  mutate(pathogen = as.character(if_else(pathogen == "Influenza", "flu", pathogen)),
+         round_id = as.character(round_id)) |> 
+  select(-c(measure_name, target)) |> 
+  pivot_wider(names_from = measure_scale) |> 
+  rename(crps = natural, crps_log = log)
+
+
 
 perf_data_full <- bind_rows(
-  perf_data, acefa_perf_data
+  perf_data, acefa_perf_data, autogp_perf_data
 ) |> 
   select(.model, location, pathogen, round_id, origin_date, date, crps, crps_log) |> 
   mutate(horizon = as.numeric(date - origin_date)) |> 
@@ -30,7 +38,7 @@ perf_data_full <- bind_rows(
       .model, 
       c("snaive", "dstg-RV_model", "UQ-DD", "UQ-renewal_global", 
         "UQ-renewal_i", "uom-multiwalk", "ensemble-mixture", "ensemble-quantile", 
-        "uom-reff-comp")
+        "uom-reff-comp", "uom-autogp_weekly")
     )
   )
 
@@ -41,7 +49,7 @@ perf_data_full |>
   summarise(crps_log = mean(crps_log)) |> 
   
   ggplot() +
-  geom_line(aes(x = horizon, y = crps_log, colour = .model == "uom-reff-comp", group = .model)) +
+  geom_line(aes(x = horizon, y = crps_log, colour = .model == "uom-autogp_weekly", group = .model)) +
   
   ggokabeito::scale_colour_okabe_ito(order = c(2, 9)) +
   
@@ -50,7 +58,7 @@ perf_data_full |>
   theme_bw()
 
 perf_data_ranking <- perf_data_full |> 
-  filter(!str_detect(.model, "ensemble"), #.model != "snaive",
+  filter(!str_detect(.model, "ensemble"), 
          horizon > 21, horizon <= 28) |> 
   group_by(pathogen, location, round_id, horizon) |> 
   mutate(n_models = n(),
@@ -73,7 +81,7 @@ perf_data_ranking |>
                  linewidth = 2.0) +
   
   ggokabeito::scale_colour_okabe_ito(
-    order = c(9, 9, 9, 9, 9, 9, 3),
+    order = c(9, 9, 9, 9, 9, 9, 3, 5),
     name = "Model"
   ) +
   
@@ -122,6 +130,29 @@ perf_data_full |>
   plot_theme_pres +
   
   theme(legend.position = "none")
+
+perf_data_full |> 
+  filter(horizon > 21, horizon <= 28,
+         !str_detect(.model, "ensemble")) |> 
+  group_by(.model, pathogen) |> 
+  summarise(crps_log = mean(crps_log)) |> 
+  
+  ggplot() +
+  geom_linerange(aes(y = .model, xmin = 0, xmax = crps_log, colour = .model == "uom-reff-comp"),
+                 linewidth = 7.0) +
+  
+  ylab(NULL) + xlab("CRPS") +
+  
+  ggokabeito::scale_colour_okabe_ito(order = c(9, 2)) +
+  
+  facet_wrap(~pathogen) +
+  
+  ggtitle("Mean 22–28 day CRPS\n(lower is better)") +
+  
+  plot_theme_pres +
+  
+  theme(legend.position = "none")
+
 
 perf_data_full |> 
   filter(horizon > 21, horizon <= 28,

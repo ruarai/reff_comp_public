@@ -38,13 +38,15 @@ origin_date <- get_origin_date(combined_counts, x_pathogen, x_location, x_target
 
 print(str_c("Performing job ", ix_job, " (", x_location, "-", x_pathogen, "-", x_target, ")"))
 
-n_days_ahead <- 365
+# n_days_ahead <- 365
+n_days_ahead <- as.numeric(ymd("2027-01-01") - origin_date)
+
 
 training_counts <- process_counts(combined_counts, x_location, x_pathogen, x_target, n_days_ahead, origin_date)
 
 data_list <- create_stan_data(training_counts, n_days_ahead, x_pathogen, x_location)
 
-fit <- fit_model(data_list, model_file = "src/gp_renewal.stan")
+fit <- fit_model(data_list, model_file = "src/gp_renewal_norm.stan")
 
 print("Saving fit object and training data")
 

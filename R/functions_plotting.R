@@ -385,8 +385,8 @@ plot_timewarp <- function(fit, round_results, job_name, school_holidays, public_
 }
 
 
-make_fit_plots <- function(round_id, x_pathogen, x_location, x_target) {
-  round_results <- fs::path("results", round_id)
+make_fit_plots <- function(round_id, x_pathogen, x_location, x_target, results_dir = "results") {
+  round_results <- fs::path(results_dir, round_id)
   
   job_name <- str_c(x_pathogen, "_", x_location, "_", x_target)
   

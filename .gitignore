@@ -1,9 +1,5 @@
 .Rproj.user
 .Rhistory
-src/gp_cases
-src/gp_functions
-src/qr_weekly
-src/gp_renewal
 data
 results
 slurm_out
@@ -13,3 +9,7 @@ forecast_outputs_raw
 forecast_outputs_old
 results*
 Rplots.pdf
+
+src/*
+!src/
+!src/*.stan

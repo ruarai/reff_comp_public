@@ -43,11 +43,11 @@ make_retrospective_jobs <- function() {
     
     rowwise() |> 
     mutate(counts = list(read_csv(counts_file, show_col_types = FALSE)), 
-           jobs = list(distinct(counts, location, pathogen))) |> 
+           jobs = list(distinct(counts, location, pathogen, target))) |> 
     select(-counts) |> 
     unnest(jobs) |> 
     
-    select(round_id, location, pathogen)
+    select(round_id, location, pathogen, target)
 }
 
 
@@ -72,7 +72,8 @@ plots_to_gif <- function(plot_list, out_file, width, height, delay = 1) {
 
 
 calculate_performance_metrics <- function(
-    round_id, x_pathogen, x_location
+    round_id, x_pathogen, x_location, x_target,
+    results_dir = "results"
 ) {
   
   eval_counts <- read_csv("data/combined-count-2026-01-15.csv", show_col_types = FALSE) |> 
@@ -81,10 +82,12 @@ calculate_performance_metrics <- function(
     
     select(date, cases_true = y)
   
-  round_results <- fs::path("results", round_id)
+  round_results <- fs::path(results_dir, round_id)
   
-  fit <- read_rds(str_c(round_results, "/", x_pathogen, "_", x_location, ".rds"))
-  training_counts <- arrow::read_parquet(str_c(round_results, "/", x_pathogen, "_", x_location, "_training_counts.parquet"))
+  job_name <- str_c(x_pathogen, "_", x_location, "_", x_target)
+  
+  fit <- read_rds(str_c(round_results, "/", job_name, ".rds"))
+  training_counts <- arrow::read_parquet(str_c(round_results, "/", job_name, "_training_counts.parquet"))
   
   perf_data <- fit |> 
     spread_draws(latent_cases_weekly_log[ix_t], cases[ix_t], phi) |> 
@@ -110,12 +113,12 @@ calculate_performance_metrics <- function(
       med_ae_log = abs(median(log_cases) - log_cases_true),
       .groups = "drop"
     ) |> 
-    mutate(location = x_location, pathogen = x_pathogen,
+    mutate(location = x_location, pathogen = x_pathogen, target = x_target,
            round_id = round_id, origin_date = training_counts$origin_date[[1]],
            .before = 1)
   
   perf_data |> 
-    write_parquet(str_c(round_results, "/", x_pathogen, "_", x_location, "_performance.parquet"))
+    write_parquet(str_c(round_results, "/", job_name, "_performance.parquet"))
 }
 
 label_pathogens <- function(df) {
