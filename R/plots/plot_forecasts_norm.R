@@ -14,15 +14,26 @@ perf_data <- bind_rows(
     mutate(.model = "normalised_incidence_0.3"),
   read_parquet("saved_results/normalised_incidence_0.4_performance.parquet") |> 
     mutate(.model = "normalised_incidence_0.4"),
-  # collect(open_dataset(fs::dir_ls("saved_results/results_baseline/", glob = "*_performance.parquet", recurse = TRUE))) |> 
-  #   mutate(.model = "uom-reff-comp", .before = 1)
+  collect(open_dataset(fs::dir_ls("saved_results/normalised_incidence_0.5/", glob = "*_performance.parquet", recurse = TRUE))) |>
+    mutate(.model = "normalised_incidence_0.5"),
+  collect(open_dataset(fs::dir_ls("saved_results/normalised_incidence_0.75/", glob = "*_performance.parquet", recurse = TRUE))) |>
+    mutate(.model = "normalised_incidence_0.75"),
+  collect(open_dataset(fs::dir_ls("saved_results/normalised_incidence_1/", glob = "*_performance.parquet", recurse = TRUE))) |>
+    mutate(.model = "normalised_incidence_1"),
+  collect(open_dataset(fs::dir_ls("saved_results/normalised_incidence_1.5/", glob = "*_performance.parquet", recurse = TRUE))) |>
+    mutate(.model = "normalised_incidence_1.5")
 ) |> 
   filter(location != "NZ", location != "SA") |> 
   mutate(horizon = as.numeric(date - origin_date))
 
 
 perf_data |> 
-  filter(horizon > 21, horizon <= 28) |> 
+  
+  filter(horizon > 0, horizon <= 28) |> 
+  
+  group_by(pathogen, location, date, round_id) |>
+  filter(n() == 9) |> 
+  
   group_by(pathogen, location) |> 
   mutate(crps_log_baseline = mean(crps_log[.model == "baseline"])) |> 
   filter(.model != "baseline") |> 
@@ -31,9 +42,10 @@ perf_data |>
   mutate(sigma_total_inf = parse_number(.model)) |> 
   
   ggplot() +
-  geom_linerange(aes(x = factor(sigma_total_inf), ymin = 0, ymax = skill_score, colour = location),
-                 position = position_dodge2(width = 0.5),
-                 linewidth = 0.9) +
+  geom_line(aes(x = sigma_total_inf, y = skill_score, colour = location),
+            linewidth = 0.5) +
+  
+  geom_hline(yintercept = 0, linetype = "42") +
   
   ggokabeito::scale_colour_okabe_ito(name = "Location") +
   
@@ -46,7 +58,12 @@ perf_data |>
   theme_bw()
 
 perf_data |> 
+  
   filter(horizon > 0, horizon <= 28) |> 
+  
+  group_by(pathogen, location, date, round_id) |>
+  filter(n() == 9) |> 
+  
   group_by(pathogen) |> 
   mutate(crps_log_baseline = mean(crps_log[.model == "baseline"])) |> 
   filter(.model != "baseline") |> 
@@ -55,9 +72,10 @@ perf_data |>
   mutate(sigma_total_inf = parse_number(.model)) |> 
   
   ggplot() +
-  geom_linerange(aes(x = factor(sigma_total_inf), ymin = 0, ymax = skill_score),
-                 position = position_dodge2(width = 0.5),
-                 linewidth = 0.9) +
+  geom_line(aes(x = sigma_total_inf, y = skill_score),
+            linewidth = 0.9) +
+  
+  geom_hline(yintercept = 0, linetype = "42") +
   
   ggokabeito::scale_colour_okabe_ito(name = "Location") +
   
@@ -85,47 +103,7 @@ perf_data |>
 perf_data |> 
   filter(horizon > 21, horizon <= 28) |> 
   group_by(pathogen, location, date, round_id) |>
-  group_by(pathogen, .model) |> 
-  summarise(crps_log = mean(crps_log)) |> 
-  ggplot() +
-  geom_linerange(aes(y = .model, xmin = 0, xmax = crps_log)) +
-  
-  facet_wrap(~pathogen)
-  
-perf_data |> 
-  filter(horizon > 21, horizon <= 28) |> 
-  group_by(pathogen, location, date, round_id) |>
-  mutate(n_missing = 5 - n()) |> 
-  ungroup() |> 
-  summarise(sum(n_missing))
-
-
-perf_data |> 
-  filter(horizon > 21, horizon <= 28) |> 
-  group_by(pathogen, location, date, round_id) |>
-  filter(n() == 5) |> 
-  summarise(crps_diff = crps_log[.model == "normalised_incidence_0.4"] - crps_log[.model == "baseline"],
-            skill_score = 1 - crps_log[.model == "normalised_incidence_0.4"] / crps_log[.model == "baseline"]) |> 
-  
-  ggplot() +
-  geom_linerange(aes(x =date, ymin = 0, ymax = skill_score, colour = skill_score > 0),
-                 linewidth = 0.8) +
-  
-  ggokabeito::scale_colour_okabe_ito(order = c(6, 3)) +
-  
-  geom_hline(yintercept = 0, linetype = "22") +
-  
-  scale_y_continuous(trans = log1minus_trans(),
-                     breaks = c(-3, -1, 0, 0.5, 0.75)) +
-  
-  facet_grid(rows = vars(location), cols = vars(pathogen)) +
-  
-  theme_bw()
-
-perf_data |> 
-  filter(horizon > 21, horizon <= 28) |> 
-  group_by(pathogen, location, date, round_id) |>
-  filter(n() == 2) |> 
+  filter(n() == 9) |> 
   group_by(pathogen, location, round_id, .model) |> 
   
   summarise(crps_log = mean(crps_log),
@@ -142,53 +120,12 @@ perf_data |>
   theme_bw()
 
 
-perf_data |> 
-  filter(horizon >= 0, horizon <= 7 * 4) |> 
-  group_by(pathogen, location, date, round_id) |>
-  filter(n() == 2) |> 
-  group_by(pathogen, location, horizon) |> 
-  summarise(skill_score = 1 - mean(crps_log[.model == "normalised_incidence"]) / mean(crps_log[.model == "baseline"])) |> 
-  
-  ggplot() +
-  geom_line(aes(x = horizon, y = skill_score), linewidth = 0.8) +
-  
-  geom_hline(yintercept = 0, linetype = "22") +
-  
-  scale_y_continuous(trans = log1minus_trans(),
-                     breaks = c(-3, -1, 0, 0.5, 0.75)) +
-  
-  facet_grid(rows = vars(location), cols = vars(pathogen)) +
-  
-  theme_bw()
-
-
-
-
-
-perf_data |> 
-  filter(horizon >= -7, horizon <= 7 * 4) |> 
-  group_by(pathogen, location, date, round_id) |>
-  filter(n() == 5) |> 
-  
-  group_by(pathogen, location, horizon, .model) |> 
-  summarise(crps_log = mean(crps_log),
-            med_ae_log = mean(med_ae_log),
-            elpd = sum(elpd)) |> 
-  
-  ggplot() +
-  geom_line(aes(x = horizon, y = crps_log, colour = .model), linewidth = 0.5) +
-  
-  geom_hline(yintercept = 0, linetype = "22") +
-  
-  facet_grid(rows = vars(location), cols = vars(pathogen), scales = "free_y") +
-  
-  theme_bw()
 
 
 perf_data |> 
   filter(horizon > 21, horizon <= 28) |> 
   group_by(pathogen, location, date, round_id) |>
-  filter(n() == 5) |> 
+  filter(n() == 9) |> 
   group_by(pathogen, location, round_id) |> 
   mutate(crps_log_mean_baseline = mean(crps_log[.model == "baseline"])) |> 
   filter(.model != "baseline") |> 

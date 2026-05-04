@@ -3,7 +3,7 @@
 
 source("R/functions.R")
 
-fit_files <- fs::dir_ls("saved_results/results_baseline/2025-10-09/", recurse = TRUE, glob = "*.rds")
+fit_files <- fs::dir_ls("results/2026-04-29/", recurse = TRUE, glob = "*.rds")
 
 fit_diagnostics <- fit_files |> 
   map(function(fit_file) {

@@ -190,19 +190,21 @@ p_Rt_exp <- ggplot(trajectory_data |> filter(date >= date_range[1], date <= date
 
 p_Rt <- ((p_case_inc + theme(axis.text.x = element_blank())) / p_Rt_exp) + 
   plot_annotation("<b>A</b>. Conditioned case incidence and inferred <i>R</i>(<i>t</i>)",
-                  theme = theme(plot.title = element_markdown(),
+                  theme = theme(plot.title = element_markdown(family = "Helvetica"),
                                 plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "cm")))
 
 
 p_decomp <- (p_hol / p_ann / (p_noise + theme(axis.text.x = element_text(margin = margin(t = 0.3, unit = "cm"), colour = "black")))) + 
   plot_annotation("<b>B</b>. Decomposed log <i>R</i>(<i>t</i>) additive effects",
-                  theme = theme(plot.title = element_markdown(),
+                  theme = theme(plot.title = element_markdown(family = "Helvetica"),
                                 plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "cm")))
 
 
 n_days_ahead <- 7 * 6
 
-p_cases <- ggplot(trajectory_data |> filter(date >= ymd("2025-05-01"), date <= origin_date + days(n_days_ahead))) +
+date_range_forecast <- c(ymd("2025-05-01"), origin_date + days(n_days_ahead))
+
+p_cases <- ggplot(trajectory_data |> filter(date >= date_range_forecast[1], date <= date_range_forecast + days(1))) +
   
   plot_common +
   
@@ -212,23 +214,22 @@ p_cases <- ggplot(trajectory_data |> filter(date >= ymd("2025-05-01"), date <= o
   plot_common_above +
   
   geom_line(aes(x = date, y = y),
-            training_counts) +
+            training_counts |> filter(date >= date_range_forecast[1])) +
   geom_point(aes(x = date, y = y), size = 0.9,
-             training_counts) +
+             training_counts |> filter(date >= date_range_forecast[1])) +
   
   geom_line(aes(x = notification_date, y = value),
             colour = "orangered",
-            eval_counts) +
+            eval_counts |> filter(notification_date <= date_range_forecast[2])) +
   geom_point(aes(x = notification_date, y = value), size = 0.9,
              colour = "orangered",
-             eval_counts) +
+             eval_counts |> filter(notification_date <= date_range_forecast[2])) +
   
   scale_fill_brewer(palette = "Blues") +
   
   coord_cartesian(xlim = c(ymd("2025-05-01"), origin_date + days(n_days_ahead)), ylim = c(0, 2000)) +
   
-  scale_x_date(date_breaks = "2 weeks", labels = scales::label_date_short(),
-               limits = c(ymd("2025-05-01"), origin_date + days(n_days_ahead))) +
+  scale_x_date(date_breaks = "2 weeks", labels = scales::label_date_short()) +
   
   scale_y_continuous(labels = scales::label_comma()) +
   
@@ -237,9 +238,12 @@ p_cases <- ggplot(trajectory_data |> filter(date >= ymd("2025-05-01"), date <= o
   theme(legend.position = "none",
         plot.margin = margin(t = 0.25, b = 0.25, l = 0.1, r = 0.1, unit = "cm"))
 
+p_cases
+
+
 p_forecast <- (p_cases) + 
   plot_annotation("<b>C</b>. Forecast case incidence",
-                  theme = theme(plot.title = element_markdown())) +
+                  theme = theme(plot.title = element_markdown(family = "Helvetica"))) +
   
   theme(plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "cm"))
 
@@ -248,7 +252,7 @@ p_example <- (wrap_elements(full = p_Rt) | wrap_elements(full = p_decomp)) /
 
 ggsave(
   "paper_figures/f_1_example.png", p_example,
-  width = 10, height = 8,
+  width = 9, height = 7,
   bg = "white"
 )
 
