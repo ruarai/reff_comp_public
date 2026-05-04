@@ -13,3 +13,5 @@ Rplots.pdf
 src/*
 !src/
 !src/*.stan
+
+saved_results

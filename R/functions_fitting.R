@@ -1,5 +1,5 @@
 
-fit_model <- function(data_list, model_file = "src/gp_renewal.stan") {
+fit_model <- function(data_list, model_file = "src/gp_renewal.stan", n_warmup = 1000) {
   
   print(str_c("Fitting model ", model_file))
   
@@ -13,8 +13,7 @@ fit_model <- function(data_list, model_file = "src/gp_renewal.stan") {
     parallel_chains = 4,
     refresh = 50,
     
-    # TODO increase back to 3000
-    iter_warmup = 1000, iter_sampling = 1000,
+    iter_warmup = n_warmup, iter_sampling = 1000,
     init = 0.5
   )
   
