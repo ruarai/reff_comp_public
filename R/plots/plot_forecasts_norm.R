@@ -32,7 +32,14 @@ perf_data |>
   filter(horizon > 0, horizon <= 28) |> 
   
   group_by(pathogen, location, date, round_id) |>
-  filter(n() == 9) |> 
+  filter(n() != 9) 
+
+perf_data |> 
+  
+  filter(horizon > 0, horizon <= 28) |> 
+  
+  group_by(pathogen, location, date, round_id) |>
+  filter(n() == 9) |>
   
   group_by(pathogen, location) |> 
   mutate(crps_log_baseline = mean(crps_log[.model == "baseline"])) |> 

@@ -14,8 +14,21 @@ plot_theme_paper <- list(
         axis.ticks.length=unit(-0.1, "cm"),
         axis.title.y = element_markdown(),
         axis.title.x = element_markdown(),
-        strip.text.x = element_text(hjust = 0),
+        strip.text.x = element_text(size = 11, hjust = 0),
         plot.title = element_markdown(),
         plot.subtitle = element_markdown()
   )
 )
+
+element_gridline <- element_line(colour = "grey70", linetype = "28", linewidth = 0.3)
+element_facet_background <- element_rect(fill = "white", colour = "grey50", linewidth = 0.5)
+
+
+label_pathogen <- function(tbl) {
+  tbl |> 
+    mutate(pathogen_label = factor(
+      pathogen,
+      c("RSV", "flu", "SARSCOV2"),
+      labels = c("RSV" = "RSV", "flu" = "Influenza", "SARSCOV2" = "SARS-CoV-2")
+    ))
+}

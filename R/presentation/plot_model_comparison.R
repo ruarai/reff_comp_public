@@ -1,6 +1,5 @@
 
 source("R/functions.R")
-
 source("R/presentation/plot_theme.R")
 
 perf_data <- bind_rows(
