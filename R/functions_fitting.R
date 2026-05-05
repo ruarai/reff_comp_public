@@ -172,13 +172,12 @@ get_gi <- function(pathogen) {
 make_training_counts <- function(
     reduced_counts,
     x_location, x_pathogen, x_target,
-    days_ahead = 0,
-    holidays_cutoff = ymd("2023-01-01")
+    days_ahead = 0
 ) {
-  school_holidays_location <- get_school_holidays_long(date_cutoff = holidays_cutoff) |> 
+  school_holidays_location <- get_school_holidays_long() |> 
     filter(location == x_location)
   
-  public_holidays_location <- get_public_holidays(date_cutoff = holidays_cutoff) |> 
+  public_holidays_location <- get_public_holidays() |> 
     filter(location == x_location) |> 
     mutate(public_holiday_type = match(holiday_name, unique(holiday_name))) |> 
     select(date, location, public_holiday_type)
@@ -315,19 +314,6 @@ get_population_size <- function(location) {
   return(population_sizes[[location]])
 }
 
-get_sigma_total_inf <- function(x_pathogen) {
-  
-  # Specified as the (approximate) mean of observed
-  # sd in log10 total cases across 2023, 2024 and 2025
-  sigma_vals <- c(
-    "RSV" = 0.1,
-    "flu" = 0.15,
-    "SARSCOV2" = 0.15
-  )
-  
-  return(sigma_vals[[x_pathogen]])
-}
-
 create_stan_data <- function(
     training_counts,
     n_days_ahead,
@@ -339,15 +325,8 @@ create_stan_data <- function(
   
   N_public_holiday_types <- max(training_counts$public_holiday_type) - 1
   N_school_holiday_types <- max(training_counts$school_holiday_type) - 1
-  N_years <- max(training_counts$year)
   
-  year_coverage <- training_counts |> count(year) |> mutate(year_covered = pmin(365, n) / 365) |> arrange(year) |> pull(year_covered)
-  
-  year_ranges <- training_counts |> 
-    mutate(ix = row_number()) |>
-    group_by(year) |> 
-    summarise(ix_year_start = min(ix), ix_year_end = max(ix))
-  
+  # Download humidity data for (experimental) immunity model
   humidity_data <- read_csv("data/modelled_humidity.csv", show_col_types = FALSE) |> 
     filter(location == x_location) |> 
     arrange(day_of_year)
@@ -361,11 +340,6 @@ create_stan_data <- function(
     
     public_holiday_type = training_counts$public_holiday_type,
     
-    ix_year = training_counts$year,
-    year_start = year_ranges$ix_year_start,
-    year_end = year_ranges$ix_year_end,
-    N_years = length(unique(training_counts$year)),
-    
     y = training_counts$y[1:n_days_data],
     N = nrow(training_counts), N_data = n_days_data,
     N_public_holiday_types = N_public_holiday_types,
@@ -377,11 +351,9 @@ create_stan_data <- function(
     
     population_size = get_population_size(x_location),
     
-    gi_reversed = rev(gi), N_gi = length(gi),
+    gi_reversed = rev(gi),
     
-    sigma_total_inf = get_sigma_total_inf(x_pathogen),
-    
-    # Immunity model params
+    # Experimental immunity-model params
     k = 5, init_factor = 0.5e-2,
     humidity = humidity_data$humidity_scaled,
     sample_from_prior = 0, log_R_0 = 0.33

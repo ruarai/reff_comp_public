@@ -1,6 +1,6 @@
 
 
-upload_dir_to_mediaflux <- function(target_dir) {
+upload_output_to_mediaflux <- function(target_dir) {
   library(processx)
   
   x <- run(
@@ -17,21 +17,21 @@ upload_dir_to_mediaflux <- function(target_dir) {
 }
 
 
-download_dir_from_mediaflux <- function(target_dir) {
-  library(processx)
-  
-  x <- run(
-    "/apps/unimelb-mf-clients/current/bin/unimelb-mf-download",
-    c("--mf.config", "data/mflux.cfg",
-      "--nb-workers", "4",
-      "--out", "saved_results",
-      str_c("/projects/proj-5050_reffcomp_model_evaluation-1128.4.1617/")
-    ),
-    echo = TRUE
-  )
-  
-  message(x$stdout)
-}
+# download_dir_from_mediaflux <- function(target_dir) {
+#   library(processx)
+#   
+#   x <- run(
+#     "/apps/unimelb-mf-clients/current/bin/unimelb-mf-download",
+#     c("--mf.config", "data/mflux.cfg",
+#       "--nb-workers", "4",
+#       "--out", "saved_results",
+#       str_c("/projects/proj-5050_reffcomp_model_evaluation-1128.4.1617/")
+#     ),
+#     echo = TRUE
+#   )
+#   
+#   message(x$stdout)
+# }
 
 
 consolidate_result <- function(results_name) {
@@ -42,14 +42,7 @@ consolidate_result <- function(results_name) {
   perf_dataset |> write_parquet(str_c("saved_results/", results_name, "_performance.parquet"))
   
   
-  upload_dir_to_mediaflux(str_c("saved_results/", results_name))
+  upload_output_to_mediaflux(str_c("saved_results/", results_name))
   
   fs::dir_delete(str_c("saved_results/", results_name))
 }
-
-source("R/functions.R")
-
-consolidate_result("normalised_incidence_0.5")
-consolidate_result("normalised_incidence_0.75")
-consolidate_result("normalised_incidence_1")
-consolidate_result("normalised_incidence_1.5")

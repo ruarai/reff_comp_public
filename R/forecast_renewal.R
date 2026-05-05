@@ -1,6 +1,3 @@
-
-
-
 source("R/functions.R")
 
 args <- commandArgs(trailingOnly = TRUE)

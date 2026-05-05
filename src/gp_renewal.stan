@@ -21,7 +21,7 @@ data {
   array[N_data] int y;
   
   
-  vector[21] gi_reversed;
+  vector[M] gi_reversed;
 
   int<lower=1> M_annual;
   int<lower=1> M_noise; 
@@ -30,16 +30,15 @@ data {
 }
 
 transformed data {
-  matrix[N, 2 * M_annual] phi_annual = PHI_periodic(N, M_annual, 2 * pi() / 365.25, x);
-  
+  // Construct the basis functions for HSGP
   vector[N] x_centered = x - mean(x);
   real L = c_factor * max(abs(x_centered));
   
   matrix[N, M_noise] phi_noise = PHI(N, M_noise, L, x_centered);
+  matrix[N, 2 * M_annual] phi_annual = PHI_periodic(N, M_annual, 2 * pi() / 365.25, x);
   
-  int N_delay = 21;
-  
-  int N_total = N + N_delay;
+  int M = 21;
+  int N_total = N + M;
 }
 
 parameters {
@@ -76,71 +75,98 @@ parameters {
 }
 
 transformed parameters {
+  // Calculate length-scale for annual GP in radians
   real ls_annual_rad = ls_annual * (2 * pi() / 365.25);
-
-  // Use the radian lengthscale for the SPD
+  
+  // Calculate the weighting (SPD) vector for the periodic annual GP 
+  // from ls_annual_rad and scaling_annual
   vector[2 * M_annual] diag_SPD_annual = diagSPD_Periodic(scaling_annual, ls_annual_rad, M_annual);
   
+  // Calculate the weighting (SPD) vector for the Matern 5/2 noise GP
+  // from ls_noise and scaling_noise
   vector[M_noise] diag_SPD_noise = diagSPD_Matern52(scaling_noise, ls_noise, L, M_noise);
   
-  
+  // Calculate the GPs as the weighting vectors from the basis functions
+  // and the weighting vectors
   vector[N] f_annual = phi_annual * (diag_SPD_annual .* beta_annual);
   vector[N] f_noise  = phi_noise * (diag_SPD_noise .* beta_noise);
   
+  // Add a zero to the start of the school and public holiday effects
+  // so that we can index into them using the holiday_type vectors
+  // with type == 1 having an effect of zero
   vector[N_school_holiday_types + 1] school_holiday_Rt_effect = rep_vector(0.0, N_school_holiday_types + 1);
   school_holiday_Rt_effect[2:(N_school_holiday_types + 1)] = school_holiday_Rt_effect_raw;
   
   vector[N_public_holiday_types + 1] public_holiday_Rt_effect = rep_vector(0.0, N_public_holiday_types + 1);
   public_holiday_Rt_effect[2:(N_public_holiday_types + 1)] = public_holiday_Rt_effect_raw;
   
-  
+  // Calculate the value of log R(t) across t = 1 .. N
   vector[N] log_R = log_R_0 +
     f_annual +
     f_noise + 
     school_holiday_Rt_effect[school_holiday_type] +
     public_holiday_Rt_effect[public_holiday_type];
   
-  vector[7] obs_offset_weekly = beta_offset_weekly * scaling_weekly_asc;
+  // Calculate the delay distribution between infection onset and reporting
+  vector[M] delay_dist = construct_delay_dist(delay_mean, delay_sd, M);
   
-  vector[N_delay] delay_dist = construct_delay_dist(delay_mean, delay_sd, N_delay);
+  // Number of new infections by time of infection onset
+  vector[N] inf; 
   
-  vector[N] inf;
+  // Number of new infections convolved by delay_dist 
+  // but not affected by any reporting/ascertainment effects
   vector[N] inf_delayed;
   
   {
-    matrix[N, N_delay] inf_lagged;
+    // The full time-series of infections including M days prior to t = 1
     vector[N_total] inf_full = rep_vector(0.0, N_total);
 
-    // Calculate initial infs as exp growth: I(t) = I_0 * exp(r * t)
-    inf_full[1:N_delay] = exp(log_I_0 + r_0 * linspaced_vector(N_delay, -N_delay + 1, 0));
+    // Calculate initial infections as exp growth: I(t) = I_0 * exp(r * t)
+    inf_full[1:M] = exp(log_I_0 + r_0 * linspaced_vector(M, -M + 1, 0));
     
     for(t in 1:N) {
+      // Perform the renewal equation step
       real R_t = exp(log_R[t]);
       
-      real new_infections = R_t * dot_product(gi_reversed, segment(inf_full, t, N_delay));
+      // Use a dot-product here to make the sum over the generation interval
+      // a single auto-diff operation
+      real new_infections = R_t * dot_product(gi_reversed, segment(inf_full, t, M));
       
-      inf_full[t + N_delay] = new_infections;
+      inf_full[t + M] = new_infections;
     }
     
-    inf = segment(inf_full, N_delay + 1, N);
+    // We only care about t = 1..N, so drop the first M days
+    inf = segment(inf_full, M + 1, N);
     
-    for(k in 1:N_delay) {
-       inf_lagged[:, k] = segment(inf_full, N_delay + 1 - (k - 1), N);
+    // Calculate the delayed infections by creating an N x M matrix
+    // where each column k is infections delayed by k - 1 days
+    matrix[N, M] inf_lagged;
+    for(k in 1:M) {
+       inf_lagged[:, k] = segment(inf_full, M + 1 - (k - 1), N);
     }
     
+    // The above construction allows us to calculate the full convolution
+    // in a single matrix multiplication:
     inf_delayed = inf_lagged * delay_dist;
   }
   
+  // As above, create vectors allowing for indexing of ascertainment effect by holiday_type
   vector[N_school_holiday_types + 1] school_holiday_asc_effect = rep_vector(0.0, N_school_holiday_types + 1);
   school_holiday_asc_effect[2:(N_school_holiday_types + 1)] = school_holiday_asc_effect_raw;
   
   vector[N_public_holiday_types + 1] public_holiday_asc_effect = rep_vector(0.0, N_public_holiday_types + 1);
   public_holiday_asc_effect[2:(N_public_holiday_types + 1)] = public_holiday_asc_effect_raw;
   
+  // Calculate the latent cases time-series on the log scale with asc. effects
+  // (but not day of week effects, as it is nice to look at them separately)
   vector[N] latent_cases_log = log(inf_delayed) + 
     school_holiday_asc_effect[school_holiday_type] +
     public_holiday_asc_effect[public_holiday_type];
+
+  // Calculate the day-of-week effect (non-centred parametrisation)
+  vector[7] obs_offset_weekly = beta_offset_weekly * scaling_weekly_asc;
   
+  // Add in the day-of-week effect
   vector[N] latent_cases_weekly_log = obs_offset_weekly[day_of_week] + latent_cases_log;
 }
 
@@ -159,7 +185,8 @@ model {
   // Inv-gamma priors derived from:
   // find_inv_gamma_params(7.0, 90.0)
   // find_inv_gamma_params(14.0, 90.0)
-  // as in Betancourt approach.
+  // as in Betancourt approach (Section 3.2.3)
+  // https://betanalpha.github.io/assets/case_studies/gaussian_processes.html
   
   ls_noise ~ inv_gamma(3.858, 68.729);
   ls_annual ~ inv_gamma(6.809, 200.117);
@@ -178,9 +205,11 @@ model {
   delay_mean ~ lognormal(2.0, 0.5);
   delay_sd ~ lognormal(1, 0.5);
   
+  // Data likelihood
   y ~ neg_binomial_2_log(latent_cases_weekly_log[1:N_data], phi);
 }
 
 generated quantities {
+  // Calculate out case incidence for backcasting and forecasting
   array[N] int cases = neg_binomial_2_log_rng(latent_cases_weekly_log, phi);
 }
