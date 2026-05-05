@@ -5,12 +5,12 @@ args <- commandArgs(trailingOnly = TRUE)
 ix_job <- as.integer(args[1])
 
 
+results_dir <- "saved_results/immunity"
+
 jobs <- make_retrospective_jobs() |> 
   filter(round_id >= "2025-05-08", round_id <= "2025-10-09") |> 
   
-  filter(location != "SA", location != "NZ") |> 
-  
-  expand_grid(sigma_total_inf = c(0.5, 0.75, 1.0, 1.5))
+  filter(location != "SA", location != "NZ") 
 
 print(str_c("Generated ", nrow(jobs), " jobs"))
 
@@ -25,9 +25,6 @@ x_location <- job$location[[1]]
 x_pathogen <- job$pathogen[[1]]
 x_target <- job$target[[1]]
 round_id <- job$round_id[[1]]
-x_sigma_total_inf <- job$sigma_total_inf[[1]]
-
-results_dir <- str_c("saved_results/normalised_incidence_", x_sigma_total_inf)
 
 print(str_c("Performing job ", ix_job, " (", x_location, "-", x_pathogen, "-", x_target, "), saving to ", results_dir))
 
@@ -45,9 +42,7 @@ training_counts <- process_counts(combined_counts, x_location, x_pathogen, x_tar
 
 data_list <- create_stan_data(training_counts, n_days_ahead, x_pathogen, x_location)
 
-data_list$sigma_total_inf <- x_sigma_total_inf
-
-fit <- fit_model(data_list, model_file = "src/gp_renewal_norm.stan")
+fit <- fit_model(data_list, model_file = "src/gp_renewal_immunity.stan")
 
 print("Saving fit object and training data")
 
@@ -61,13 +56,13 @@ print("Writing trajectories...")
 
 write_forecast_file(round_id, x_pathogen, x_location, x_target, results_dir = results_dir)
 
-print("Making plots...")
-
-make_fit_plots(round_id, x_pathogen, x_location, x_target, results_dir = results_dir)
-
 print("Calculating performance metrics...")
 
 calculate_performance_metrics(round_id, x_pathogen, x_location, x_target, results_dir = results_dir)
+
+print("Making plots...")
+
+make_fit_plots_immunity(round_id, x_pathogen, x_location, x_target, results_dir = results_dir)
 
 print("Complete")
 

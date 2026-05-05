@@ -26,7 +26,9 @@ public_holidays <- get_public_holidays() |>
 
 results <- read_rds(str_c("saved_results/results_baseline/", round_id, "/", x_pathogen, "_", x_location, ".rds"))
 
-date_range <- c(ymd("2023-12-01"), ymd("2026-01-15"))
+date_range <- c(ymd("2024-05-01"), ymd("2025-10-01"))
+
+year_starts <- tibble(year_start = ymd(c("2024-01-01", "2025-01-01", "2026-01-01")))
 
 plot_common <- list(
   geom_rect(aes(xmin = start_date, xmax = end_date + 1, ymin = -Inf, ymax = Inf),
@@ -61,15 +63,12 @@ p_case_inc <- ggplot() +
 p_case_inc
 
 trajectory_data <- results |> 
-  spread_draws(log_R[ix_t], inf[ix_t], inf_delayed[ix_t],
-               cases[ix_t], f_annual[ix_t], f_noise[ix_t],
-               latent_cases_log[ix_t], log_R_0) |> 
+  spread_draws(c(log_R, inf, inf_delayed, cases, f_annual,
+                 f_noise, latent_cases_log)[ix_t],
+               log_R_0) |> 
   mutate(date = training_counts$date[ix_t],
-         latent_cases = exp(latent_cases_log)) |> 
-  
-  mutate(holiday_effect = log_R - log_R_0 - f_annual - f_noise)
-
-year_starts <- tibble(year_start = ymd(c("2024-01-01", "2025-01-01", "2026-01-01")))
+         latent_cases = exp(latent_cases_log),
+         holiday_effect = log_R - log_R_0 - f_annual - f_noise)
 
 p_hol <- ggplot(trajectory_data |> filter(date >= date_range[1], date <= date_range[2])) +
   
@@ -135,12 +134,6 @@ p_ann <- ggplot(trajectory_data |> filter(date >= date_range[1], date <= date_ra
   
   geom_hline(yintercept = 0, linetype = "22", linewidth = 0.7) +
   
-  geom_line(aes(x = date + 0.5, y = y),
-            training_counts) +
-  
-  geom_point(aes(x = date + 0.5, y = y),
-             training_counts) +
-  
   scale_fill_brewer(palette = "Blues") +
   
   coord_cartesian(xlim = date_range, ylim = c(-0.15, 0.15)) +
@@ -167,12 +160,6 @@ p_Rt_exp <- ggplot(trajectory_data |> filter(date >= date_range[1], date <= date
   
   geom_hline(yintercept = 1, linetype = "22", linewidth = 0.7) +
   
-  geom_line(aes(x = date + 0.5, y = y),
-            training_counts) +
-  
-  geom_point(aes(x = date + 0.5, y = y),
-             training_counts) +
-  
   scale_fill_brewer(palette = "Blues") +
   
   coord_cartesian(xlim = date_range, ylim = c(0.7, 1.3)) +
@@ -187,8 +174,38 @@ p_Rt_exp <- ggplot(trajectory_data |> filter(date >= date_range[1], date <= date
   
   ggtitle(NULL, "Instantaneous reproduction number <i>R</i>(<i>t</i>)")
 
+p_cases_long <- ggplot(trajectory_data |> filter(date >= date_range[1], date <= date_range[2])) +
+  
+  plot_common +
+  
+  fastribbon::stat_fastribbon(aes(x = date - 0.5, y = cases), geom = "stepribbon",
+                              linewidth = 0.0) +
+  
+  plot_common_above +
+  
+  geom_line(aes(x = date, y = y),
+            linewidth = 0.5,
+            training_counts |> filter(date >= date_range[1])) +
+  
+  geom_line(aes(x = notification_date, y = value),
+            colour = "orangered",
+            eval_counts |> filter(notification_date <= date_range[2])) +
+  
+  scale_fill_brewer(palette = "Blues") +
+  
+  coord_cartesian(xlim = date_range, ylim = c(0, 1500)) +
+  
+  scale_y_continuous(labels = scales::label_comma()) +
+  
+  xlab(NULL) + ylab("Incidence") +
+  
+  theme(legend.position = "none",
+        plot.margin = margin(t = 0.25, b = 0.25, l = 0.1, r = 0.1, unit = "cm"))
 
-p_Rt <- ((p_case_inc + theme(axis.text.x = element_blank())) / p_Rt_exp) + 
+p_cases_long
+
+
+p_Rt <- ((p_cases_long + theme(axis.text.x = element_blank())) / p_Rt_exp) + 
   plot_annotation("<b>A</b>. Conditioned case incidence and inferred <i>R</i>(<i>t</i>)",
                   theme = theme(plot.title = element_markdown(family = "Helvetica"),
                                 plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "cm")))
@@ -200,9 +217,9 @@ p_decomp <- (p_hol / p_ann / (p_noise + theme(axis.text.x = element_text(margin 
                                 plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "cm")))
 
 
-n_days_ahead <- 7 * 6
+n_days_ahead <- 7 * 4
 
-date_range_forecast <- c(ymd("2025-05-01"), origin_date + days(n_days_ahead))
+date_range_forecast <- c(origin_date - days(7 * 8), origin_date + days(n_days_ahead))
 
 p_cases <- ggplot(trajectory_data |> filter(date >= date_range_forecast[1], date <= date_range_forecast + days(1))) +
   
@@ -227,7 +244,7 @@ p_cases <- ggplot(trajectory_data |> filter(date >= date_range_forecast[1], date
   
   scale_fill_brewer(palette = "Blues") +
   
-  coord_cartesian(xlim = c(ymd("2025-05-01"), origin_date + days(n_days_ahead)), ylim = c(0, 2000)) +
+  coord_cartesian(xlim = date_range_forecast, ylim = c(0, 1500)) +
   
   scale_x_date(date_breaks = "2 weeks", labels = scales::label_date_short()) +
   

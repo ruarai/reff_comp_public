@@ -46,3 +46,10 @@ consolidate_result <- function(results_name) {
   
   fs::dir_delete(str_c("saved_results/", results_name))
 }
+
+source("R/functions.R")
+
+consolidate_result("normalised_incidence_0.5")
+consolidate_result("normalised_incidence_0.75")
+consolidate_result("normalised_incidence_1")
+consolidate_result("normalised_incidence_1.5")

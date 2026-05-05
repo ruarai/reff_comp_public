@@ -242,7 +242,7 @@ make_intervals_internal <- function(
     )
 }
 
-add_forecast_noise <- function(case_trajectories, training_counts) {
+add_forecast_noise <- function(case_trajectories, training_counts, horizon_range = c(-7, 7 * 8)) {
   fit_data <- training_counts |> 
     filter(date < origin_date) |> 
     filter(date > max(date) - days(365)) |> 
@@ -259,7 +259,7 @@ add_forecast_noise <- function(case_trajectories, training_counts) {
   
   smoothed_forecast <- case_trajectories |> 
     mutate(horizon = as.integer(date - origin_date)) |> 
-    filter(horizon >= -7, horizon <= 7 * 8) |>
+    filter(horizon >= horizon_range[1], horizon <= horizon_range[2]) |>
     rename(count = inf_delayed)
   
   forecast_noisy <- smoothed_forecast |> 
