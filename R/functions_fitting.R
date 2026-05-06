@@ -1,6 +1,5 @@
 
 fit_model <- function(data_list, model_file = "src/gp_renewal.stan", n_warmup = 1000) {
-  
   print(str_c("Fitting model ", model_file))
   
   library(cmdstanr)
@@ -21,6 +20,51 @@ fit_model <- function(data_list, model_file = "src/gp_renewal.stan", n_warmup = 
 }
 
 
+create_stan_data <- function(
+    training_counts,
+    n_days_ahead,
+    x_pathogen,
+    x_location
+) {
+  gi <- get_gi(x_pathogen)
+  n_days_data <- nrow(training_counts) - n_days_ahead
+  
+  N_public_holiday_types <- max(training_counts$public_holiday_type) - 1
+  N_school_holiday_types <- max(training_counts$school_holiday_type) - 1
+  
+  # Download humidity data for (experimental) immunity model
+  humidity_data <- read_csv("data/modelled_humidity.csv", show_col_types = FALSE) |> 
+    filter(location == x_location) |> 
+    arrange(day_of_year)
+  
+  data_list <- list(
+    x = training_counts$x,
+    day_of_week = training_counts$day_of_week,
+    day_of_year = training_counts$day_of_year,
+    school_holiday_type = training_counts$school_holiday_type,
+    
+    public_holiday_type = training_counts$public_holiday_type,
+    
+    y = training_counts$y[1:n_days_data],
+    N = nrow(training_counts), N_data = n_days_data,
+    N_public_holiday_types = N_public_holiday_types,
+    N_school_holiday_types = N_school_holiday_types,
+    
+    M_annual = 40,
+    M_noise = calculate_M_matern(c = 1.25, length_scale = 10.0, x = training_counts$x),
+    c_factor = 1.25,
+    
+    gi_reversed = rev(gi),
+    
+    # Experimental immunity-model params
+    k = 5, init_factor = 0.5e-2,
+    humidity = humidity_data$humidity_scaled,
+    sample_from_prior = 0, log_R_0 = 0.33
+  )
+  
+  return(data_list)
+}
+
 get_origin_date <- function(combined_counts, x_pathogen, x_location, x_target) {
   combined_counts |> 
     filter(location == x_location, pathogen == x_pathogen, target == x_target,
@@ -38,7 +82,7 @@ write_forecast_file <- function(round_id, x_pathogen, x_location, x_target, resu
   origin_date <- training_counts$origin_date[[1]]
   
   case_trajectories <- fit |> 
-    spread_draws(cases[ix_t], latent_cases_log[ix_t], inf_delayed[ix_t]) |> 
+    spread_draws(c(cases, latent_cases_log, inf_delayed)[ix_t]) |> 
     mutate(date = training_counts$date[ix_t],
            latent_cases = exp(latent_cases_log))
   
@@ -116,9 +160,6 @@ write_forecast_file <- function(round_id, x_pathogen, x_location, x_target, resu
   arrow::write_parquet(forecast_data, output_file)
 }
 
-
-
-
 process_counts <- function(
     combined_counts,
     x_location, x_pathogen, x_target,
@@ -128,31 +169,80 @@ process_counts <- function(
   training_dates <- get_training_dates()
   
   # Filter the counts for our given location and pathogen
-  # and drop data prior to the training date
+  # and drop data prior to the training (cutoff) date
   reduced_counts <- combined_counts |> 
     left_join(training_dates) |>
     
     filter(notification_date >= cutoff_date) |>
     filter(location == x_location, pathogen == x_pathogen, target == x_target) |> 
-    filter(is_complete) |> 
+    filter(is_complete)
     
-    filter(
-      # Drop the last day of data (often issues)
-      # If this improves, remove this line
-      notification_date < max(notification_date)
-    )
+    
+  # Drop the last day of data, but only for forecasts where we had
+  # issues with right truncation often (i.e. pre-2026 season)
+  if(origin_date < ymd("2026-01-01")) {
+    reduced_counts <- reduced_counts |> 
+      filter(notification_date < max(notification_date))
+  }
+  
   
   training_counts <- reduced_counts |> 
-    make_training_counts(x_location, x_pathogen, x_target, n_days_ahead) |> 
-    # Save some extra data in case we need it later
+    select(location, pathogen, target, date = notification_date, 
+           y = value, y_trend = value_trend, y_trend_and_remainder = value_trend_and_remainder) |> 
+    complete(date = seq(min(date), max(date), by = "days"), fill = list(location = x_location, pathogen = x_pathogen, target = x_target)) |>
+    arrange(date)
+  
+  # Make sure all values are complete
+  n_na <- sum(is.na(training_counts$y))
+  stopifnot(n_na == 0)
+  
+  # Bind extra rows that make up the forecasting horizon
+  if(n_days_ahead > 0) {
+    training_counts <- bind_rows(
+      training_counts,
+      tibble(
+        date = seq(max(training_counts$date) + days(1), max(training_counts$date) + days(n_days_ahead), by = "days"),
+        
+        location = x_location, pathogen = x_pathogen, target = x_target
+      )
+    )
+  }
+  
+  school_holidays_location <- get_school_holidays_long() |> 
+    filter(location == x_location)
+  
+  public_holidays_location <- get_public_holidays() |> 
+    filter(location == x_location) |> 
+    mutate(public_holiday_type = match(holiday_name, unique(holiday_name))) |> 
+    select(date, location, public_holiday_type)
+  
+  # Add a bunch of the effects data (day of week, day of year, holidays, ...)
+  training_counts_full <- training_counts |>
+    arrange(date) |> 
+    mutate(
+      x = as.numeric(date - min(date)),
+      day_of_week = wday(date, week_start = 7),
+      day_of_year = yday(date)
+    ) |> 
+    left_join(school_holidays_location, by = join_by(date, location)) |> 
+    left_join(public_holidays_location, by = join_by(date, location)) |> 
+    mutate(school_holiday_type = replace_na(school_holiday_type, 0) + 1,
+           public_holiday_type = replace_na(public_holiday_type, 0) + 1) |> 
+    
+    # Add the origin_date as a column (very useful for later reference)
     mutate(origin_date = origin_date)
   
-  return(training_counts)
+  # Make sure we have a complete sequence of dates
+  n_diff <- diff(training_counts_full$x) |> table() |> unique() |> length()
+  stopifnot(n_diff == 1)
+  
+  return(training_counts_full)
 }
 
 
 get_gi <- function(pathogen) {
   # From ACEFA standards
+  # https://github.com/acefa-hubs/forecast-hub/tree/main/distributions
   gis <- list(
     "SARSCOV2" = make_gi(0.89, rate = 0.27),
     "RSV" = make_gi(12.76, 1.7),
@@ -168,87 +258,20 @@ get_gi <- function(pathogen) {
   return(gi)
 }
 
-
-make_training_counts <- function(
-    reduced_counts,
-    x_location, x_pathogen, x_target,
-    days_ahead = 0
-) {
-  school_holidays_location <- get_school_holidays_long() |> 
-    filter(location == x_location)
-  
-  public_holidays_location <- get_public_holidays() |> 
-    filter(location == x_location) |> 
-    mutate(public_holiday_type = match(holiday_name, unique(holiday_name))) |> 
-    select(date, location, public_holiday_type)
-  
-  training_counts <- reduced_counts |> 
-    select(location, pathogen, target, date = notification_date, 
-           y = value, y_trend = value_trend, y_trend_and_remainder = value_trend_and_remainder) |> 
-    complete(date = seq(min(date), max(date), by = "days"), fill = list(location = x_location, pathogen = x_pathogen, target = x_target)) |>
-    arrange(date)
-  
-  n_na <- sum(is.na(training_counts$y))
-  
-  message(str_c(n_na, " NA values to be imputed"))
-  
-  if(n_na > 0) {
-    training_counts |> 
-      filter(is.na(y)) |> 
-      print()
-    
-    training_counts <- training_counts |> 
-      fill(y, .direction = "down")
-  }
-  
-  if(days_ahead > 0) {
-    training_counts <- bind_rows(
-      training_counts,
-      tibble(
-        date = seq(max(training_counts$date) + days(1), max(training_counts$date) + days(days_ahead), by = "days"),
-        
-        location = x_location, pathogen = x_pathogen, target = x_target
-      )
-    )
-  }
-  
-  
-  training_counts_full <- training_counts |>
-    arrange(date) |> 
-    mutate(
-      x = as.numeric(date - min(date)),
-      day_of_week = wday(date, week_start = 7),
-      is_weekend = if_else(day_of_week == 1 | day_of_week == 7, 1, 0),
-      year = as.integer(
-        interval(min(floor_date(date, "year")), floor_date(date, "year")) / years(1)
-      ) + 1,
-      day_of_year = yday(date)
-    ) |> 
-    left_join(school_holidays_location, by = join_by(date, location)) |> 
-    left_join(public_holidays_location, by = join_by(date, location)) |> 
-    mutate(school_holiday_type = replace_na(school_holiday_type, 0) + 1,
-           public_holiday_type = replace_na(public_holiday_type, 0) + 1)
-  
-  # Make sure we have a complete sequence of dates
-  n_diff <- diff(training_counts_full$x) |> table() |> unique() |> length()
-  
-  stopifnot(n_diff == 1)
-  
-  return(training_counts_full)
-}
-
-
 make_gi <- function(shape, rate) {
+  # Discretises the generational interval across M = 21 days
   cdf_gi <- pgamma(0:21, shape = shape, rate = rate)
   
   discrete_gi <- diff(cdf_gi)
-  discrete_gi[length(discrete_gi)] <- discrete_gi[length(discrete_gi)] + 1 - sum(discrete_gi)
+  
+  # Let the last day accumulate any remaining probability
+  discrete_gi[length(discrete_gi)] <- 1 - sum(discrete_gi[1:(length(discrete_gi) - 1)])
   
   return(discrete_gi)
 }
 
-
-
+# Helper function to calculate inverse-gamma parameters for
+# length-scale priors (see gp_renewal.stan)
 find_inv_gamma_params <- function(l, u, tail_prob = 0.01) {
   f <- function(x) {
     alpha <- exp(x[1])
@@ -278,86 +301,15 @@ find_inv_gamma_params <- function(l, u, tail_prob = 0.01) {
   }
 }
 
-
+# Calculates M (the number of HSGP basis functions) for the
+# Matern 3/2 prior using the equation provided in Riutort-Mayol (2023)
 calculate_M_matern <- function(c, length_scale, x) {
   x_centered <- x - mean(x) 
   S <- max(abs(x_centered))
-  
-  # Formula of Riutort-Mayol 2023
+
   M <- 2.65 * (c * S) / length_scale
   
   M <- max(10, M)
   
   return(round(M))
-}
-
-get_population_size <- function(location) {
-  population_sizes <- list(
-    # December 2021 ERP - ABS
-    "ACT" = 453.3 * 1000,
-    "NSW" = 8095.4 * 1000,
-    "NT" = 249.3 * 1000,
-    "QLD" = 5265.0 * 1000,
-    "SA" = 1806.6 * 1000,
-    "TAS" = 569.8 * 1000,
-    "VIC" = 6559.9 * 1000,
-    "WA" = 2762.2 * 1000,
-    
-    # September 25 ERP - Stats NZ
-    "NZ" = 5334.2 * 1000
-  )
-  
-  if(!(location %in% names(population_sizes))) {
-    stop("Invalid location for population size")
-  }
-  
-  return(population_sizes[[location]])
-}
-
-create_stan_data <- function(
-    training_counts,
-    n_days_ahead,
-    x_pathogen,
-    x_location
-) {
-  gi <- get_gi(x_pathogen)
-  n_days_data <- nrow(training_counts) - n_days_ahead
-  
-  N_public_holiday_types <- max(training_counts$public_holiday_type) - 1
-  N_school_holiday_types <- max(training_counts$school_holiday_type) - 1
-  
-  # Download humidity data for (experimental) immunity model
-  humidity_data <- read_csv("data/modelled_humidity.csv", show_col_types = FALSE) |> 
-    filter(location == x_location) |> 
-    arrange(day_of_year)
-  
-  data_list <- list(
-    x = training_counts$x,
-    day_of_week = training_counts$day_of_week,
-    day_of_year = training_counts$day_of_year,
-    is_weekend = training_counts$is_weekend,
-    school_holiday_type = training_counts$school_holiday_type,
-    
-    public_holiday_type = training_counts$public_holiday_type,
-    
-    y = training_counts$y[1:n_days_data],
-    N = nrow(training_counts), N_data = n_days_data,
-    N_public_holiday_types = N_public_holiday_types,
-    N_school_holiday_types = N_school_holiday_types,
-    
-    M_annual = 40,
-    M_noise = calculate_M_matern(c = 1.25, length_scale = 10.0, x = training_counts$x),
-    c_factor = 1.25,
-    
-    population_size = get_population_size(x_location),
-    
-    gi_reversed = rev(gi),
-    
-    # Experimental immunity-model params
-    k = 5, init_factor = 0.5e-2,
-    humidity = humidity_data$humidity_scaled,
-    sample_from_prior = 0, log_R_0 = 0.33
-  )
-  
-  return(data_list)
 }

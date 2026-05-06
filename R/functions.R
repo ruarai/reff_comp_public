@@ -50,27 +50,6 @@ make_retrospective_jobs <- function() {
     select(round_id, location, pathogen, target)
 }
 
-
-
-plots_to_gif <- function(plot_list, out_file, width, height, delay = 1) {
-  require(gifski)
-  plot_files <- fs::path(tempdir(), str_c("tmp_", 1:length(plot_list), ".png"))
-  
-  for(i in 1:length(plot_list)) {
-    ggsave(
-      plot_files[[i]],
-      plot_list[[i]],
-      width = width, height = height
-    )
-  }
-  
-  gifski(plot_files, gif_file = out_file, width = width * 120, height = height * 120, delay = delay)
-  
-  file.remove(plot_files)
-}
-
-
-
 calculate_performance_metrics <- function(
     round_id, x_pathogen, x_location, x_target,
     results_dir = "results"
@@ -78,7 +57,7 @@ calculate_performance_metrics <- function(
   
   eval_counts <- read_csv("data/combined-count-smoothed-2026-04-15.csv", show_col_types = FALSE) |> 
     filter(location == x_location, pathogen == x_pathogen, target == x_target) |> 
-    make_training_counts(x_location, x_pathogen, x_target) |> 
+    process_counts(x_location, x_pathogen, x_target, 0, today()) |> 
     
     select(date, cases_true = y)
   
@@ -127,7 +106,6 @@ label_pathogens <- function(df) {
   ) 
 }
 
-
 combine_forecasts <- function(round_id, dir = "results") {
   forecast_trajectories <- fs::dir_ls(fs::path(dir, round_id), glob = "*forecast-trajectories.parquet")
   
@@ -142,16 +120,14 @@ combine_forecasts <- function(round_id, dir = "results") {
   
   fs::dir_create(output_path)
   
-  
-  forecasts |>
+  forecasts_out <- forecasts |>
     filter(horizon <= 7 * 8,
            output_type_id <= 4000) |> 
     collect() |> 
     mutate(horizon = as.integer(horizon),
-           
-           # Careful.
-           value = as.integer(replace_na(value, 0))) |> 
-    write_parquet(fs::path(output_path, str_c(round_id, "-", model_name, ".parquet")))
+           value = as.integer(replace_na(value, 0)))
+  
+  write_parquet(forecasts_out, fs::path(output_path, str_c(round_id, "-", model_name, ".parquet")))
 }
 
 save_plots_to_pdf <- function(plot_list, file_path, width = 8, height = 6) {

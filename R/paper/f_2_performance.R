@@ -86,9 +86,9 @@ p_skill +
                                 plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "cm")))
 
 perf_data_paired |> 
-  filter(horizon > 21, horizon <= n_days_ahead) |> 
+  filter(horizon > 21, horizon <= 28) |> 
   group_by(pathogen, location, round_id, date) |> 
-  mutate(crps_log_ensemble = crps_log[.model == "ensemble-mixture"]) |> 
+  mutate(crps_log_ensemble = crps_log[.model == "baseline"]) |> 
   filter(.model == "baseline") |> 
   group_by(pathogen, location, round_id) |> 
   summarise(skill_score = 1 - mean(crps_log) / mean(crps_log_ensemble),
@@ -147,7 +147,7 @@ perf_data_paired |>
   theme(panel.spacing.x = unit(0.5, "cm"))
 
 perf_data |> 
-  filter(horizon > 0, horizon <= n_days_ahead) |> 
+  filter(horizon > 0, horizon <= 7 * 8) |> 
   group_by(pathogen, location, horizon = floor((horizon - 1) / 7)) |> 
   summarise(crps_log = mean(crps_log)) |> 
   label_pathogen() |> 

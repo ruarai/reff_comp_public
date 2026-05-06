@@ -21,7 +21,7 @@ data {
   array[N_data] int y;
   
   
-  vector[M] gi_reversed;
+  vector[21] gi_reversed;
 
   int<lower=1> M_annual;
   int<lower=1> M_noise; 
@@ -37,8 +37,8 @@ transformed data {
   matrix[N, M_noise] phi_noise = PHI(N, M_noise, L, x_centered);
   matrix[N, 2 * M_annual] phi_annual = PHI_periodic(N, M_annual, 2 * pi() / 365.25, x);
   
-  int M = 21;
-  int N_total = N + M;
+  int K = 21;
+  int N_total = N + K;
 }
 
 parameters {
@@ -108,7 +108,7 @@ transformed parameters {
     public_holiday_Rt_effect[public_holiday_type];
   
   // Calculate the delay distribution between infection onset and reporting
-  vector[M] delay_dist = construct_delay_dist(delay_mean, delay_sd, M);
+  vector[K] delay_dist = construct_delay_dist(delay_mean, delay_sd, K);
   
   // Number of new infections by time of infection onset
   vector[N] inf; 
@@ -122,7 +122,7 @@ transformed parameters {
     vector[N_total] inf_full = rep_vector(0.0, N_total);
 
     // Calculate initial infections as exp growth: I(t) = I_0 * exp(r * t)
-    inf_full[1:M] = exp(log_I_0 + r_0 * linspaced_vector(M, -M + 1, 0));
+    inf_full[1:K] = exp(log_I_0 + r_0 * linspaced_vector(K, -K + 1, 0));
     
     for(t in 1:N) {
       // Perform the renewal equation step
@@ -130,19 +130,19 @@ transformed parameters {
       
       // Use a dot-product here to make the sum over the generation interval
       // a single auto-diff operation
-      real new_infections = R_t * dot_product(gi_reversed, segment(inf_full, t, M));
+      real new_infections = R_t * dot_product(gi_reversed, segment(inf_full, t, K));
       
-      inf_full[t + M] = new_infections;
+      inf_full[t + K] = new_infections;
     }
     
-    // We only care about t = 1..N, so drop the first M days
-    inf = segment(inf_full, M + 1, N);
+    // We only care about t = 1..N, so drop the first K days
+    inf = segment(inf_full, K + 1, N);
     
-    // Calculate the delayed infections by creating an N x M matrix
+    // Calculate the delayed infections by creating an N x K matrix
     // where each column k is infections delayed by k - 1 days
-    matrix[N, M] inf_lagged;
-    for(k in 1:M) {
-       inf_lagged[:, k] = segment(inf_full, M + 1 - (k - 1), N);
+    matrix[N, K] inf_lagged;
+    for(k in 1:K) {
+       inf_lagged[:, k] = segment(inf_full, K + 1 - (k - 1), N);
     }
     
     // The above construction allows us to calculate the full convolution
