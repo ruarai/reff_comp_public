@@ -5,7 +5,7 @@ snaive_perf_data <- read_rds("data/case_forecast_measures.rds") |>
   filter(measure_name == "crps", target == "case_incidence") |> 
   mutate(pathogen = as.character(if_else(pathogen == "Influenza", "flu", pathogen)),
          round_id = as.character(round_id)) |> 
-  filter(.model == "ensemble-mixture") |> 
+  filter(.model == "snaive") |> 
   select(-c(measure_name, target)) |> 
   pivot_wider(names_from = measure_scale) |> 
   rename(crps = natural, crps_log = log)
@@ -85,33 +85,65 @@ p_skill +
                   theme = theme(plot.title = element_markdown(family = "Helvetica"),
                                 plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "cm")))
 
+
+
+location_y <- tibble(
+  location = unique(perf_data_paired$location)
+) |> 
+  mutate(y_offset = row_number())
+
+combined_counts <- read_csv("data/combined-count-smoothed-2026-04-22.csv")
+
+plot_data_counts <- combined_counts |> 
+  filter(notification_date >= ymd("2025-05-01"),
+         notification_date <= ymd("2025-12-01")) |> 
+  inner_join(location_y, by = join_by(location)) |> 
+  group_by(location, pathogen) |> 
+  mutate(y = y_offset + scales::rescale(value_trend, to = c(0.1, 0.9)),
+         y_full = scales::rescale(value_trend)) |> 
+  label_pathogen()
+
 perf_data_paired |> 
   filter(horizon > 21, horizon <= 28) |> 
   group_by(pathogen, location, round_id, date) |> 
-  mutate(crps_log_ensemble = crps_log[.model == "baseline"]) |> 
+  mutate(crps_log_snaive = crps_log[.model == "snaive"]) |> 
   filter(.model == "baseline") |> 
   group_by(pathogen, location, round_id) |> 
-  summarise(skill_score = 1 - mean(crps_log) / mean(crps_log_ensemble),
-            crps_log = mean(crps_log)) |> 
+  summarise(skill_score = 1 - mean(crps_log) / mean(crps_log_snaive),
+            crps_log = mean(crps_log),
+            date = first(date)) |> 
   label_pathogen() |> 
-  mutate(round_id = ymd(round_id),
-         skill_score = pmax(-1, skill_score)) |> 
+  mutate(skill_score = pmax(-1, skill_score)) |> 
   
   ungroup() |> 
   
-  complete(location, pathogen_label, round_id) |> 
+  left_join(location_y, by = join_by(location)) |> 
+  arrange(location, desc(date)) |> 
   
   ggplot() +
   
-  geom_tile(aes(x = round_id, y = location, fill = skill_score)) +
+  geom_rect(aes(xmin = date, xmax = date + days(7),
+                ymin = y_offset - 0.5, ymax = y_offset + 0.5, fill = skill_score),
+            colour = "white", linewidth = 0.25) +
+  
+  geom_hline(aes(yintercept = y_offset + 0.5), location_y |> filter(location != "WA"),
+             colour = "white", linewidth = 4.0) +
+  
+  geom_line(aes(x = notification_date, y = y - 0.5, group = location), plot_data_counts,
+            colour = "white", linewidth = 2.0, alpha = 0.8) +
+  geom_line(aes(x = notification_date, y = y - 0.5, group = location), plot_data_counts) +
+  
   
   scale_fill_distiller(type = "div", direction = 1, palette = "RdBu",
                        limits = c(-1, 1), name = "Skill score",
                        breaks = c(-1, 0, 1), labels = c("<1", "0", "1")) +
   
-  facet_wrap(~pathogen_label, ncol = 1) +
+  facet_wrap(~pathogen_label, ncol = 3) +
   
-  xlab("Region") + ylab("Skill score") +
+  scale_y_continuous(breaks = location_y$y_offset, labels = location_y$location) +
+  
+  ylab("Region") +
+  xlab("Date") +
   
   plot_theme_paper +
   
@@ -119,83 +151,51 @@ perf_data_paired |>
         panel.background = element_facet_background)
 
 
-perf_data_paired |> 
-  filter(horizon > 0, horizon <= n_days_ahead) |> 
+
+p_skill <- perf_data_paired |> 
+  filter(horizon > 21, horizon <= 28) |> 
   group_by(pathogen, location, round_id, date) |> 
-  mutate(crps_log_ensemble = crps_log[.model == "ensemble-mixture"]) |> 
-  group_by(pathogen, location, horizon = floor((horizon - 1) / 7)) |> 
-  summarise(skill_score = 1 - mean(crps_log) / mean(crps_log_ensemble),
-            crps_log = mean(crps_log)) |> 
+  mutate(crps_log_snaive = crps_log[.model == "snaive"]) |> 
+  filter(.model == "baseline") |> 
+  group_by(pathogen, location, round_id) |> 
+  summarise(skill_score = 1 - mean(crps_log) / mean(crps_log_snaive),
+            crps_log = mean(crps_log),
+            date = first(date)) |> 
   label_pathogen() |> 
-  ggplot() +
-  geom_line(aes(x = horizon, y = skill_score, colour = location)) +
+  mutate(skill_score = pmax(-1, skill_score)) |> 
   
-  ggokabeito::scale_colour_okabe_ito(order = c(1, 2, 3, 5, 6, 7, 8),
-                                     name = "Region") +
-  
-  geom_hline(yintercept = 0, linetype = "44") +
-  
-  plot_theme_paper +
-  
-  scale_x_continuous(breaks = c(0, 1, 2, 3),
-                     labels = c("1–7", "8–14", "15–21", "22–28")) +
-  
-  xlab("Horizon (days)") + ylab("Skill score") +
-  
-  facet_wrap(~pathogen_label) +
-  
-  theme(panel.spacing.x = unit(0.5, "cm"))
-
-perf_data |> 
-  filter(horizon > 0, horizon <= 7 * 8) |> 
-  group_by(pathogen, location, horizon = floor((horizon - 1) / 7)) |> 
-  summarise(crps_log = mean(crps_log)) |> 
-  label_pathogen() |> 
-  ggplot() +
-  geom_line(aes(x = horizon, y = crps_log, colour = location)) +
-  geom_point(aes(x = horizon, y = crps_log, colour = location), size = 1) +
-  
-  ggokabeito::scale_colour_okabe_ito(order = c(1, 2, 3, 5, 6, 7, 8),
-                                     name = "Region") +
-  
-  plot_theme_paper +
-  
-  scale_x_continuous(breaks = c(0, 1, 2, 3),
-                     labels = c("1–7", "8–14", "15–21", "22–28")) +
-  
-  coord_cartesian(ylim = c(0, NA)) +
-  
-  xlab("Horizon (days)") + ylab("CRPS") +
-  
-  facet_wrap(~pathogen_label) +
-  
-  theme(panel.spacing.x = unit(0.5, "cm"))
-
-
-combined_counts <- read_csv("data/combined-count-smoothed-2026-04-22.csv")
-
-growth_estimates <- combined_counts |> 
-  filter(target == "case_incidence") |> 
-  group_by(pathogen, location) |>
-  mutate(g = log(value_trend + 1) - lag(log(value_trend + 1), 21))
-
-perf_data |> 
-  filter(horizon > 0, horizon <= 28) |> 
-  left_join(growth_estimates |> select(date = notification_date, location, pathogen, g)) |> 
-  
-  mutate(g = cut(g, c(-10, -0.1, 0.1, 10))) |> 
-  
-  group_by(g, location, pathogen) |> 
-  summarise(crps_log = mean(crps_log)) |> 
-  
-  label_pathogen() |> 
-  
+  ungroup() |> 
   
   ggplot() +
-  geom_point(aes(x = g, y = crps_log, colour = location), size = 0.5, stroke = 0.5) +
+  
+  geom_tile(aes(x = ymd(round_id) + days(21), y = location, fill = skill_score)) +
+  
+  scale_fill_distiller(type = "div", direction = 1, palette = "RdBu",
+                       limits = c(-1, 1), name = "Skill score",
+                       breaks = c(-1, 0, 1), labels = c("<1", "0", "1")) +
   
   facet_wrap(~pathogen_label, ncol = 3) +
-  plot_theme_paper
+  
+  ylab("Region") +
+  xlab("Date") +
+  
+  plot_theme_paper +
+  
+  theme(legend.position = "none",
+        panel.background = element_facet_background)
+
+p_inc <- ggplot(plot_data_counts) +
+  geom_line(aes(x = notification_date, y = y_full, colour = location)) +
+  
+  facet_wrap(~pathogen_label, ncol = 3) +
+  
+  plot_theme_paper +
+  
+  ylab("Relative case incidence") +
+  xlab("Date") +
+  
+  theme(legend.position = "bottom",
+        panel.background = element_facet_background)
 
 
-
+wrap_plots(p_skill, p_inc, heights = c(2, 1))

@@ -4,7 +4,7 @@
 source("R/functions.R")
 
 
-round_id <- "2025-06-12"
+round_id <- "2025-07-10"
 
 x_pathogen <- "RSV"
 x_target <- "case_incidence"
@@ -61,40 +61,42 @@ fit <- model$sample(
   iter_warmup = 500, iter_sampling = 500
 )
 
-fit$save_object("saved_results/hierarchical_exp/fit_RSV.rds")
+fit$save_object("saved_results/hierarchical_exp/fit_RSV_2.rds")
 
 q('no')
 
-fit <- read_rds("saved_results/hierarchical_exp/fit_RSV.rds")
+fit <- read_rds("saved_results/hierarchical_exp/fit_RSV_2.rds")
 
 
 draws <- tidy_draws(fit) |> mutate(chain = .chain)
 
-index_ref <- training_counts |> 
-  group_by(location) |> 
-  mutate(ix_t = row_number()) |> 
-  ungroup() |> 
-  mutate(i = match(location, unique(location))) |> 
-  select(i, ix_t, location, date)
+date_index <- unique(training_counts$date)
+location_index <- unique(training_counts$location)
+
 
 trajectory_data <- fit |> 
   spread_draws(c(inf, inf_delayed, latent_cases_weekly_log,
                  cases)[i, ix_t]) |> 
-  left_join(index_ref)
+  mutate(date = date_index[ix_t],
+         location = location_index[i])
 
 ggplot(trajectory_data) + 
-  fastribbon::stat_fastribbon(aes(x = date, y = inf_delayed),
+  fastribbon::stat_fastribbon(aes(x = ix_t, y = inf_delayed),
                               linewidth = 0.0) +
   
-  facet_wrap(~location, scales = "free_y") +
+  geom_line(aes(x = ix_t, y = y_trend),
+            training_counts |> mutate(ix_t = match(date, unique(date)),
+                                      i = match(location, unique(location))) |> 
+              filter(pathogen == "RSV")) +
+  
+  facet_wrap(~i, scales = "free_y") +
   
   scale_fill_brewer() + theme_bw() + theme(legend.position = "none")
 
 
 
 year_data <- fit |> 
-  spread_draws(log10_total_inf_year[i, ix_year]) |> 
-  filter(ix_year < 5)
+  spread_draws(log10_total_inf_year[i, ix_year])
 
 ggplot(year_data) + 
   fastribbon::stat_fastribbon(aes(x = ix_year, y = log10_total_inf_year),
@@ -117,15 +119,39 @@ fit |>
 fit |> 
   spread_draws(log10_total_inf_year_mean[ix_year], log10_total_inf_offset[i]) |> 
   mutate(latent_log10_total_inf_year = log10_total_inf_year_mean + log10_total_inf_offset) |> 
-  filter(ix_year < 5) |> 
 
   ggplot() + 
   fastribbon::stat_fastribbon(aes(x = ix_year, y = latent_log10_total_inf_year),
                               linewidth = 0.0) + 
   fastribbon::stat_fastribbon(aes(x = ix_year, y = log10_total_inf_year),
                               year_data, alpha = 0.5,
-                              linewidth = 0.0) +
+                              linewidth = 1.0) +
   
-  facet_wrap(~i, scales = "free_y") +
+  facet_wrap(~i) +
   
   scale_fill_brewer() + theme_bw() + theme(legend.position = "none")
+
+
+combined_counts <- read_csv("data/combined-count-smoothed-2026-04-22.csv")
+
+plot_data_true_total <- combined_counts |> 
+  filter(location %in% location_index, pathogen == x_pathogen,
+         notification_date >= ymd("2023-01-01")) |> 
+  group_by(location, year = floor_date(notification_date, "year")) |> 
+  summarise(total_inf = sum(value))
+
+trajectory_data |> 
+  filter(.draw %% 10 == 0) |> 
+  group_by(location, year = floor_date(date, "year"), .draw) |> 
+  summarise(total_inf = sum(inf)) |> 
+  ggplot() + 
+  geom_point(aes(x = year, y = total_inf),
+             position = position_jitter(width = 50),
+             size = 0.5, stroke = 0.5, alpha = 0.5) +
+  
+  geom_point(aes(x = year, y = total_inf),
+             colour = "orangered",
+             plot_data_true_total) +
+  facet_wrap(~location, scales = "free_y") +
+  
+  theme_bw()
