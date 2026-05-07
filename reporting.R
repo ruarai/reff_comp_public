@@ -133,12 +133,6 @@ ggsave(
   width = 10
 )
 
-ggsave(
-  ribbon_plot_path,
-  height = 12,
-  width = 10
-)
-
 library(magick)
 forecast_plot_files <- fs::dir_ls(fs::path("results", round_id), glob = "*plot_forecast.png")
 latent_plot_files <- fs::dir_ls(fs::path("results", round_id), glob = "*plot_latent_inf.png")

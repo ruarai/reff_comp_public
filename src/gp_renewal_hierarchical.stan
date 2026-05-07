@@ -70,8 +70,10 @@ parameters {
   // For school holidays and public holidays, type = 1 is no holiday
   // Only fit effects to type > 1
   array[N_loc] vector[N_school_holiday_types] school_holiday_Rt_effect_raw;
+  array[N_loc] vector[N_school_holiday_types] school_holiday_asc_effect_raw;
   
   array[N_loc] vector[N_public_holiday_types] public_holiday_Rt_effect_raw;
+  array[N_loc] vector[N_public_holiday_types] public_holiday_asc_effect_raw;
   
   vector<lower=0, upper=21>[N_loc] delay_mean;
   vector<lower=1.0>[N_loc] delay_sd;
@@ -104,14 +106,19 @@ transformed parameters {
   
   array[N_loc] vector[N_years] log10_total_inf_year; 
   
+  // Latent transmission rate trajectories
+  array[N_loc] vector[N] f_annual; 
+  array[N_loc] vector[N] f_noise; 
+  array[N_loc] vector[N] log_R; 
+  
   vector[N_loc] log10_total_inf_offset = rep_vector(0.0, N_loc);
   log10_total_inf_offset[2:N_loc] = log10_total_inf_offset_raw;
   
   for(i in 1:N_loc) {
     // Calculate the GPs as the weighting vectors from the basis functions
     // and the weighting vectors
-    vector[N] f_annual = phi_annual * (diag_SPD_annual .* beta_annual[i]);
-    vector[N] f_noise  = phi_noise * (diag_SPD_noise .* beta_noise[i]);
+    f_annual[i] = phi_annual * (diag_SPD_annual .* beta_annual[i]);
+    f_noise[i]  = phi_noise * (diag_SPD_noise .* beta_noise[i]);
     
     // Add a zero to the start of the school and public holiday effects
     // so that we can index into them using the holiday_type vectors
@@ -123,9 +130,9 @@ transformed parameters {
     public_holiday_Rt_effect[2:(N_public_holiday_types + 1)] = public_holiday_Rt_effect_raw[i];
     
     // Calculate the value of log R(t) across t = 1 .. N
-    vector[N] log_R = log_R_0[i] +
-      f_annual +
-      f_noise + 
+    log_R[i] = log_R_0[i] +
+      f_annual[i] +
+      f_noise[i] + 
       school_holiday_Rt_effect[school_holiday_type[i]] +
       public_holiday_Rt_effect[public_holiday_type[i]];
     
@@ -141,7 +148,7 @@ transformed parameters {
       
       for(t in 1:N) {
         // Perform the renewal equation step
-        real R_t = exp(log_R[t]);
+        real R_t = exp(log_R[i][t]);
         
         // Use a dot-product here to make the sum over the generation interval
         // a single auto-diff operation
@@ -168,8 +175,17 @@ transformed parameters {
     for (j in 1:N_years) { 
     	log10_total_inf_year[i][j] = log10(sum(inf[i][year_start[j]:year_end[j]])); 
     }
+      
+    // As above, create vectors allowing for indexing of ascertainment effect by holiday_type
+    vector[N_school_holiday_types + 1] school_holiday_asc_effect = rep_vector(0.0, N_school_holiday_types + 1);
+    school_holiday_asc_effect[2:(N_school_holiday_types + 1)] = school_holiday_asc_effect_raw[i];
     
-    vector[N] latent_cases_log = log(inf_delayed[i] + 1e-4);
+    vector[N_public_holiday_types + 1] public_holiday_asc_effect = rep_vector(0.0, N_public_holiday_types + 1);
+    public_holiday_asc_effect[2:(N_public_holiday_types + 1)] = public_holiday_asc_effect_raw[i];
+    
+    vector[N] latent_cases_log = log(inf_delayed[i] + 1e-4) + 
+      school_holiday_asc_effect[school_holiday_type[i]] +
+      public_holiday_asc_effect[public_holiday_type[i]];
     
     // Calculate the day-of-week effect (non-centred parametrisation)
     vector[7] obs_offset_weekly = beta_offset_weekly[i] * scaling_weekly_asc;
@@ -214,7 +230,10 @@ model {
     beta_offset_weekly[i] ~ normal(0, 1);
     
     school_holiday_Rt_effect_raw[i] ~ normal(0, 1);
+    school_holiday_asc_effect_raw[i] ~ normal(0, 1);
+    
     public_holiday_Rt_effect_raw[i] ~ normal(0, 0.25);
+    public_holiday_asc_effect_raw[i] ~ normal(0, 0.25);
   
     beta_annual[i] ~ normal(0, 1);
     beta_noise[i]  ~ normal(0, 1);

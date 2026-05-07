@@ -1,6 +1,4 @@
 
-
-
 source("R/functions.R")
 
 
@@ -80,16 +78,25 @@ trajectory_data <- fit |>
   mutate(date = date_index[ix_t],
          location = location_index[i])
 
-ggplot(trajectory_data) + 
-  fastribbon::stat_fastribbon(aes(x = ix_t, y = inf_delayed),
+ggplot(trajectory_data |> filter(date >= ymd("2025-01-01"))) + 
+  fastribbon::stat_fastribbon(aes(x = date, y = inf_delayed),
                               linewidth = 0.0) +
   
-  geom_line(aes(x = ix_t, y = y_trend),
-            training_counts |> mutate(ix_t = match(date, unique(date)),
-                                      i = match(location, unique(location))) |> 
+  
+  geom_line(aes(x = notification_date, y = value_trend),
+            combined_counts |> 
+              filter(pathogen == "RSV",
+                     location %in% location_index,
+                     notification_date >= min(origin_dates$origin_date)),
+            colour = "orangered") +
+  
+  geom_line(aes(x = date, y = y_trend),
+            training_counts |> 
               filter(pathogen == "RSV")) +
   
-  facet_wrap(~i, scales = "free_y") +
+  coord_cartesian(xlim = c(ymd("2025-01-01"), NA)) +
+  
+  facet_wrap(~location, scales = "free_y") +
   
   scale_fill_brewer() + theme_bw() + theme(legend.position = "none")
 
@@ -123,9 +130,6 @@ fit |>
   ggplot() + 
   fastribbon::stat_fastribbon(aes(x = ix_year, y = latent_log10_total_inf_year),
                               linewidth = 0.0) + 
-  fastribbon::stat_fastribbon(aes(x = ix_year, y = log10_total_inf_year),
-                              year_data, alpha = 0.5,
-                              linewidth = 1.0) +
   
   facet_wrap(~i) +
   
