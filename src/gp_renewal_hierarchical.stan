@@ -78,7 +78,7 @@ parameters {
   vector<lower=0, upper=21>[N_loc] delay_mean;
   vector<lower=1.0>[N_loc] delay_sd;
   
-  vector[N_years] log10_total_inf_year_mean;
+  real log10_total_inf_mean;
   vector[N_loc - 1] log10_total_inf_offset_raw;
 }
 
@@ -190,8 +190,6 @@ transformed parameters {
     // Calculate the day-of-week effect (non-centred parametrisation)
     vector[7] obs_offset_weekly = beta_offset_weekly[i] * scaling_weekly_asc;
     
-    
-    
     // Add in the day-of-week effect
     latent_cases_weekly_log[i] = obs_offset_weekly[day_of_week] + latent_cases_log;
   }
@@ -222,7 +220,7 @@ model {
   delay_mean ~ lognormal(2.0, 0.5);
   delay_sd ~ lognormal(1, 0.5);
   
-  log10_total_inf_year_mean ~ normal(4, 3);
+  log10_total_inf_mean ~ normal(4, 3);
   log10_total_inf_offset_raw ~ normal(0, 2);
   
   for(i in 1:N_loc) {
@@ -238,7 +236,7 @@ model {
     beta_annual[i] ~ normal(0, 1);
     beta_noise[i]  ~ normal(0, 1);
   
-    log10_total_inf_year[i] ~ normal(log10_total_inf_year_mean + log10_total_inf_offset[i], sigma_log10_total_inf);
+    log10_total_inf_year[i] ~ normal(log10_total_inf_mean + log10_total_inf_offset[i], sigma_log10_total_inf);
     
     
     // Data likelihood

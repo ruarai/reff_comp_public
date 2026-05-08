@@ -22,35 +22,19 @@ training_counts <- process_counts(combined_counts, x_location, x_pathogen, x_tar
 
 data_list <- create_stan_data(training_counts, n_days_ahead, x_pathogen, x_location)
 
-data_list$ix_year <- training_counts$year
-
-data_list$year_start <- training_counts |> 
-  mutate(ix = row_number()) |>  group_by(year) |> summarise(year_start = first(ix)) |> pull(year_start)
-data_list$year_end <- training_counts |> 
-  mutate(ix = row_number()) |>  group_by(year) |> summarise(year_end = last(ix)) |> pull(year_end)
-
-data_list$N_years <- length(unique(training_counts$year))
-
 
 library(cmdstanr)
-model <- cmdstan_model("src/gp_renewal_peak.stan")
+model <- cmdstan_model("src/gp_renewal_obs.stan")
 
 fit <- model$optimize(
   data = data_list, seed = 5, iter = 1e4, init = 0.1,
-  
-  # algorithm = "lbfgs",
-  # tol_obj     = 1e-15,
-  # tol_rel_obj = 1,    
-  # tol_param   = 1e-12,
-  # tol_grad    = 1e-12,
-  # tol_rel_grad = 1e4,
   jacobian = TRUE
 )
 fit <- model$pathfinder(
   data = data_list, seed = 4, init = 0.5
 )
 fit <- model$variational(
-  data = data_list, seed = 8, iter = 1e4
+  data = data_list, seed = 2, iter = 1e4, init = 0.2
 )
 
 
@@ -61,10 +45,8 @@ fit <- model$sample(
   parallel_chains = 4,
   init = 0.01,
   refresh = 50,
-  iter_warmup = 500, iter_sampling = 500
+  iter_warmup = 250, iter_sampling = 250
 )
-
-# fit <- read_rds(str_c(fs::path("results", round_id), "/", str_c(x_pathogen, "_", x_location, "_", x_target), ".rds"))
 
 eval_counts <- read_csv("../forecast-hub/processed-data/2026/2026-04-22/combined-count-smoothed-2026-04-22.csv") |> 
   filter(notification_date > origin_date, location == x_location, pathogen == x_pathogen)
@@ -72,13 +54,19 @@ eval_counts <- read_csv("../forecast-hub/processed-data/2026/2026-04-22/combined
 draws <- tidy_draws(fit) |> mutate(chain = .chain)
 
 trajectory_data <- fit |> 
-  spread_draws(log_R[ix_t], inf[ix_t], inf_delayed[ix_t],
-               cases[ix_t], f_noise[ix_t],
-               latent_cases_log[ix_t]
+  spread_draws(log_R[ix_t], inf_delayed[ix_t],
+               cases[ix_t], f_noise[ix_t], f_switch[ix_t],
+               latent_cases_log[ix_t], f_annual[ix_t]
   ) |> 
   mutate(date = training_counts$date[ix_t],
          latent_cases = exp(latent_cases_log),
          cases = replace_na(cases, 0))
+
+ggplot(trajectory_data |> 
+         mutate(y = f_annual * (plogis(f_switch)) + f_noise)) + 
+  fastribbon::stat_fastribbon(aes(x = date, y = f_switch)) +
+  
+  scale_fill_brewer() + theme_bw() + theme(legend.position = "none")
 
 
 p_Rt <- ggplot(trajectory_data) + 

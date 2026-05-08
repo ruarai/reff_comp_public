@@ -8,7 +8,7 @@ args <- commandArgs(trailingOnly = TRUE)
 ix_job <- as.integer(args[1])
 
 
-results_dir <- "saved_results/hierarchical"
+results_dir <- "saved_results/hierarchical_0.2"
 
 jobs <- make_retrospective_jobs() |> 
   filter(round_id >= "2025-05-08", round_id <= "2025-10-09") |> 
@@ -64,7 +64,7 @@ data_list <- create_stan_data_hierarchical(training_counts, n_days_ahead, x_path
 data_list$N_years <- max(training_counts$year)
 data_list$year_start <- year_ranges$ix_year_start
 data_list$year_end <- year_ranges$ix_year_end
-data_list$sigma_log10_total_inf <- 0.1
+data_list$sigma_log10_total_inf <- 0.2
 
 library(cmdstanr)
 model <- cmdstan_model("src/gp_renewal_hierarchical.stan")

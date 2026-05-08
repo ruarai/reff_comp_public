@@ -5,12 +5,17 @@ args <- commandArgs(trailingOnly = TRUE)
 ix_job <- as.integer(args[1])
 
 
-results_dir <- "saved_results/immunity"
+results_dir <- "saved_results/baseline_2"
 
 jobs <- make_retrospective_jobs() |> 
-  filter(round_id >= "2025-05-08", round_id <= "2025-10-09") |> 
-  
-  filter(location != "SA", location != "NZ") 
+  anti_join(
+    ignore_jobs <- tribble(
+      ~location, ~pathogen, ~target,
+      "NZ", "RSV", "hospital_incidence",
+      "NZ", "flu", "hospital_incidence",
+    ),
+    by = join_by(location, pathogen, target)
+  )
 
 print(str_c("Generated ", nrow(jobs), " jobs"))
 
@@ -34,15 +39,14 @@ combined_counts <- read_csv(str_c("../forecast-hub/processed-data/", year, "/", 
 
 origin_date <- get_origin_date(combined_counts, x_pathogen, x_location, x_target)
 
-
-n_days_ahead <- as.numeric(ymd("2027-01-01") - origin_date)
+n_days_ahead <- 365
 
 training_counts <- process_counts(combined_counts, x_location, x_pathogen, x_target, n_days_ahead, origin_date)
 
 
 data_list <- create_stan_data(training_counts, n_days_ahead, x_pathogen, x_location)
 
-fit <- fit_model(data_list, model_file = "src/gp_renewal_immunity.stan")
+fit <- fit_model(data_list, model_file = "src/gp_renewal.stan")
 
 print("Saving fit object and training data")
 
@@ -62,7 +66,7 @@ calculate_performance_metrics(round_id, x_pathogen, x_location, x_target, result
 
 print("Making plots...")
 
-make_fit_plots_immunity(round_id, x_pathogen, x_location, x_target, results_dir = results_dir)
+make_fit_plots(round_id, x_pathogen, x_location, x_target, results_dir = results_dir)
 
 print("Complete")
 
