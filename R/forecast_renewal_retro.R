@@ -5,8 +5,6 @@ args <- commandArgs(trailingOnly = TRUE)
 ix_job <- as.integer(args[1])
 
 
-results_dir <- "saved_results/baseline_2"
-
 jobs <- make_retrospective_jobs() |> 
   anti_join(
     ignore_jobs <- tribble(
@@ -15,7 +13,8 @@ jobs <- make_retrospective_jobs() |>
       "NZ", "flu", "hospital_incidence",
     ),
     by = join_by(location, pathogen, target)
-  )
+  ) |> 
+  expand_grid(model_version = c("no_annual", "no_holidays", "no_holidays_no_annual"))
 
 print(str_c("Generated ", nrow(jobs), " jobs"))
 
@@ -29,7 +28,10 @@ job <- jobs[ix_job, ]
 x_location <- job$location[[1]]
 x_pathogen <- job$pathogen[[1]]
 x_target <- job$target[[1]]
+x_version <- job$model_version[[1]]
 round_id <- job$round_id[[1]]
+
+results_dir <- str_c("saved_results/", x_version)
 
 print(str_c("Performing job ", ix_job, " (", x_location, "-", x_pathogen, "-", x_target, "), saving to ", results_dir))
 
@@ -46,7 +48,13 @@ training_counts <- process_counts(combined_counts, x_location, x_pathogen, x_tar
 
 data_list <- create_stan_data(training_counts, n_days_ahead, x_pathogen, x_location)
 
-fit <- fit_model(data_list, model_file = "src/gp_renewal.stan")
+model_file <- case_when(
+  x_version == "no_annual" ~ "src/_gp_renewal_no_annual.stan",
+  x_version == "no_holidays" ~ "src/_gp_renewal_no_holidays.stan",
+  x_version == "no_holidays_no_annual" ~ "src/_gp_renewal_no_holidays_no_annual.stan",
+)
+
+fit <- fit_model(data_list, model_file = model_file)
 
 print("Saving fit object and training data")
 

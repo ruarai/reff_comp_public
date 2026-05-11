@@ -20,6 +20,9 @@ plot_theme_paper <- list(
   )
 )
 
+plot_theme_annotation <- theme(plot.title = element_markdown(family = "Helvetica"),
+                               plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "cm"))
+
 element_gridline <- element_line(colour = "grey70", linetype = "28", linewidth = 0.3)
 element_facet_background <- element_rect(fill = "white", colour = "grey50", linewidth = 0.5)
 

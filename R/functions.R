@@ -100,12 +100,6 @@ calculate_performance_metrics <- function(
     write_parquet(str_c(round_results, "/", job_name, "_performance.parquet"))
 }
 
-label_pathogens <- function(df) {
-  df |> mutate(
-    pathogen = factor(pathogen, c("RSV", "flu", "SARSCOV2"), c("RSV", "Influenza", "SARS-CoV-2"))
-  ) 
-}
-
 combine_forecasts <- function(round_id, dir = "results") {
   forecast_trajectories <- fs::dir_ls(fs::path(dir, round_id), glob = "*forecast-trajectories.parquet")
   

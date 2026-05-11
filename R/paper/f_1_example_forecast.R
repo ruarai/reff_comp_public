@@ -10,7 +10,10 @@ library(pammtools)
 round_id <- "2025-07-03"
 x_pathogen <- "flu"
 x_location <- "VIC"
-training_counts <- arrow::read_parquet(str_c("saved_results/results_baseline/", round_id, "/", x_pathogen, "_", x_location, "_training_counts.parquet"))
+job_name <- str_c(round_id, "/", x_pathogen, "_", x_location, "_case_incidence")
+# training_counts <- arrow::read_parquet(str_c("saved_results/results_baseline/", round_id, "/", x_pathogen, "_", x_location, "_training_counts.parquet"))
+
+training_counts <- arrow::read_parquet(str_c("saved_results/baseline_2/", job_name, "_training_counts.parquet"))
 
 origin_date <- training_counts$origin_date[[1]] - days(1)
 
@@ -24,18 +27,25 @@ school_holidays <- get_school_holidays() |>
 public_holidays <- get_public_holidays() |> 
   filter(location == x_location)
 
-results <- read_rds(str_c("saved_results/results_baseline/", round_id, "/", x_pathogen, "_", x_location, ".rds"))
+results <- read_rds(str_c("saved_results/baseline_2/", job_name, ".rds"))
 
 date_range <- c(ymd("2024-05-01"), ymd("2025-10-01"))
 
 year_starts <- tibble(year_start = ymd(c("2024-01-01", "2025-01-01", "2026-01-01")))
 
+plot_margin <- 0.1
+
 plot_common <- list(
+  
+  geom_rect(aes(xmin = date - 0.5, xmax = date + 0.5, ymin = -Inf, ymax = Inf),
+            alpha = 0.2, fill = ggokabeito::palette_okabe_ito(3),
+            public_holidays),
   geom_rect(aes(xmin = start_date, xmax = end_date + 1, ymin = -Inf, ymax = Inf),
             school_holidays, alpha = 0.1),
   scale_x_date(breaks = scales::date_breaks(width = "3 months"),
                labels = scales::label_date_short()),
-  plot_theme_paper
+  plot_theme_paper,
+  theme(plot.margin = margin(t = plot_margin, b = plot_margin, l = 0.1, r = 0.1, unit = "cm"))
 )
 plot_common_above <- list(
   geom_vline(xintercept = origin_date, linetype = "44", linewidth = 0.5),
@@ -94,8 +104,7 @@ p_hol <- ggplot(trajectory_data |> filter(date >= date_range[1], date <= date_ra
   theme(legend.position = "none",
         plot.subtitle = ggtext::element_markdown(),
         axis.text.x = element_blank(),
-        panel.grid.major.x = element_blank(),
-        plot.margin = margin(t = 0.25, b = 0.25, l = 0.1, r = 0.1, unit = "cm"))
+        panel.grid.major.x = element_blank())
 
 p_hol
 
@@ -103,7 +112,7 @@ p_noise <- ggplot(trajectory_data |> filter(date >= date_range[1], date <= date_
   
   plot_common +
   
-  fastribbon::stat_fastribbon(aes(x = date, y = f_noise), geom = "stepribbon") +
+  fastribbon::stat_fastribbon(aes(x = date, y = f_noise), linewidth = 0.0) +
   
   plot_common_above +
   
@@ -119,8 +128,7 @@ p_noise <- ggplot(trajectory_data |> filter(date >= date_range[1], date <= date_
   theme(legend.position = "none",
         plot.subtitle = ggtext::element_markdown(),
         axis.text.x = element_blank(),
-        panel.grid.major.x = element_blank(),
-        plot.margin = margin(t = 0.25, b = 0.25, l = 0.1, r = 0.1, unit = "cm")) +
+        panel.grid.major.x = element_blank()) +
   
   ggtitle(NULL, "Noise <i>f</i><sub>noise</sub>(<i>t</i>)")
 
@@ -128,7 +136,7 @@ p_ann <- ggplot(trajectory_data |> filter(date >= date_range[1], date <= date_ra
   
   plot_common +
   
-  fastribbon::stat_fastribbon(aes(x = date, y = f_annual), geom = "stepribbon") +
+  fastribbon::stat_fastribbon(aes(x = date, y = f_annual), linewidth = 0.0) +
   
   plot_common_above +
   
@@ -144,8 +152,7 @@ p_ann <- ggplot(trajectory_data |> filter(date >= date_range[1], date <= date_ra
   theme(legend.position = "none",
         plot.subtitle = ggtext::element_markdown(),
         axis.text.x = element_blank(),
-        panel.grid.major.x = element_blank(),
-        plot.margin = margin(t = 0.25, b = 0.25, l = 0.1, r = 0.1, unit = "cm")) +
+        panel.grid.major.x = element_blank()) +
   
   ggtitle(NULL, "Annual periodic variation <i>f</i><sub>ann</sub>(<i>t</i>)")
 
@@ -165,21 +172,22 @@ p_Rt_exp <- ggplot(trajectory_data |> filter(date >= date_range[1], date <= date
   coord_cartesian(xlim = date_range, ylim = c(0.7, 1.3)) +
   scale_y_continuous(breaks = c(0.75, 1, 1.25)) +
   
-  xlab(NULL) + ylab("R(t)") +
+  xlab(NULL) + ylab("<i>R</i>(<i>t</i>)") +
   
   theme(legend.position = "none",
         plot.subtitle = ggtext::element_markdown(),
-        panel.grid.major.x = element_blank(),
-        plot.margin = margin(t = 0.25, b = 0.25, l = 0.1, r = 0.1, unit = "cm")) +
+        panel.grid.major.x = element_blank()) +
   
   ggtitle(NULL, "Instantaneous reproduction number <i>R</i>(<i>t</i>)")
+
+p_Rt_exp
 
 p_cases_long <- ggplot(trajectory_data |> filter(date >= date_range[1], date <= date_range[2])) +
   
   plot_common +
   
-  fastribbon::stat_fastribbon(aes(x = date - 0.5, y = cases), geom = "stepribbon",
-                              linewidth = 0.0) +
+  # fastribbon::stat_fastribbon(aes(x = date - 0.5, y = cases), geom = "stepribbon",
+  #                             linewidth = 0.0) +
   
   plot_common_above +
   
@@ -199,27 +207,24 @@ p_cases_long <- ggplot(trajectory_data |> filter(date >= date_range[1], date <= 
   
   xlab(NULL) + ylab("Incidence") +
   
-  theme(legend.position = "none",
-        plot.margin = margin(t = 0.25, b = 0.25, l = 0.1, r = 0.1, unit = "cm"))
+  theme(legend.position = "none")
 
 p_cases_long
 
 
 p_Rt <- ((p_cases_long + theme(axis.text.x = element_blank())) / p_Rt_exp) + 
   plot_annotation("<b>A</b>. Conditioned case incidence and inferred <i>R</i>(<i>t</i>)",
-                  theme = theme(plot.title = element_markdown(family = "Helvetica"),
-                                plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "cm")))
+                  theme = plot_theme_annotation)
 
-
-p_decomp <- (p_hol / p_ann / (p_noise + theme(axis.text.x = element_text(margin = margin(t = 0.3, unit = "cm"), colour = "black")))) + 
+p_decomp <- (p_hol / p_ann / (p_noise + theme(axis.text.x = element_text(margin = margin(t = 0.3, unit = "cm"), colour = "black", vjust = 1)))) + 
   plot_annotation("<b>B</b>. Decomposed log <i>R</i>(<i>t</i>) additive effects",
-                  theme = theme(plot.title = element_markdown(family = "Helvetica"),
-                                plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "cm")))
-
+                  theme = plot_theme_annotation)
 
 n_days_ahead <- 7 * 4
 
 date_range_forecast <- c(origin_date - days(7 * 8), origin_date + days(n_days_ahead))
+
+
 
 p_cases <- ggplot(trajectory_data |> filter(date >= date_range_forecast[1], date <= date_range_forecast + days(1))) +
   
@@ -252,20 +257,20 @@ p_cases <- ggplot(trajectory_data |> filter(date >= date_range_forecast[1], date
   
   xlab(NULL) + ylab("Incidence") +
   
-  theme(legend.position = "none",
-        plot.margin = margin(t = 0.25, b = 0.25, l = 0.1, r = 0.1, unit = "cm"))
+  theme(legend.position = "none")
 
 p_cases
 
 
 p_forecast <- (p_cases) + 
   plot_annotation("<b>C</b>. Forecast case incidence",
-                  theme = theme(plot.title = element_markdown(family = "Helvetica"))) +
+                  theme = plot_theme_annotation) +
   
   theme(plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "cm"))
 
 p_example <- (wrap_elements(full = p_Rt) | wrap_elements(full = p_decomp)) /
-  wrap_elements(full = p_forecast)
+  wrap_elements(full = p_forecast) +
+  plot_layout(heights = c(1.2, 1))
 
 ggsave(
   "paper_figures/f_1_example.png", p_example,
