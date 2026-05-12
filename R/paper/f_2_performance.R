@@ -1,5 +1,5 @@
 source("R/functions.R")
-source("R/paper/plot_theme.R")
+source("R/paper/common.R")
 
 snaive_perf_data <- read_parquet("data/snaive_perf_extended.parquet")
 
@@ -92,12 +92,12 @@ p_heatmap <- ggplot(plot_data_skill) +
   geom_linerange(aes(y = y_offset + 0.5,
                      xmin = min(plot_data_skill$date), xmax = max(plot_data_skill$date) + 14),
                  location_y |> filter(location != "VIC"),
-             colour = "white", linewidth = 4.0) +
+             colour = "white", linewidth = 1.6) +
   
   geom_linerange(aes(y = y_offset - 0.5,
                      xmin = min(plot_data_skill$date), xmax = max(plot_data_skill$date) + 14),
                  location_y,
-                 colour = "white", linewidth = 4.0) +
+                 colour = "white", linewidth = 1.6) +
   
   geom_line(aes(x = notification_date, y = y - 0.5, group = location), plot_data_counts,
             colour = "white", linewidth = 1.5, alpha = 0.8) +
@@ -156,7 +156,8 @@ p_skill <- perf_data_paired |>
   ylab("Skill score") +
   
   theme(legend.position = "right",
-        panel.background = element_facet_background)
+        panel.background = element_facet_background,
+        panel.grid.major = element_gridline)
 
 
 p_top <- p_skill + 

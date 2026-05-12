@@ -14,7 +14,7 @@ jobs <- make_retrospective_jobs() |>
     ),
     by = join_by(location, pathogen, target)
   ) |> 
-  expand_grid(model_version = c("no_annual", "no_holidays", "no_holidays_no_annual"))
+  expand_grid(model_version = c("no_school_holidays", "no_public_holidays"))
 
 print(str_c("Generated ", nrow(jobs), " jobs"))
 
@@ -49,10 +49,11 @@ training_counts <- process_counts(combined_counts, x_location, x_pathogen, x_tar
 data_list <- create_stan_data(training_counts, n_days_ahead, x_pathogen, x_location)
 
 model_file <- case_when(
-  x_version == "no_annual" ~ "src/_gp_renewal_no_annual.stan",
-  x_version == "no_holidays" ~ "src/_gp_renewal_no_holidays.stan",
-  x_version == "no_holidays_no_annual" ~ "src/_gp_renewal_no_holidays_no_annual.stan",
+  x_version == "no_school_holidays" ~ "src/varietals/_gp_renewal_no_school_holidays.stan",
+  x_version == "no_public_holidays" ~ "src/varietals/_gp_renewal_no_public_holidays.stan"
 )
+
+fit_file <- str_c(results_dir, "/", round_id, "/", x_pathogen, "_", x_location, "_", x_target, ".rds")
 
 fit <- fit_model(data_list, model_file = model_file)
 
@@ -60,9 +61,9 @@ print("Saving fit object and training data")
 
 fs::dir_create(fs::path(results_dir, round_id))
 
-fit_file <- str_c(results_dir, "/", round_id, "/", x_pathogen, "_", x_location, "_", x_target, ".rds")
 fit$save_object(fit_file)
 arrow::write_parquet(training_counts, str_c(results_dir, "/", round_id, "/", x_pathogen, "_", x_location, "_", x_target, "_training_counts.parquet"))
+
 
 print("Writing trajectories...")
 

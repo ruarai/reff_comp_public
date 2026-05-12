@@ -50,17 +50,20 @@ transformed data {
 parameters {
   real<lower=0> scaling_annual;
   real<lower=0> scaling_noise;
+  vector<lower=0>[N_loc] scaling_noise_2;
   
   real<lower=0, upper=365> ls_annual;
   real<lower=0, upper=120> ls_noise;
+  vector<lower=0, upper=120>[N_loc] ls_noise_2;
   
   real<lower=0> scaling_weekly_asc;
   
   vector[N_loc] log_R_0;
   vector<lower=0, upper=200>[N_loc] phi;
 
-  array[N_loc] vector[2 * M_annual] beta_annual;
-  array[N_loc] vector[M_noise] beta_noise;
+  vector[2 * M_annual] beta_annual;
+  vector[M_noise] beta_noise;
+  array[N_loc] vector[M_noise] beta_noise_2;
   
   array[N_loc] sum_to_zero_vector[7] beta_offset_weekly;
   
@@ -107,18 +110,20 @@ transformed parameters {
   array[N_loc] vector[N_years] log10_total_inf_year; 
   
   // Latent transmission rate trajectories
-  array[N_loc] vector[N] f_annual; 
-  array[N_loc] vector[N] f_noise; 
   array[N_loc] vector[N] log_R; 
+  array[N_loc] vector[N] f_noise_2; 
   
   vector[N_loc] log10_total_inf_offset = rep_vector(0.0, N_loc);
   log10_total_inf_offset[2:N_loc] = log10_total_inf_offset_raw;
   
+  // Calculate the GPs as the weighting vectors from the basis functions
+  // and the weighting vectors
+  vector[N] f_annual = phi_annual * (diag_SPD_annual .* beta_annual);
+  vector[N] f_noise  = phi_noise * (diag_SPD_noise .* beta_noise);
+  
   for(i in 1:N_loc) {
-    // Calculate the GPs as the weighting vectors from the basis functions
-    // and the weighting vectors
-    f_annual[i] = phi_annual * (diag_SPD_annual .* beta_annual[i]);
-    f_noise[i]  = phi_noise * (diag_SPD_noise .* beta_noise[i]);
+    vector[M_noise] diag_SPD_noise_2 = diagSPD_Matern52(scaling_noise_2[i], ls_noise_2[i], L, M_noise);
+    f_noise_2[i]  = phi_noise * (diag_SPD_noise_2 .* beta_noise_2[i]);
     
     // Add a zero to the start of the school and public holiday effects
     // so that we can index into them using the holiday_type vectors
@@ -131,8 +136,9 @@ transformed parameters {
     
     // Calculate the value of log R(t) across t = 1 .. N
     log_R[i] = log_R_0[i] +
-      f_annual[i] +
-      f_noise[i] + 
+      f_annual +
+      f_noise +
+      f_noise_2[i] +
       school_holiday_Rt_effect[school_holiday_type[i]] +
       public_holiday_Rt_effect[public_holiday_type[i]];
     
@@ -198,6 +204,7 @@ transformed parameters {
 model {
   scaling_annual ~ exponential(1.0);
   scaling_noise  ~ exponential(1.0);
+  scaling_noise_2  ~ exponential(3.0);
   
   scaling_weekly_asc ~ exponential(1.0);
   
@@ -208,12 +215,11 @@ model {
   // https://betanalpha.github.io/assets/case_studies/gaussian_processes.html
   
   ls_noise ~ inv_gamma(3.858, 68.729);
+  ls_noise_2 ~ inv_gamma(3.858, 68.729);
   ls_annual ~ inv_gamma(6.809, 200.117);
   phi ~ gamma(2, 0.1);
   
   log_R_0 ~ normal(0, 0.5);
-  
-  
   log_I_0 ~ normal(3.2, 1);
   r_0 ~ normal(0, 0.2);
   
@@ -223,18 +229,19 @@ model {
   log10_total_inf_mean ~ normal(4, 3);
   log10_total_inf_offset_raw ~ normal(0, 2);
   
+  beta_annual ~ normal(0, 1);
+  beta_noise ~ normal(0, 1);
+  
   for(i in 1:N_loc) {
       
     beta_offset_weekly[i] ~ normal(0, 1);
+    beta_noise_2[i] ~ normal(0, 1);
     
     school_holiday_Rt_effect_raw[i] ~ normal(0, 1);
     school_holiday_asc_effect_raw[i] ~ normal(0, 1);
     
     public_holiday_Rt_effect_raw[i] ~ normal(0, 0.25);
     public_holiday_asc_effect_raw[i] ~ normal(0, 0.25);
-  
-    beta_annual[i] ~ normal(0, 1);
-    beta_noise[i]  ~ normal(0, 1);
   
     log10_total_inf_year[i] ~ normal(log10_total_inf_mean + log10_total_inf_offset[i], sigma_log10_total_inf);
     

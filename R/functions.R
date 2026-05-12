@@ -139,11 +139,11 @@ check_and_log_git_status <- function(round_id) {
   is_clean <- nrow(git_status()) == 0
   if (!is_clean) {
     print(git_status())
-    stop("Working directory is not clean.")
-  } else {
-    fs::dir_create(fs::path("results", round_id))
-    write_file(git_info()$commit, fs::path("results", round_id, "git_commit"))
+    warning("Working directory is not clean.")
   }
+  
+  fs::dir_create(fs::path("results", round_id))
+  write_file(git_info()$commit, fs::path("results", round_id, "git_commit"))
 }
 
 

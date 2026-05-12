@@ -56,14 +56,14 @@ fit <- model$sample(
   parallel_chains = 4,
   init = 0.01,
   refresh = 50,
-  iter_warmup = 500, iter_sampling = 500
+  iter_warmup = 250, iter_sampling = 250
 )
 
-fit$save_object("saved_results/hierarchical_exp/fit_RSV_2.rds")
-
-q('no')
-
-fit <- read_rds("saved_results/hierarchical_exp/fit_RSV_2.rds")
+# fit$save_object("saved_results/hierarchical_exp/fit_RSV_2.rds")
+# 
+# q('no')
+# 
+# fit <- read_rds("saved_results/hierarchical_exp/fit_RSV_2.rds")
 
 
 draws <- tidy_draws(fit) |> mutate(chain = .chain)
@@ -71,14 +71,25 @@ draws <- tidy_draws(fit) |> mutate(chain = .chain)
 date_index <- unique(training_counts$date)
 location_index <- unique(training_counts$location)
 
+fit |> 
+  spread_draws(f_noise[ix_t]) |> 
+  
+  ggplot() +
+  fastribbon::stat_fastribbon(aes(x = ix_t, y = f_noise))
+fit |> 
+  spread_draws(f_noise_2[i, ix_t]) |> 
+  
+  ggplot() +
+  fastribbon::stat_fastribbon(aes(x = ix_t, y = f_noise_2)) +
+  
+  facet_wrap(~i)
 
-trajectory_data <- fit |> 
-  spread_draws(c(inf, inf_delayed, latent_cases_weekly_log,
-                 cases)[i, ix_t]) |> 
+fit |> 
+  spread_draws(inf_delayed[i, ix_t]) |> 
   mutate(date = date_index[ix_t],
-         location = location_index[i])
-
-ggplot(trajectory_data |> filter(date >= ymd("2025-01-01"))) + 
+         location = location_index[i]) |> 
+  filter(date >= ymd("2025-01-01")) |> 
+  ggplot() + 
   fastribbon::stat_fastribbon(aes(x = date, y = inf_delayed),
                               linewidth = 0.0) +
   

@@ -6,8 +6,8 @@ source("R/presentation/plot_theme.R")
 perf_data <- bind_rows(
   read_parquet("saved_results/results_baseline_performance.parquet") |> 
     mutate(.model = "baseline"),
-  collect(open_dataset(fs::dir_ls("saved_results/hierarchical_0.2/", glob = "*_performance.parquet", recurse = TRUE))) |>
-    mutate(.model = "hierarchical")
+  read_parquet("saved_results/hierarchical_performance.parquet") |> 
+    mutate(.model = "hierarchical"),
 ) |> 
   filter(location %in% c("ACT", "NSW", "WA", "QLD", "VIC", "TAS")) |> 
   mutate(horizon = as.numeric(date - origin_date))
@@ -41,7 +41,7 @@ perf_data |>
   ggplot() +
   geom_line(aes(x = horizon, y = crps_log, colour = .model, group = .model)) +
   
-  ggokabeito::scale_colour_okabe_ito(order = c(2, 9)) +
+  ggokabeito::scale_colour_okabe_ito(order = c(9, 2)) +
   
   facet_grid(rows = vars(location), cols = vars(pathogen), scales = "free_y") +
   

@@ -35,3 +35,27 @@ label_pathogen <- function(tbl) {
       labels = c("RSV" = "RSV", "flu" = "Influenza", "SARSCOV2" = "SARS-CoV-2")
     ))
 }
+
+process_perf_data <- function(perf_data) {
+  processed_perf <- perf_data |> 
+    mutate(horizon = as.numeric(date - origin_date)) |> 
+    
+    # Drop dates with known issues
+    anti_join(
+      tribble(
+        ~location, ~pathogen, ~date,
+        "WA", "flu", ymd("2025-08-16"),
+        "WA", "flu", ymd("2025-08-23"),
+        "WA", "flu", ymd("2025-08-30"),
+        "WA", "RSV", ymd("2025-08-16"),
+        "WA", "RSV", ymd("2025-08-23"),
+        "WA", "RSV", ymd("2025-08-30")
+      )
+    ) |> 
+    
+    filter(date >= ymd("2025-01-01"),
+           ymd(round_id) < ymd("2025-11-27"),
+           location != "SA", location != "NZ")
+  
+  return(processed_perf)
+}
