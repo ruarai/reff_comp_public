@@ -32,14 +32,14 @@ results <- read_rds(str_c("saved_results/baseline_2/", job_name, ".rds"))
 date_range <- c(ymd("2024-05-01"), ymd("2025-10-01"))
 
 year_starts <- tibble(year_start = ymd(c("2024-01-01", "2025-01-01", "2026-01-01")))
-colour_fc <- "#238b45"
+colour_fc <- "#02818a"
 
 plot_margin <- 0.1
 
 plot_common <- list(
   
   geom_rect(aes(xmin = date - 0.5, xmax = date + 0.5, ymin = -Inf, ymax = Inf),
-            alpha = 0.2, fill = "orangered",
+            alpha = 0.2, fill = "#e31a1c",
             public_holidays),
   geom_rect(aes(xmin = start_date + 0.5, xmax = end_date + 0.5, ymin = -Inf, ymax = Inf),
             school_holidays, alpha = 0.1),
@@ -218,19 +218,17 @@ p_cases_long <- ggplot(trajectory_data |> filter(date >= date_range[1], date <= 
             linewidth = 0.4,
             training_counts |> filter(date >= date_range[1])) +
   
-  # geom_line(aes(x = notification_date, y = value),
-  #           colour = "orangered",
-  #           eval_counts |> filter(notification_date <= date_range[2])) +
-  
   scale_fill_brewer(palette = "Blues") +
   
-  coord_cartesian(xlim = date_range, ylim = c(0, 1500)) +
+  coord_cartesian(xlim = date_range, ylim = c(0, 1000)) +
   
   scale_y_continuous(labels = scales::label_comma()) +
   
   xlab(NULL) + ylab("Incidence") +
   
-  theme(legend.position = "none")
+  theme(legend.position = "none") +
+  
+  ggtitle(NULL, "Influenza case incidence — Victoria")
 
 p_cases_long
 

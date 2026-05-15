@@ -3,7 +3,7 @@ library(tidyverse)
 library(processx)
 source("R/functions.R")
 
-round_id <- "2026-05-06"
+round_id <- "2026-05-13"
 
 check_and_log_git_status(round_id)
 
@@ -39,4 +39,5 @@ run("git", c("push", "-u", "origin", "uom-reff_comp"), wd = repo_dir, echo = TRU
 
 # Return to main branch
 run("git", c("switch", "main"), wd = repo_dir, echo = TRUE)
+message(run("git", c("pull"), wd = repo_dir, echo = TRUE)$stdout)
 

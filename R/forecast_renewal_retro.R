@@ -14,7 +14,9 @@ jobs <- make_retrospective_jobs() |>
     ),
     by = join_by(location, pathogen, target)
   ) |> 
-  expand_grid(model_version = c("no_school_holidays", "no_public_holidays"))
+  expand_grid(model_version = c("baseline_early")) |> 
+  
+  filter(round_id < ymd("2025-04-10"))
 
 print(str_c("Generated ", nrow(jobs), " jobs"))
 
@@ -48,10 +50,7 @@ training_counts <- process_counts(combined_counts, x_location, x_pathogen, x_tar
 
 data_list <- create_stan_data(training_counts, n_days_ahead, x_pathogen, x_location)
 
-model_file <- case_when(
-  x_version == "no_school_holidays" ~ "src/varietals/_gp_renewal_no_school_holidays.stan",
-  x_version == "no_public_holidays" ~ "src/varietals/_gp_renewal_no_public_holidays.stan"
-)
+model_file <- "src/gp_renewal.stan"
 
 fit_file <- str_c(results_dir, "/", round_id, "/", x_pathogen, "_", x_location, "_", x_target, ".rds")
 

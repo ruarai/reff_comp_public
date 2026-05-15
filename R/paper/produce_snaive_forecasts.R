@@ -25,11 +25,6 @@ snaive_forecast <- function(cases, start_date) {
     ungroup()
 }
 
-test_forecast <- snaive_forecast(combined_count_latest, start_date)
-
-ggplot() +
-  stat_lineribbon(aes(x = date, ydist = value_log),
-                  test_forecast |> filter(location == "NSW", pathogen == "RSV"))
 
 calculate_crps <- function(dist, truth) {
   dist_family <- family(dist)
@@ -66,9 +61,16 @@ combined_count_latest <- read_csv(
 ) |> 
   filter(target == "case_incidence")
 
+test_forecast <- snaive_forecast(combined_count_latest, start_date)
+
+ggplot() +
+  stat_lineribbon(aes(x = date, ydist = value_log),
+                  test_forecast |> filter(location == "NSW", pathogen == "RSV"))
+
 
 forecast_data <- tibble(
-  round_id = seq(ymd("2025-04-10"), ymd("2025-12-25"), by = "1 week")
+  round_id = c(seq(ymd("2025-04-10"), ymd("2025-12-25"), by = "1 week"),
+               seq(ymd("2025-01-17"), ymd("2025-04-10"), by = "1 week"))
 ) |> 
   mutate(case_file = glue::glue("../forecast-hub/processed-data/2025/{round_id}/combined-count-{round_id}.csv")) |> 
   

@@ -11,11 +11,11 @@ model$expose_functions(global = TRUE)
 
 
 
-simulate_matern <- function(x, alpha_m, rho_m, seed = 0) {
+simulate_matern <- function(x, alpha_m, rho_m, seed = 0, ls_M = rho_m) {
   x <- x - mean(x)
   N <- length(x)
   
-  M <- calculate_M_matern(c = 1.25, length_scale = rho_m, x = x)
+  M <- calculate_M_matern(c = 1.25, length_scale = ls_M, x = x)
   L <- max(abs(x)) * 1.25
   
   spd_matern <- diagSPD_Matern52(alpha = alpha_m, rho = rho_m, L = L, M = M)
@@ -47,7 +47,7 @@ simulate_periodic <- function(x, alpha_p, rho_p, seed = 0) {
   phi_periodic %*% beta_periodic
 }
 
-tibble(x = 1:60) |> mutate(y = simulate_matern(x, 1.0, 4)) |> 
+tibble(x = 1:128) |> mutate(y = simulate_matern(x, 1.0, 7, ls_M = 7)) |> 
   ggplot() +
   geom_line(aes(x,y))
 

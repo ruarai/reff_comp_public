@@ -48,6 +48,7 @@ consolidate_result <- function(results_name) {
 }
 
 
-consolidate_result("no_annual")
-consolidate_result("no_holidays")
-consolidate_result("no_holidays_no_annual")
+consolidate_result("baseline_early")
+consolidate_result("no_delay")
+consolidate_result("no_public_holidays")
+consolidate_result("no_school_holidays")
