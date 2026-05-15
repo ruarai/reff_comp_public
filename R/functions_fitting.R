@@ -51,7 +51,7 @@ create_stan_data <- function(
     N_school_holiday_types = N_school_holiday_types,
     
     M_annual = 40,
-    M_noise = calculate_M_matern(c = 1.25, length_scale = 10.0, x = training_counts$x),
+    M_noise = calculate_M_matern(c = 1.25, length_scale = 7.0, x = training_counts$x),
     c_factor = 1.25,
     
     gi_reversed = rev(gi),
