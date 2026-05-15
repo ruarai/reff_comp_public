@@ -313,3 +313,22 @@ calculate_M_matern <- function(c, length_scale, x) {
   
   return(round(M))
 }
+
+assign_retro_varietals <- function(data_list, x_version) {
+  
+  
+  data_list$include_school_holiday_asc_effect <- x_version %in% 
+    c("baseline", "no_public_holidays", "no_Rt_holidays", "no_annual")
+  data_list$include_public_holiday_asc_effect <- x_version %in% 
+    c("baseline", "no_school_holidays", "no_Rt_holidays", "no_annual")
+  data_list$include_school_holiday_Rt_effect <- x_version %in% 
+    c("baseline", "no_public_holidays", "no_asc_holidays", "no_annual")
+  data_list$include_public_holiday_Rt_effect <- x_version %in% 
+    c("baseline", "no_school_holidays", "no_asc_holidays", "no_annual")
+  
+  data_list$include_f_annual <- x_version %in%
+    c("baseline", "no_school_holidays", "no_public_holidays",
+      "no_asc_holidays", "no_Rt_holidays", "no_holidays")
+  
+  return(data_list)
+}
