@@ -170,15 +170,16 @@ get_school_holidays <- function() {
     "ACT", "2026-09-26", "2026-10-12", "Spring 2026",
     "ACT", "2026-12-19", "2027-01-31", "Summer 2026/27",
     
-    
+    # Verified 2026-05-15
+    # https://www.education.govt.nz/school-terms-and-holidays-dates
     "NZ", "2025-04-12", "2025-04-27", "Autumn 2025",
     "NZ", "2025-06-28", "2025-07-13", "Winter 2025",
     "NZ", "2025-09-20", "2025-10-05", "Spring 2025",
-    "NZ", "2025-12-20", "2026-01-27", "Summer 2025/26",
+    "NZ", "2025-12-20", "2026-01-25", "Summer 2025/26",
     "NZ", "2026-04-03", "2026-04-19", "Autumn 2026",
     "NZ", "2026-07-04", "2026-07-19", "Winter 2026",
     "NZ", "2026-09-26", "2026-10-11", "Spring 2026",
-    "NZ", "2026-12-19", "2027-01-31", "Summer 2026/27"
+    "NZ", "2026-12-19", "2027-01-27", "Summer 2026/27"
   ) |> 
     mutate(
       start_date = ymd(start_date),
@@ -205,6 +206,8 @@ get_school_holidays_long <- function() {
 get_public_holidays <- function() {
   locations_aus <- c("VIC", "NSW", "QLD", "NT", "TAS", "SA", "WA", "ACT")
   
+  
+  # Verified 2026-05-15
   aus_holidays <- tribble(
     ~date,       ~holiday_name,
     "2023-01-01", "New Year's Day", 
@@ -242,6 +245,7 @@ get_public_holidays <- function() {
       )
     )
   
+  # Verified 2026-05-15
   nz_holidays <- tribble(
     ~date,       ~holiday_name,
     "2023-01-01", "New Year's Day",
@@ -280,6 +284,7 @@ get_public_holidays <- function() {
   ) |> 
     mutate(date = ymd(date), location = "NZ")
   
+  # Verified 2026-05-15
   easter_holidays <- tribble(
     ~date, ~holiday_name,
     "2023-04-07", "Easter",
@@ -305,6 +310,8 @@ get_public_holidays <- function() {
     mutate(date = ymd(date)) |> 
     expand_grid(location = c("NZ", locations_aus))
   
+  # Verified 2026-05-15
+  # https://business.vic.gov.au/business-information/public-holidays/victorian-public-holidays-2026
   vic_holidays <- tribble(
     ~location, ~date,          ~holiday_name,
     "VIC", "2023-03-13", "Labour Day",
@@ -322,7 +329,6 @@ get_public_holidays <- function() {
     "VIC", "2025-09-26", "Friday before the AFL Grand Final",
     "VIC", "2025-11-04", "Melbourne Cup",
     
-    # Note Friday before the AFL Grand Final may be subject to change
     "VIC", "2026-03-09", "Labour Day",
     "VIC", "2026-06-08", "King's Birthday",
     "VIC", "2026-09-25", "Friday before the AFL Grand Final",
@@ -330,6 +336,9 @@ get_public_holidays <- function() {
   ) |> 
     mutate(date = ymd(date))
   
+  # Verified 2026-05-15
+  # https://www.nsw.gov.au/sites/default/files/noindex/2024-08/NSW-Public-Holidays-2021-2023.pdf
+  # https://www.nsw.gov.au/sites/default/files/noindex/2024-08/NSW-Public-Holiday-Guide-2024-2025-2026.pdf
   nsw_holidays <- tribble(
     ~location, ~date,          ~holiday_name,
     "NSW", "2023-06-12", "King's Birthday",
@@ -346,6 +355,9 @@ get_public_holidays <- function() {
   ) |> 
     mutate(date = ymd(date))
   
+  # Verified 2026-05-15
+  # https://www.act.gov.au/living-in-the-act/public-holidays-school-terms-and-daylight-saving/previous-years
+  # https://www.act.gov.au/living-in-the-act/public-holidays-school-terms-and-daylight-saving
   act_holidays <- tribble(
     ~location, ~date,          ~holiday_name,
     "ACT", "2023-03-13", "Canberra Day",
@@ -370,6 +382,9 @@ get_public_holidays <- function() {
   ) |> 
     mutate(date = ymd(date))
   
+  # Verified 2026-05-15
+  # https://www.qld.gov.au/recreation/travel/holidays/queensland-public-holiday-dates-for-2023
+  # https://www.qld.gov.au/recreation/travel/holidays/queensland-public-holiday-dates-for-2024
   qld_holidays <- tribble(
     ~location, ~date,          ~holiday_name,
     "QLD", "2023-05-01", "Labour Day",
@@ -386,6 +401,8 @@ get_public_holidays <- function() {
   ) |> 
     mutate(date = ymd(date))
   
+  # Verified 2026-05-15
+  # https://nt.gov.au/nt-public-holidays
   nt_holidays <- tribble(
     ~location, ~date,          ~holiday_name,
     "NT", "2023-05-01", "May Day",
@@ -406,11 +423,13 @@ get_public_holidays <- function() {
   ) |> 
     mutate(date = ymd(date))
   
+  # Verified 2026-05-15
+  # https://safework.sa.gov.au/resources/public-holidays
   sa_holidays <- tribble(
     ~location, ~date,          ~holiday_name,
-    "SA", "2023-03-13", "Adelaide Cup Day",
+    "SA", "2023-03-13", "Adelaide Cup Day", # Second Monday of March
     "SA", "2023-06-12", "King's Birthday",
-    "SA", "2023-10-02", "Labour Day",
+    "SA", "2023-10-02", "Labour Day", # First Monday of October
     
     "SA", "2024-03-11", "Adelaide Cup Day",
     "SA", "2024-06-10", "King's Birthday",
@@ -426,9 +445,11 @@ get_public_holidays <- function() {
   ) |> 
     mutate(date = ymd(date))
   
+  # Verified 2026-05-15
+  # https://worksafe.tas.gov.au/topics/laws-and-compliance/public-holidays
   tas_holidays <- tribble(
     ~location, ~date,          ~holiday_name,
-    "TAS", "2023-03-13", "Eight Hours Day",
+    "TAS", "2023-03-13", "Eight Hours Day", # Second Monday in March
     "TAS", "2023-06-12", "King's Birthday",
     
     "TAS", "2024-03-11", "Eight Hours Day",
@@ -442,9 +463,11 @@ get_public_holidays <- function() {
   ) |> 
     mutate(date = ymd(date))
   
+  # Verified 2026-05-15
+  # https://www.wa.gov.au/service/employment/workplace-arrangements/public-holidays-western-australia
   wa_holidays <- tribble(
     ~location, ~date,          ~holiday_name,
-    "WA", "2023-03-06", "Labour Day",
+    "WA", "2023-03-06", "Labour Day", # First Monday of March
     "WA", "2023-06-05", "Western Australia Day",
     "WA", "2023-09-25", "King's Birthday",
     
@@ -456,7 +479,6 @@ get_public_holidays <- function() {
     "WA", "2025-06-02", "Western Australia Day",
     "WA", "2025-09-29", "King's Birthday",
     
-    # Note King's Birthday may be subject to change
     "WA", "2026-03-02", "Labour Day",
     "WA", "2026-06-01", "Western Australia Day",
     "WA", "2026-09-28", "King's Birthday"
