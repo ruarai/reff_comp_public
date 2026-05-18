@@ -37,3 +37,14 @@ vector get_effect(matrix effect_raw, int N, int ix_loc) {
 real sigmoid(real x, real k, real x0, real S) {
   return S * inv_logit(k * (x - x0));
 }
+
+int which_max(vector y) {
+  return sort_indices_asc(y)[size(y)];
+}
+
+real soft_argmax(vector v, real tau) {
+  int N = num_elements(v);
+  vector[N] indices = linspaced_vector(N, 1, N);
+  vector[N] w = softmax(v / tau);
+  return dot_product(w, indices);
+}

@@ -4,34 +4,11 @@ source("R/paper/common.R")
 snaive_perf_data <- read_parquet("data/snaive_perf_extended.parquet")
 
 
-locations <- c("NSW", "QLD", "VIC", "NT", "ACT")
 
 
-perf_data <- bind_rows(
-  read_parquet("saved_results/baseline_2_performance.parquet"),
-  
-  collect(open_dataset(fs::dir_ls("saved_results/baseline_early/", recurse = TRUE, glob = "*performance.parquet")))
-) |> 
-  mutate(.model = "baseline") |> 
+perf_data <- read_perf("baseline") |> 
   bind_rows(snaive_perf_data) |> 
-  mutate(horizon = as.numeric(date - origin_date)) |> 
-  
-  # Drop dates with known issues
-  anti_join(
-    tribble(
-      ~location, ~pathogen, ~date,
-      "WA", "flu", ymd("2025-08-16"),
-      "WA", "flu", ymd("2025-08-23"),
-      "WA", "flu", ymd("2025-08-30"),
-      "WA", "RSV", ymd("2025-08-16"),
-      "WA", "RSV", ymd("2025-08-23"),
-      "WA", "RSV", ymd("2025-08-30")
-    )
-  ) |> 
-  
-  filter(date >= ymd("2025-01-01"),
-         ymd(round_id) < ymd("2025-11-27"),
-         location %in% locations)
+  process_perf_data()
 
 combined_counts <- read_csv("data/combined-count-smoothed-2026-04-22.csv")
 

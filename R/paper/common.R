@@ -37,6 +37,8 @@ label_pathogen <- function(tbl) {
 }
 
 process_perf_data <- function(perf_data) {
+  locations <- c("NSW", "QLD", "VIC", "NT", "ACT")
+  
   processed_perf <- perf_data |> 
     mutate(horizon = as.numeric(date - origin_date)) |> 
     
@@ -50,12 +52,31 @@ process_perf_data <- function(perf_data) {
         "WA", "RSV", ymd("2025-08-16"),
         "WA", "RSV", ymd("2025-08-23"),
         "WA", "RSV", ymd("2025-08-30")
-      )
+      ),
+      by = join_by(location, pathogen, date)
     ) |> 
     
     filter(date >= ymd("2025-01-01"),
            ymd(round_id) < ymd("2025-11-27"),
-           location != "SA", location != "NZ")
+           location %in% locations)
   
   return(processed_perf)
+}
+
+read_perf <- function(output_dir, model_name = output_dir) {
+  summ_perf_file <- str_c("saved_results/", output_dir, "_performance.parquet")
+  
+  if(fs::file_exists(summ_perf_file)) {
+    perf_data <- read_parquet(summ_perf_file) |> 
+      collect() |> 
+      mutate(.model = model_name)
+  } else {
+    perf_data <- open_dataset(
+      fs::dir_ls(str_c("saved_results/", output_dir), recurse = TRUE, glob = "*performance.parquet")
+    ) |> 
+      collect() |> 
+      mutate(.model = model_name)
+  }
+  
+  return(perf_data)
 }

@@ -189,7 +189,7 @@ ggsave("test.png", width = 10, height = 5)
 
 
 
-x <- seq(0, 50, by = 1)
+x <- seq(0, 100, by = 1)
 
 rho_m <- 10
 alpha_m <- 0.2

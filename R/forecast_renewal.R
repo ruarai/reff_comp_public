@@ -16,9 +16,7 @@ jobs <- distinct(combined_counts, location, pathogen, target) |>
       "NZ", "flu", "hospital_incidence",
     ),
     by = join_by(location, pathogen, target)
-  ) |> 
-  
-  filter(location == "VIC")
+  )
 
 print(str_c("Generated ", nrow(jobs), " jobs from combined_counts"))
 

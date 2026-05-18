@@ -27,6 +27,15 @@ data {
   int<lower=1> M_noise; 
   
   real<lower=1.0> c_factor;
+  
+  real log_peak_size_mean;
+  real log_peak_size_sd;
+  
+  real peak_day_mean;
+  real peak_day_sd;
+  
+  int peak_season_start;
+  int peak_season_end;
 }
 
 transformed data {
@@ -44,28 +53,23 @@ transformed data {
 parameters {
   real<lower=0> scaling_annual;
   real<lower=0> scaling_noise;
-  real<lower=0> scaling_switch;
+  
+  real<lower=0> scaling_weekly_asc;
   
   real<lower=0, upper=365> ls_annual;
   real<lower=0, upper=120> ls_noise;
-  real<lower=0, upper=120> ls_switch;
-
-  vector[2 * M_annual] beta_annual;
-  vector[M_noise] beta_noise;
-  vector[M_noise] beta_switch;
-  
-  real<lower=0> scaling_weekly_asc;
   
   real log_R_0;
   
   real<lower=0, upper=200> phi;
+
+  vector[2 * M_annual] beta_annual;
+  vector[M_noise] beta_noise;
   
   sum_to_zero_vector[7] beta_offset_weekly;
   
   real r_0;
   real log_I_0;
-  
-  real switch_mean;
   
   // For school holidays and public holidays, type = 1 is no holiday
   // Only fit effects to type > 1
@@ -91,13 +95,10 @@ transformed parameters {
   // from ls_noise and scaling_noise
   vector[M_noise] diag_SPD_noise = diagSPD_Matern52(scaling_noise, ls_noise, L, M_noise);
   
-  vector[M_noise] diag_SPD_switch = diagSPD_Matern52(scaling_switch, ls_switch, L, M_noise);
-  
   // Calculate the GPs as the weighting vectors from the basis functions
   // and the weighting vectors
   vector[N] f_annual = phi_annual * (diag_SPD_annual .* beta_annual);
   vector[N] f_noise  = phi_noise * (diag_SPD_noise .* beta_noise);
-  vector[N] f_switch  = switch_mean + phi_noise * (diag_SPD_switch .* beta_switch);
   
   // Add a zero to the start of the school and public holiday effects
   // so that we can index into them using the holiday_type vectors
@@ -181,7 +182,6 @@ transformed parameters {
 model {
   scaling_annual ~ exponential(1.0);
   scaling_noise  ~ exponential(1.0);
-  scaling_switch  ~ exponential(1.0);
   
   scaling_weekly_asc ~ exponential(1.0);
   
@@ -199,14 +199,10 @@ model {
   
   ls_noise ~ inv_gamma(3.858, 68.729);
   ls_annual ~ inv_gamma(6.809, 200.117);
-  ls_switch ~ inv_gamma(3.858, 68.729);
   phi ~ gamma(2, 0.1);
 
   beta_annual ~ std_normal();
   beta_noise  ~ std_normal();
-  beta_switch ~ std_normal();
-  
-  switch_mean ~ std_normal();
   
   log_R_0 ~ normal(0, 0.5);
   
@@ -220,6 +216,12 @@ model {
   
   // Data likelihood
   y ~ neg_binomial_2_log(latent_cases_weekly_log[1:N_data], phi);
+  
+  real latent_inf_peak = max(inf[peak_season_start:peak_season_end]);
+  real t_peak = soft_argmax(inf[peak_season_start:peak_season_end], 1.0);
+  
+  log(latent_inf_peak) ~ normal(log_peak_size_mean, log_peak_size_sd);
+  t_peak ~ normal(peak_day_mean, peak_day_sd);
 }
 
 generated quantities {
