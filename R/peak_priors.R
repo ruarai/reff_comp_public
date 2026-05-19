@@ -23,24 +23,26 @@ get_peak_priors <- function() {
     "QLD", "RSV", ymd("2026-07-01"), 90,  75, 500,
     "SA",  "RSV", ymd("2026-07-01"), 60,   60,  200,
     "TAS", "RSV", ymd("2026-07-01"), 60,   5,  40,
-    "VIC", "RSV", ymd("2026-07-01"), 30, 150, 400,
-    "WA",  "RSV", ymd("2026-08-01"), 60, 60, 180,
+    "VIC", "RSV", ymd("2026-07-01"), 30, 125, 400,
+    "WA",  "RSV", ymd("2026-08-01"), 60, 40, 180,
     
-    "ACT", "flu", ymd("2026-07-01"), 45, 20,   150,
-    "NSW", "flu", ymd("2026-07-01"), 30, 500, 5000,
-    "QLD", "flu", ymd("2026-07-01"), 90, 300, 1500,
-    "SA",  "flu", ymd("2026-07-01"), 45, 80,    400,
-    "TAS", "flu", ymd("2026-07-01"), 45, 15,    60,
-    "VIC", "flu", ymd("2026-07-01"), 45, 300, 1200,
-    "WA",  "flu", ymd("2026-08-01"), 45, 100,  600,
+    # Assume flu might be a bit lower this year due to big year in 2025
+    "ACT", "flu", ymd("2026-07-01"), 45, 10,   150,
+    "NSW", "flu", ymd("2026-07-01"), 30, 250, 5000,
+    "QLD", "flu", ymd("2026-07-01"), 90, 200, 1500,
+    "SA",  "flu", ymd("2026-07-01"), 45, 50,    400,
+    "TAS", "flu", ymd("2026-07-01"), 45, 10,    60,
+    "VIC", "flu", ymd("2026-07-01"), 45, 50, 1200,
+    "WA",  "flu", ymd("2026-08-01"), 45, 50,  600,
     
-    "ACT", "SARSCOV2", ymd("2026-07-01"), 45, 10,   45,
-    "NSW", "SARSCOV2", ymd("2026-07-01"), 45, 250, 1000,
-    "QLD", "SARSCOV2", ymd("2026-07-01"), 45, 100, 450,
-    "SA",  "SARSCOV2", ymd("2026-07-01"), 45, 30,    120,
-    "TAS", "SARSCOV2", ymd("2026-07-01"), 45, 5,    40,
-    "VIC", "SARSCOV2", ymd("2026-07-01"), 45, 50, 400,
-    "WA",  "SARSCOV2", ymd("2026-07-01"), 45, 25,  150,
+    # More uncertain timing with SARS-CoV-2 (unclear epi)
+    "ACT", "SARSCOV2", ymd("2026-07-01"), 90, 10,   45,
+    "NSW", "SARSCOV2", ymd("2026-07-01"), 90, 250, 1000,
+    "QLD", "SARSCOV2", ymd("2026-07-01"), 90, 100, 450,
+    "SA",  "SARSCOV2", ymd("2026-07-01"), 90, 30,    120,
+    "TAS", "SARSCOV2", ymd("2026-07-01"), 90, 5,    40,
+    "VIC", "SARSCOV2", ymd("2026-07-01"), 90, 50, 400,
+    "WA",  "SARSCOV2", ymd("2026-07-01"), 90, 25,  150,
   ) |> 
     
     rowwise() |> 
@@ -64,11 +66,8 @@ plot_peak_priors <- function() {
            target == "case_incidence",
            location %in% c("VIC", "ACT", "WA", "NSW", "TAS", "QLD", "SA"))
   
-  
-  peak_priors <- get_peak_priors()
-  
   n_samples <- 4000
-  peak_samples <- peak_priors |> 
+  peak_samples <- get_peak_priors() |> 
     rowwise() |> 
     mutate(
       day_of_year = list(rnorm(n_samples, peak_yday_mean, peak_yday_sd)),
@@ -86,8 +85,12 @@ plot_peak_priors <- function() {
                        scales = "free_y", independent = "y") +
     
     geom_density2d(aes(x = ymd("2026-01-01") + day_of_year - 1, y = peak_size),
-                   contour_var = "ndensity",
-                   peak_samples, bins = 4) +
+                   contour_var = "ndensity", alpha = 0.6,
+                   peak_samples, bins = 6) +
+    
+    geom_point(aes(x = ymd("2026-01-01") + day_of_year - 1, y = peak_size),
+               size = 0.4, stroke = 0.4, alpha = 0.2,
+                   peak_samples |> sample_n(1000)) +
     
     coord_cartesian(xlim = c(ymd("2023-01-01"), ymd("2027-01-01"))) +
     

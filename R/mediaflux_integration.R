@@ -1,5 +1,4 @@
 
-
 upload_output_to_mediaflux <- function(target_dir) {
   library(processx)
   
@@ -47,7 +46,8 @@ consolidate_result <- function(results_name) {
   fs::dir_delete(str_c("saved_results/", results_name))
 }
 
+source("R/functions.R")
 
-consolidate_result("no_asc_holidays")
-consolidate_result("no_holidays")
-consolidate_result("no_Rt_holidays")
+
+consolidate_result("no_holidays_no_annual")
+consolidate_result("no_annual")

@@ -221,7 +221,7 @@ model {
   real t_peak = soft_argmax(inf[peak_season_start:peak_season_end], 1.0);
   
   log(latent_inf_peak) ~ normal(log_peak_size_mean, log_peak_size_sd);
-  t_peak ~ normal(peak_day_mean, peak_day_sd);
+  t_peak ~ normal(peak_day_mean, peak_day_sd) T[0, 366];
 }
 
 generated quantities {
