@@ -36,8 +36,9 @@ label_pathogen <- function(tbl) {
     ))
 }
 
+locations_paper <- c("NSW", "QLD", "VIC", "NT", "ACT")
+
 process_perf_data <- function(perf_data) {
-  locations <- c("NSW", "QLD", "VIC", "NT", "ACT")
   
   processed_perf <- perf_data |> 
     mutate(horizon = as.numeric(date - origin_date)) |> 
@@ -58,7 +59,7 @@ process_perf_data <- function(perf_data) {
     
     filter(date >= ymd("2025-01-01"),
            ymd(round_id) < ymd("2025-11-27"),
-           location %in% locations)
+           location %in% locations_paper)
   
   return(processed_perf)
 }
