@@ -1,5 +1,7 @@
 source("R/functions.R")
 
+results_dir <- "results"
+
 args <- commandArgs(trailingOnly = TRUE)
 
 ix_job <- as.integer(args[1])
@@ -16,7 +18,9 @@ jobs <- distinct(combined_counts, location, pathogen, target) |>
       "NZ", "flu", "hospital_incidence",
     ),
     by = join_by(location, pathogen, target)
-  )
+  ) |> 
+  
+  filter(location == "VIC")
 
 print(str_c("Generated ", nrow(jobs), " jobs from combined_counts"))
 
@@ -42,23 +46,25 @@ training_counts <- process_counts(combined_counts, x_location, x_pathogen, x_tar
 
 data_list <- create_stan_data(training_counts, n_days_ahead, x_pathogen, x_location)
 
+
+
 fit <- fit_model(data_list, model_file = "src/gp_renewal.stan")
 
 print("Saving fit object and training data")
 
-fs::dir_create(fs::path("results", round_id))
+fs::dir_create(fs::path(results_dir, round_id))
 
-fit_file <- str_c("results/", round_id, "/", x_pathogen, "_", x_location, "_", x_target, ".rds")
+fit_file <- str_c(results_dir, "/", round_id, "/", x_pathogen, "_", x_location, "_", x_target, ".rds")
 fit$save_object(fit_file)
-arrow::write_parquet(training_counts, str_c("results/", round_id, "/", x_pathogen, "_", x_location, "_", x_target, "_training_counts.parquet"))
+arrow::write_parquet(training_counts, str_c(results_dir, "/", round_id, "/", x_pathogen, "_", x_location, "_", x_target, "_training_counts.parquet"))
 
 print("Writing trajectories...")
 
-write_forecast_file(round_id, x_pathogen, x_location, x_target)
+write_forecast_file(round_id, x_pathogen, x_location, x_target, results_dir)
 
 print("Making plots...")
 
-make_fit_plots(round_id, x_pathogen, x_location, x_target)
+make_fit_plots(round_id, x_pathogen, x_location, x_target, results_dir)
 
 print("Complete")
 

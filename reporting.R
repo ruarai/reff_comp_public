@@ -119,7 +119,7 @@ ribbon_plot_path <- fs::path("plots", str_c("uom-reff_comp_plots-ribbon-", round
 
 ggsave(
   ribbon_plot_path,
-  height = 12,
+  height = 4.5,
   width = 10
 )
 
@@ -129,7 +129,7 @@ smooth_ribbon_plot_path <- fs::path("plots", str_c("uom-reff_comp_plots-ribbon-s
 
 ggsave(
   smooth_ribbon_plot_path,
-  height = 12,
+  height = 4.5,
   width = 10
 )
 
@@ -139,7 +139,8 @@ latent_plot_files <- fs::dir_ls(fs::path("results", round_id), glob = "*plot_lat
 diagnostic_plot_files <- fs::dir_ls(fs::path("results", round_id), glob = "*plot_MCMC.png")
 
 image_write(
-  c(ribbon_plot_path, forecast_plot_files, latent_plot_files) |> 
+  # c(ribbon_plot_path, forecast_plot_files, latent_plot_files) |> 
+  c(forecast_plot_files, latent_plot_files) |> 
     image_read() |> 
     image_resize("50%"),
   path = fs::path("plots", str_c("uom-reff_comp_plots-", round_id, ".pdf")), format = "pdf"

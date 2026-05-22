@@ -79,3 +79,40 @@ matrix PHI_periodic(int N, int M, real w0, vector x) {
   );
   return append_col(cos(mw0x), sin(mw0x));
 }
+
+vector diagSPD_LP(
+  real alpha, real rho_se, real rho_per, real period,
+  real L, int M, real log_bessel_cutoff
+) {
+  vector[M] omega = (pi() / 2 / L) * linspaced_vector(M, 1, M);
+
+  // b = 1 / rho_per^2
+  real b = inv(square(rho_per));
+  
+  real scaling_factor = sqrt(2 * pi()) * rho_se;
+
+  vector[M] spd = rep_vector(0.0, M);
+    
+  real d_coeff = -0.5 * square(rho_se);
+  
+  for(n in 0:64) {
+    real log_bessel_scaled = log_modified_bessel_first_kind(n, b) - b;
+    
+    // If the log-bessel value gets too small, we can safely stop early
+    if(log_bessel_scaled < log_bessel_cutoff) break;
+    
+    vector[M] d_pos = square(omega - 2 * pi() * n / period);
+    
+    spd += exp(log_bessel_scaled + d_coeff * d_pos);
+    
+    // For n > 0, we count both sides of the infinite sum
+    if(n > 0) {
+      vector[M] d_neg = square(omega + 2 * pi() * n / period);
+      spd += exp(log_bessel_scaled + d_coeff * d_neg);
+    }
+  }
+
+  return alpha * sqrt(scaling_factor * spd);
+}
+
+

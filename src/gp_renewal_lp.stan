@@ -24,27 +24,18 @@ data {
   vector[21] gi_reversed;
 
   int<lower=1> M_annual;
-  int<lower=1> M_noise; 
   
   real<lower=1.0> c_factor;
-  
-  real log_peak_size_mean;
-  real log_peak_size_sd;
-  
-  real peak_day_mean;
-  real peak_day_sd;
-  
-  int peak_season_start;
-  int peak_season_end;
+  real<lower=1.0> c_factor_annual;
 }
 
 transformed data {
   // Construct the basis functions for HSGP
   vector[N] x_centered = x - mean(x);
   real L = c_factor * max(abs(x_centered));
+  real L_annual = c_factor_annual * max(abs(x_centered));
   
-  matrix[N, M_noise] phi_noise = PHI(N, M_noise, L, x_centered);
-  matrix[N, 2 * M_annual] phi_annual = PHI_periodic(N, M_annual, 2 * pi() / 365.25, x);
+  matrix[N, M_annual] phi_annual = PHI(N, M_annual, L_annual, x_centered);
   
   int K = 21;
   int N_total = N + K;
@@ -52,19 +43,17 @@ transformed data {
 
 parameters {
   real<lower=0> scaling_annual;
-  real<lower=0> scaling_noise;
   
   real<lower=0> scaling_weekly_asc;
   
-  real<lower=0, upper=365> ls_annual;
-  real<lower=0, upper=120> ls_noise;
+  real<lower=14, upper=100> ls_annual;
+  real<lower=1, upper=5> ls_annual_decay_years;
   
   real log_R_0;
   
   real<lower=0, upper=200> phi;
 
-  vector[2 * M_annual] beta_annual;
-  vector[M_noise] beta_noise;
+  vector[M_annual] beta_annual;
   
   sum_to_zero_vector[7] beta_offset_weekly;
   
@@ -87,18 +76,15 @@ transformed parameters {
   // Calculate length-scale for annual GP in radians
   real ls_annual_rad = ls_annual * (2 * pi() / 365.25);
   
-  // Calculate the weighting (SPD) vector for the periodic annual GP 
-  // from ls_annual_rad and scaling_annual
-  vector[2 * M_annual] diag_SPD_annual = diagSPD_Periodic(scaling_annual, ls_annual_rad, M_annual);
-  
-  // Calculate the weighting (SPD) vector for the Matern 5/2 noise GP
-  // from ls_noise and scaling_noise
-  vector[M_noise] diag_SPD_noise = diagSPD_Matern52(scaling_noise, ls_noise, L, M_noise);
+  // Calculate the weighting (SPD) vector for the locally-periodic GP 
+  vector[M_annual] diag_SPD_lp = diagSPD_LP(
+    scaling_annual, ls_annual_decay_years * 365.25, ls_annual_rad,
+    365.25, L, M_annual, -10
+  );
   
   // Calculate the GPs as the weighting vectors from the basis functions
   // and the weighting vectors
-  vector[N] f_annual = phi_annual * (diag_SPD_annual .* beta_annual);
-  vector[N] f_noise  = phi_noise * (diag_SPD_noise .* beta_noise);
+  vector[N] f_annual = phi_annual * (diag_SPD_lp .* beta_annual);
   
   // Add a zero to the start of the school and public holiday effects
   // so that we can index into them using the holiday_type vectors
@@ -112,7 +98,6 @@ transformed parameters {
   // Calculate the value of log R(t) across t = 1 .. N
   vector[N] log_R = log_R_0 +
     f_annual +
-    f_noise + 
     school_holiday_Rt_effect[school_holiday_type] +
     public_holiday_Rt_effect[public_holiday_type];
   
@@ -180,10 +165,9 @@ transformed parameters {
 }
 
 model {
-  scaling_annual ~ exponential(1.0);
-  scaling_noise  ~ exponential(1.0);
+  scaling_annual ~ normal(0, 1);
   
-  scaling_weekly_asc ~ exponential(1.0);
+  scaling_weekly_asc ~ normal(0, 1);
   
   school_holiday_Rt_effect_raw ~ std_normal();
   school_holiday_asc_effect_raw ~ std_normal();
@@ -192,17 +176,15 @@ model {
   public_holiday_asc_effect_raw ~ normal(0, 0.25);
   
   // Inv-gamma priors derived from:
-  // find_inv_gamma_params(7.0, 90.0)
-  // find_inv_gamma_params(14.0, 90.0)
+  // find_inv_gamma_params(2 * 7, 10 * 7)
   // as in Betancourt approach (Section 3.2.3)
   // https://betanalpha.github.io/assets/case_studies/gaussian_processes.html
   
-  ls_noise ~ inv_gamma(3.858, 68.729);
-  ls_annual ~ inv_gamma(6.809, 200.117);
+  ls_annual ~ inv_gamma(8.919, 242.063);
+  ls_annual_decay_years ~ normal(2, 2);
   phi ~ gamma(2, 0.1);
 
   beta_annual ~ std_normal();
-  beta_noise  ~ std_normal();
   
   log_R_0 ~ normal(0, 0.5);
   
@@ -216,15 +198,11 @@ model {
   
   // Data likelihood
   y ~ neg_binomial_2_log(latent_cases_weekly_log[1:N_data], phi);
-  
-  real latent_inf_peak = max(inf[peak_season_start:peak_season_end]);
-  real t_peak = soft_argmax(inf[peak_season_start:peak_season_end], 1.0);
-  
-  log(latent_inf_peak) ~ normal(log_peak_size_mean, log_peak_size_sd);
-  t_peak ~ normal(peak_day_mean, peak_day_sd) T[0, 366];
 }
 
 generated quantities {
   // Calculate out case incidence for backcasting and forecasting
   array[N] int cases = neg_binomial_2_log_rng(latent_cases_weekly_log, phi);
+  
+  vector[N] f_noise = rep_vector(0.0, N);
 }
