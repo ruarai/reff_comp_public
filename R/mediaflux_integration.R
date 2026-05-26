@@ -16,15 +16,15 @@ upload_output_to_mediaflux <- function(target_dir) {
 }
 
 
-download_dir_from_mediaflux <- function(target_dir) {
+download_round <- function(round_id, results_dir = "baseline") {
   library(processx)
 
   x <- run(
     "/apps/unimelb-mf-clients/current/bin/unimelb-mf-download",
     c("--mf.config", "data/mflux.cfg",
       "--nb-workers", "4",
-      "--out", "saved_results/baseline_2",
-      str_c("/projects/proj-5050_reffcomp_model_evaluation-1128.4.1617/baseline_2/2025-07-03")
+      "--out", glue::glue("saved_results/{results_dir}"),
+      glue::glue("/projects/proj-5050_reffcomp_model_evaluation-1128.4.1617/{results_dir}/{round_id}")
     ),
     echo = TRUE
   )
@@ -45,9 +45,3 @@ consolidate_result <- function(results_name) {
   
   fs::dir_delete(str_c("saved_results/", results_name))
 }
-
-source("R/functions.R")
-
-
-consolidate_result("no_holidays_no_annual")
-consolidate_result("no_annual")

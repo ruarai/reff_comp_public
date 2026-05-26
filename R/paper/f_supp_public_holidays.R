@@ -138,3 +138,9 @@ ggplot() +
   theme(legend.position = "bottom")
 
 
+
+ggsave(
+  "paper_figures/f_supp_holidays.png",
+  width = 10, height = 5,
+  bg = "white"
+)

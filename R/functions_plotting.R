@@ -341,36 +341,6 @@ make_fit_plots <- function(round_id, x_pathogen, x_location, x_target, results_d
   eval_counts <- read_csv("data/combined-count-smoothed-2026-04-22.csv", show_col_types = FALSE) |> 
     filter(notification_date > origin_date, location == x_location, pathogen == x_pathogen)
   
-  draws <- fit |>
-    tidybayes::tidy_draws() |> 
-    
-    # NA cases values can cause issues with bayesplot, so
-    # drop the columns early
-    select(-starts_with("cases"))
-
-  pars <- c(
-    "scaling_annual", "scaling_noise", "ls_noise", "ls_annual", "phi",
-    "delay_mean", "delay_sd", "log_R_0"
-  ) |> 
-    intersect(fit$metadata()$model_params)
-
-  p_hist <- mcmc_hist(draws |> mutate(chain = .chain), pars = pars) +
-    theme_bw()
-
-  p_trace <- mcmc_trace(draws |> mutate(chain = .chain), pars = pars) +
-    theme_bw() +
-    
-    labs(caption = job_name)
-
-  p_hist | p_trace
-
-  ggsave(str_c(round_results, "/", job_name, "_plot_MCMC.png"), width = 14, height = 10)
-  
-
-  p_pairs <- mcmc_pairs(draws |> mutate(chain = .chain), pars = pars, off_diag_args = list(size = 0.3, alpha = 0.5))
-
-  ggsave(str_c(round_results, "/", job_name, "_plot_MCMC_pairs.png"), p_pairs, width = 16, height = 16)
-  
   school_holidays <- get_school_holidays() |> 
     filter(location == x_location, end_date >= ymd("2023-01-01"), start_date <= origin_date + 365)
   
@@ -419,32 +389,9 @@ make_fit_plots <- function(round_id, x_pathogen, x_location, x_target, results_d
   plot_holiday_effects(fit, public_holidays)
   
   ggsave(str_c(round_results, "/", job_name, "_holiday_effects.png"), width = 12, height = 8)
-}
-
-
-make_fit_plots_immunity <- function(round_id, x_pathogen, x_location, x_target, results_dir = "results") {
-  round_results <- fs::path(results_dir, round_id)
-  
-  job_name <- str_c(x_pathogen, "_", x_location, "_", x_target)
-  
-  fit <- read_rds(str_c(round_results, "/", job_name, ".rds"))
-  training_counts <- read_parquet(str_c(round_results, "/", job_name, "_training_counts.parquet"))
   
   
-  origin_date <- training_counts |> 
-    drop_na(y) |> 
-    pull(date) |> 
-    max()
-  
-  eval_counts <- read_csv("data/combined-count-smoothed-2026-04-22.csv", show_col_types = FALSE) |> 
-    filter(notification_date > origin_date, location == x_location, pathogen == x_pathogen)
-  
-  draws <- fit |>
-    tidybayes::tidy_draws() |> 
-    
-    # NA cases values can cause issues with bayesplot, so
-    # drop the columns early
-    select(-starts_with("cases"))
+  draws <- fit$draws()
   
   pars <- c(
     "scaling_annual", "scaling_noise", "ls_noise", "ls_annual", "phi",
@@ -452,10 +399,10 @@ make_fit_plots_immunity <- function(round_id, x_pathogen, x_location, x_target, 
   ) |> 
     intersect(fit$metadata()$model_params)
   
-  p_hist <- mcmc_hist(draws |> mutate(chain = .chain), pars = pars) +
+  p_hist <- mcmc_hist(posterior::subset_draws(draws, pars), pars = pars) +
     theme_bw()
   
-  p_trace <- mcmc_trace(draws |> mutate(chain = .chain), pars = pars) +
+  p_trace <- mcmc_trace(posterior::subset_draws(draws, pars), pars = pars) +
     theme_bw() +
     
     labs(caption = job_name)
@@ -465,80 +412,10 @@ make_fit_plots_immunity <- function(round_id, x_pathogen, x_location, x_target, 
   ggsave(str_c(round_results, "/", job_name, "_plot_MCMC.png"), width = 14, height = 10)
   
   
-  p_pairs <- mcmc_pairs(draws |> mutate(chain = .chain), pars = pars, off_diag_args = list(size = 0.3, alpha = 0.5))
+  p_pairs <- mcmc_pairs(posterior::subset_draws(draws, pars), pars = pars, off_diag_args = list(size = 0.3, alpha = 0.5))
   
   ggsave(str_c(round_results, "/", job_name, "_plot_MCMC_pairs.png"), p_pairs, width = 16, height = 16)
   
-  school_holidays <- get_school_holidays() |> 
-    filter(location == x_location, end_date >= ymd("2023-01-01"), start_date <= origin_date + 365)
-  
-  public_holidays <- get_public_holidays() |> 
-    filter(location == x_location, date >= ymd("2023-01-01"), date <= origin_date + 365)
-  
-  trajectory_data <- fit |> 
-    spread_draws(log_R[ix_t], inf[ix_t], inf_delayed[ix_t],
-                 cases[ix_t], f_noise[ix_t], humidity_effect[ix_t],
-                 immune_effect[ix_t], R_t[ix_t],
-                 latent_cases_log[ix_t]) |> 
-    
-    mutate(date = training_counts$date[ix_t],
-           latent_cases = exp(latent_cases_log),
-           
-           cases = replace_na(cases, 0))
-  
-  
-  p_imm <- ggplot(trajectory_data) + 
-    fastribbon::stat_fastribbon(aes(x = date, y = immune_effect))  + 
-    
-    scale_fill_brewer() + theme_bw()
-  
-  p_hum <- ggplot(trajectory_data) + 
-    fastribbon::stat_fastribbon(aes(x = date, y = humidity_effect))  + 
-    
-    scale_fill_brewer() + theme_bw()
-  
-  p_Rt <- ggplot(trajectory_data) + 
-    fastribbon::stat_fastribbon(aes(x = date, y = R_t))  + 
-    fastribbon::stat_fastribbon(aes(x = date, y = exp(log_R)),
-                                alpha = 0.2) +
-    
-    scale_fill_brewer() + theme_bw()
-  
-  
-  p_cases <- ggplot(trajectory_data) + 
-    fastribbon::stat_fastribbon(aes(x = date, y = inf_delayed))  + 
-    fastribbon::stat_fastribbon(aes(x = date, y = latent_cases),
-                                alpha = 0.2) +
-    
-    geom_line(aes(x = notification_date, y = value_trend), eval_counts,
-              colour = "orangered")  +
-    
-    scale_fill_brewer() + theme_bw()
-  
-  p_hum / p_imm / p_Rt / p_cases
-  
-  ggsave(str_c(round_results, "/", job_name, "_Rt_inf.png"), width = 14, height = 8)
-  
-  library(pammtools)
-  ggplot(trajectory_data |> filter(date > origin_date - days(7 * 8 * 2),
-                                   date < origin_date + days(7 * 8))) + 
-    fastribbon::stat_fastribbon(aes(x = date, y = cases),
-                                geom = "stepribbon") +
-    
-    geom_line(aes(x = date, y = y),
-              training_counts |> filter(date > origin_date - days(7 * 8 * 2),
-                                        date < origin_date + days(7 * 8)),
-              colour = "black") +
-    geom_line(aes(x = notification_date, y = value),
-              eval_counts |> filter(notification_date > origin_date - days(7 * 8 * 2),
-                                    notification_date < origin_date + days(7 * 8)),
-              colour = "orangered") +
-    
-    coord_cartesian(xlim = c(origin_date - days(7 * 8 * 2), origin_date + days(7 * 8))) +
-    
-    scale_fill_brewer() + theme_bw()
-  
-  ggsave(str_c(round_results, "/", job_name, "_plot_forecast.png"), width = 10, height = 5)
 }
 
 log1minus_trans <- function() {

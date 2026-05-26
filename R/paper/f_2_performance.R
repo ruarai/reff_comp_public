@@ -63,14 +63,11 @@ plot_data_skill <- perf_data_paired |>
   left_join(location_y, by = join_by(location)) |> 
   arrange(location, desc(date))
 
-plot_data_note <- tibble(
-  location = c("QLD", "NSW"), pathogen = "RSV"
-) |> left_join(location_y, by = join_by(location)) |> label_pathogen()
-
 p_heatmap <- ggplot(plot_data_skill) +
   
   geom_rect(aes(xmin = date, xmax = date + days(7),
-                ymin = y_offset - 0.4, ymax = y_offset + 0.4, fill = skill_score),
+                ymin = y_offset - 0.4, ymax = y_offset + 0.4, fill = skill_score,
+                label = round_id),
             colour = "white", linewidth = 0.25) +
   
   geom_rect(aes(xmin = date, xmax = date + days(7),
