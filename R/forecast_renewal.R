@@ -48,7 +48,7 @@ data_list <- create_stan_data(training_counts, n_days_ahead, x_pathogen, x_locat
 
 
 
-fit <- fit_model(data_list, model_file = "src/gp_renewal.stan", n_warmup = 2000)
+fit <- fit_model(data_list, model_file = "src/gp_renewal.stan", n_warmup = 1000)
 
 print("Saving fit object and training data")
 

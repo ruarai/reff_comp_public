@@ -3,11 +3,13 @@ source("R/functions.R")
 source("R/paper/common.R")
 
 
-public_holidays <- get_public_holidays()
+public_holidays <- get_public_holidays() |> 
+  filter(date < ymd("2026-01-01"))
 
 
 
-combined_counts <- read_csv("data/combined-count-smoothed-2026-04-15.csv")
+combined_counts <- read_csv("data/combined-count-smoothed-2026-04-15.csv") |> 
+  filter(notification_date < ymd("2026-01-01"))
 
 
 public_holidays |> 
@@ -52,6 +54,12 @@ public_holidays |>
   
   ggtitle(NULL, "Relative case incidence around public holidays — New South Wales, Australia")
 
+
+ggsave(
+  "paper_figures/f_supp_public_holiday_effect.png",
+  width = 10, height = 7,
+  bg = "white"
+)
 
 public_holidays |> 
   expand_grid(pathogen = c("RSV", "SARSCOV2", "flu")) |> 

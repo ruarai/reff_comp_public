@@ -338,7 +338,7 @@ make_fit_plots <- function(round_id, x_pathogen, x_location, x_target, results_d
     pull(date) |> 
     max()
   
-  eval_counts <- read_csv("data/combined-count-smoothed-2026-04-22.csv", show_col_types = FALSE) |> 
+  eval_counts <- read_csv("../forecast-hub/processed-data/2026/2026-05-27/combined-count-smoothed-2026-05-27.csv", show_col_types = FALSE) |> 
     filter(notification_date > origin_date, location == x_location, pathogen == x_pathogen)
   
   school_holidays <- get_school_holidays() |> 
@@ -369,7 +369,7 @@ make_fit_plots <- function(round_id, x_pathogen, x_location, x_target, results_d
     xlim(c(ymd(min(trajectory_data$date)), ymd(origin_date + days(365)))) +
     coord_cartesian(ylim = c(0, y_upper_latent * 1.25)) +
     
-    geom_line(aes(x = notification_date, y = value_trend), eval_counts, colour = "orangered") +
+    geom_line(aes(x = notification_date, y = value_trend_and_remainder), eval_counts, colour = "orangered") +
     
     labs(caption = job_name)
   

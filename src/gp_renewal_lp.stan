@@ -49,8 +49,6 @@ parameters {
   real<lower=14, upper=100> ls_annual;
   real<lower=1, upper=5> ls_annual_decay_years;
   
-  real log_R_0;
-  
   real<lower=0, upper=200> phi;
 
   vector[M_annual] beta_annual;
@@ -96,8 +94,7 @@ transformed parameters {
   public_holiday_Rt_effect[2:(N_public_holiday_types + 1)] = public_holiday_Rt_effect_raw;
   
   // Calculate the value of log R(t) across t = 1 .. N
-  vector[N] log_R = log_R_0 +
-    f_annual +
+  vector[N] log_R = f_annual +
     school_holiday_Rt_effect[school_holiday_type] +
     public_holiday_Rt_effect[public_holiday_type];
   
@@ -186,8 +183,6 @@ model {
 
   beta_annual ~ std_normal();
   
-  log_R_0 ~ normal(0, 0.5);
-  
   beta_offset_weekly ~ std_normal();
   
   log_I_0 ~ normal(3.2, 1);
@@ -202,7 +197,7 @@ model {
 
 generated quantities {
   // Calculate out case incidence for backcasting and forecasting
-  array[N] int cases = neg_binomial_2_log_rng(latent_cases_weekly_log, phi);
+  array[N] int cases = neg_binomial_2_log_rng(fmin(20, latent_cases_weekly_log), phi);
   
   vector[N] f_noise = rep_vector(0.0, N);
 }

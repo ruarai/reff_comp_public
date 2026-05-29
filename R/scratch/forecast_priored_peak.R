@@ -2,11 +2,12 @@
 
 
 source("R/functions.R")
+source("R/peak_priors.R")
 
 
-round_id <- "2026-04-29"
+round_id <- "2026-05-27"
 
-x_location <- "TAS"
+x_location <- "VIC"
 x_pathogen <- "RSV"
 x_target <- "case_incidence"
 
@@ -35,6 +36,8 @@ data_list$peak_day_sd <- peak_prior$peak_yday_sd
 data_list$peak_season_start <- which(training_counts$date == ymd("2026-01-01"))
 data_list$peak_season_end <- which(training_counts$date == ymd("2027-01-01")) - 1
 
+
+n_samples <- 1000
 peak_prior_samples <- peak_prior |> 
   rowwise() |> 
   mutate(
@@ -113,8 +116,6 @@ library(pammtools)
 trajectory_data |> 
   filter(.draw %% 100 == 0) |>
   ggplot() +
-  geom_line(aes(x = date, y = latent_cases, group = .draw),
-            alpha = 0.2) +
   
   geom_density2d(aes(x = ymd("2026-01-01") + day_of_year - 1, y = peak_size),
                  colour = "lightblue",
@@ -126,11 +127,14 @@ trajectory_data |>
   geom_line(aes(x = notification_date, y = value_trend),
             eval_counts, colour = "orangered") +
   
+  geom_line(aes(x = date, y = latent_cases, group = .draw),
+            alpha = 0.2) +
+  
   scale_fill_brewer() +
   
   theme_bw() +
   
-  coord_cartesian(ylim = c(0, 50))
+  coord_cartesian(ylim = c(0, 400))
 
 
 public_holidays <- get_public_holidays() |> 
