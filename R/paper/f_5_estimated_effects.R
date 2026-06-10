@@ -19,22 +19,25 @@ plot_effect <- function(plot_data, effect_name, holiday_name, pal = "Blues") {
     rename(x = !!effect_name) |> 
     ggplot() +
     
-    ggdist::stat_interval(aes(x = exp(x), y = location)) +
+    ggdist::stat_interval(aes(x = exp(x), y = location),
+                          linewidth = 4.0) +
     
     
     geom_vline(xintercept = 1, linetype = "44") +
     
     plot_theme_paper +
     
-    scale_colour_brewer(palette = pal) +
+    # scale_colour_brewer(palette = pal) +
     
-    facet_grid(cols = vars(pathogen_label))+ 
+    scale_colour_manual(values = RColorBrewer::brewer.pal(4, pal)[2:4]) +
+    
+    facet_grid(cols = vars(pathogen_label))+  
     
     theme(legend.position = "none",
           panel.grid.major = element_gridline,
           plot.margin = margin()) +
     
-    xlab(NULL) + ylab(NULL)
+    xlab("Multiplicative effect") + ylab(NULL)
 }
 
 scale_Rt <- list(
@@ -43,42 +46,33 @@ scale_Rt <- list(
 )
 
 p_Rt_1 <- plot_effect(plot_data, "school_holiday_Rt_effect_raw", "Between-term holidays") +
-  ggtitle(NULL, "Between-term holidays") + scale_Rt
-
-p_Rt_2 <- plot_effect(plot_data, "school_holiday_Rt_effect_raw", "Summer holidays") +
-  ggtitle(NULL, "Summer holidays") + scale_Rt +
-  theme(plot.margin = margin(t = 0.2, b = 0.2, unit = "cm"))
+  scale_Rt
 
 
-p_Rt <- (p_Rt_1 / p_Rt_2) + 
-  plot_annotation("<b>A</b>. Multiplicative effect of school holidays on <i>R</i>(<i>t</i>)",
+p_Rt <- (p_Rt_1) + 
+  plot_annotation("<b>A</b>. Multiplicative effect of between-term school<br>holidays on <i>R</i>(<i>t</i>)",
                   theme = plot_theme_annotation)
 
 
-scale_asc <- list(
-  scale_x_log10(breaks = c(0.75, 1, 1.3)),
-  coord_cartesian(xlim = exp(c(-0.5, 0.5)))
-)
 
 p_asc_1 <- plot_effect(plot_data, "school_holiday_asc_effect_raw", "Between-term holidays", "Greens") +
-  ggtitle(NULL, "Between-term holidays") + scale_asc
-
-p_asc_2 <- plot_effect(plot_data, "school_holiday_asc_effect_raw", "Summer holidays", "Greens") +
-  ggtitle(NULL, "Summer holidays") + scale_asc +
-  theme(plot.margin = margin(t = 0.2, unit = "cm"))
+  scale_Rt
 
 
-p_asc <- (p_asc_1 / p_asc_2) + 
-  plot_annotation("<b>B</b>. Multiplicative effect of school holidays on reporting",
+p_asc <- (p_asc_1) + 
+  plot_annotation("<b>B</b>. Multiplicative effect of between-term school<br>holidays on reporting",
                   theme = plot_theme_annotation)
-
-
-
-
 
 plot_data_gp <- gp_draws |> 
   filter(location %in% locations_paper,
          year(date) == 2025) |> 
+  
+  label_pathogen()
+
+plot_data_scaling <- holiday_draws |> 
+  filter(location %in% locations_paper) |> 
+  group_by(location, pathogen) |> 
+  summarise(scaling_noise = mean(scaling_noise)) |> 
   
   label_pathogen()
 
@@ -87,7 +81,10 @@ p_ann <- ggplot(plot_data_gp) +
   fastribbon::stat_fastribbon(aes(x = date, y = exp(f_annual)),
                               linewidth = 0.0) +
   
-  geom_hline(yintercept = 1, linetype = "22") +
+  geom_hline(aes(yintercept = exp(scaling_noise)),  plot_data_scaling, alpha = 0.5, linetype = "11") +
+  geom_hline(aes(yintercept = exp(-scaling_noise)), plot_data_scaling, alpha = 0.5, linetype = "11") +
+  
+  geom_hline(yintercept = 1, linetype = "44") +
   
   facet_grid(rows = vars(fct_rev(location)), cols = vars(pathogen_label)) +
   
@@ -98,13 +95,16 @@ p_ann <- ggplot(plot_data_gp) +
   scale_fill_brewer() +
   
   plot_theme_paper +
-  xlab(NULL) + ylab(NULL) +
+  xlab(NULL) + ylab("Multiplicative effect") +
   theme(legend.position = "none",
         panel.grid.major = element_gridline,
-        panel.background = element_facet_background) + 
+        panel.background = element_facet_background,
+        panel.spacing.x = unit(0.5, "cm")) + 
   plot_annotation("<b>C</b>. Multiplicative effect of periodic GP <i>f</i><sub>ann</sub>(<i>t</i>) on <i>R</i>(<i>t</i>)",
                   theme = theme(plot.title = element_markdown(family = "Helvetica"),
                                 plot.margin = margin(t = 0.4, l = 0.2, b = 0.0, r = 0.2, unit = "cm")))
+
+p_ann
 
 
 p_school <- wrap_elements(full = p_Rt) /
@@ -119,7 +119,16 @@ wrap_elements(full = p_school) |
 
 ggsave(
   "paper_figures/f_5_estimated_effects.png",
-  width = 10, height = 7,
+  width = 10, height = 6,
   bg = "white"
 )
+
+
+p_asc_2 <- plot_effect(plot_data, "school_holiday_asc_effect_raw", "Summer holidays", "Greens") +
+  ggtitle(NULL, "Summer holidays") + scale_asc +
+  theme(plot.margin = margin(t = 0.2, unit = "cm"))
+
+p_Rt_2 <- plot_effect(plot_data, "school_holiday_Rt_effect_raw", "Summer holidays") +
+  ggtitle(NULL, "Summer holidays") + scale_Rt +
+  theme(plot.margin = margin(t = 0.2, b = 0.2, unit = "cm"))
 

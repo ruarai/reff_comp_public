@@ -17,7 +17,9 @@ holiday_draws <- map(
     fit |> 
       
       spread_draws(school_holiday_Rt_effect_raw[ix_s],
-                   school_holiday_asc_effect_raw[ix_s]) |> 
+                   school_holiday_asc_effect_raw[ix_s],
+                   scaling_annual, scaling_noise # Include for comparison
+                   ) |> 
       mutate(location = !!location, pathogen = !!pathogen, target = !!target)
   },
   .progress = TRUE

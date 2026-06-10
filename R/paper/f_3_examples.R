@@ -3,128 +3,129 @@ source("R/paper/common.R")
 
 library(pammtools)
 
-#==2025-04-24 NSW flu (grew too fast due to f_ann)==
-#==2025-06-19 VIC RSV (confidently went down too soon due to f_ann?)==
-#==2025-04-04 NSW RSV (pretty good, holidays + f_ann)==
-#==2025-07-10 VIC SARSCOV2 (pretty good, informed by holidays + f_ann)==
 
 eval_counts <- read_csv("data/combined-count-smoothed-2026-04-15.csv", show_col_types = FALSE)
+gp_draws <- read_parquet("data/paper/gp_draws.parquet")
 
 round_id <- "2025-07-10"
 x_pathogen <- "SARSCOV2"
 x_location <- "VIC"
-x_target <- "case_incidence"
 
-job_name <- str_c(x_pathogen, "_", x_location, "_", x_target)
-
-fit <- read_rds(str_c("saved_results/baseline/", round_id, "/", job_name, ".rds"))
-training_counts <- read_parquet(str_c("saved_results/baseline/", round_id, "/", job_name, "_training_counts.parquet"))
-
-origin_date <- training_counts$origin_date[[1]] - days(1)
-
-trajectory_data <- fit |> 
-  spread_draws(c(log_R, inf, inf_delayed, cases, f_annual,
-                 f_noise, latent_cases_log)[ix_t],
-               log_R_0) |> 
-  mutate(date = training_counts$date[ix_t],
-         latent_cases = exp(latent_cases_log),
-         holiday_effect = log_R - log_R_0 - f_annual - f_noise)
-
-plot_data <- trajectory_data |> 
-  filter(date >= origin_date - days(7 * 8),
-         date <= origin_date + days(7 * 4))
-
-plot_data_eval <- eval_counts |> 
-  filter(location == x_location, pathogen == x_pathogen) |> 
-  filter(notification_date > origin_date,
-         notification_date <= origin_date + days(7 * 4))
-
-plot_data_training <- training_counts |> 
-  filter(date >= origin_date - days(7 * 8)) |> 
-  drop_na(y)
-
-
-ggplot(plot_data) +
-  fastribbon::stat_fastribbon(aes(x = date - 0.5, y = cases),
-                              geom = "stepribbon") +
+plot_forecast <- function(x_pathogen, x_location, round_id) {
+  x_target <- "case_incidence"
   
-  geom_vline(xintercept = origin_date,
-             linetype = "44") +
+  job_name <- str_c(x_pathogen, "_", x_location, "_", x_target)
   
-  geom_line(aes(x = date, y = y), plot_data_training) +
-  geom_point(aes(x = date, y = y), plot_data_training) +
+  fit <- read_rds(str_c("saved_results/baseline/", round_id, "/", job_name, ".rds"))
+  training_counts <- read_parquet(str_c("saved_results/baseline/", round_id, "/", job_name, "_training_counts.parquet"))
   
-  geom_line(aes(x = notification_date, y = value),
-            linetype = "41",
-            plot_data_eval) +
-  geom_point(aes(x = notification_date, y = value),
-             plot_data_eval) +
+  origin_date <- training_counts$origin_date[[1]] - days(1)
   
-  scale_fill_brewer() +
-  xlab(NULL) + ylab("Count") +
+  trajectory_data <- fit |> 
+    spread_draws(c(log_R, inf, inf_delayed, cases, f_annual,
+                   f_noise, latent_cases_log)[ix_t],
+                 log_R_0) |> 
+    mutate(date = training_counts$date[ix_t],
+           latent_cases = exp(latent_cases_log),
+           holiday_effect = log_R - log_R_0 - f_annual - f_noise)
   
-  coord_cartesian(ylim = c(0, 400)) +
+  plot_data <- trajectory_data |> 
+    filter(date > origin_date - days(7 * 8),
+           date <= origin_date + days(7 * 4))
   
-  plot_theme_paper +
+  plot_data_forecast <- trajectory_data |> 
+    filter(date > origin_date,
+           date <= origin_date + days(7 * 4))
   
-  theme(legend.position = "none")
-
-
-
-
-
-plot_data <- trajectory_data |> 
-  filter(date >= origin_date,
-         date <= origin_date + days(7 * 4))
-
-plot_data_eval <- eval_counts |> 
-  filter(location == x_location, pathogen == x_pathogen) |> 
-  filter(notification_date >= origin_date,
-         notification_date <= origin_date + days(7 * 4))
-
-dates <- unique(plot_data$date)
-
-plot_dates <- function(date_pair) {
-  if(date_pair[1] >= date_pair[2]) {
-    return(ggplot() + geom_blank() + theme_void())
-  }
+  plot_data_eval <- eval_counts |> 
+    filter(location == x_location, pathogen == x_pathogen) |> 
+    filter(notification_date > origin_date,
+           notification_date <= origin_date + days(7 * 4))
   
-  plot_data_samples <- plot_data |> 
-    filter(.draw %% 10 == 0) |> 
-    filter(date %in% date_pair) |> 
-    group_by(.draw) |> 
-    mutate(cases_1 = latent_cases, cases_2 = lead(latent_cases)) |> 
-    drop_na(cases_2)
+  plot_data_training <- training_counts |> 
+    filter(date >= origin_date - days(7 * 8)) |> 
+    drop_na(y)
   
-  plot_data_obs <- plot_data_eval |> 
-    filter(notification_date %in% date_pair) |> 
-    mutate(cases_1 = value_trend, cases_2 = lead(value_trend))
   
-  ggplot() +
-    geom_point(aes(x = cases_1, y = cases_2),
-               plot_data_samples,
-               size = 0.5, stroke = 0.5, alpha = 0.25) +
-    geom_point(aes(x = cases_1, y = cases_2),
-               plot_data_obs,
-               colour = "orangered") +
-    xlab(NULL) + ylab(NULL) +
-    theme_bw() +
-    theme(plot.margin = margin(0.1, 0.1, 0.1, 0.1, unit = "cm"),
-          panel.grid = element_blank())
+  school_holidays <- get_school_holidays() |> 
+    filter(location == x_location,
+           end_date > origin_date - days(7 * 8),
+           start_date <= origin_date + days(7 * 4))
+  
+  public_holidays <- get_public_holidays() |> 
+    filter(location == x_location,
+           date > origin_date - days(7 * 8),
+           date <= origin_date + days(7 * 4))
+  
+  pathogen_label <- c("RSV" = "RSV", "flu" = "Influenza", "SARSCOV2" = "SARS-CoV-2")[x_pathogen]
+  
+  p_cases <- ggplot(plot_data_forecast) +
+    
+    geom_rect(aes(xmin = date - 0.5, xmax = date + 0.5, ymin = -Inf, ymax = Inf),
+              alpha = 0.2, fill = "#e31a1c",
+              public_holidays) +
+    geom_rect(aes(xmin = start_date - 0.5, xmax = end_date + 0.5, ymin = -Inf, ymax = Inf),
+              school_holidays, alpha = 0.1) +
+    
+    fastribbon::stat_fastribbon(aes(x = date - 0.5, y = cases), linewidth = 0.0) +
+    
+    geom_vline(xintercept = origin_date,
+               linetype = "44") +
+    
+    geom_line(aes(x = date, y = y), plot_data_training) +
+    geom_point(aes(x = date, y = y), plot_data_training) +
+    
+    geom_line(aes(x = notification_date, y = value),
+              linetype = "41",
+              plot_data_eval) +
+    geom_point(aes(x = notification_date, y = value),
+               plot_data_eval) +
+    
+    scale_fill_brewer() +
+    xlab(NULL) + ylab("Count")
+    
+    coord_cartesian(xlim = c(origin_date - days(7 * 8), origin_date + days(7 * 4))) +
+    
+    plot_theme_paper +
+    
+    theme(legend.position = "none")
+  
+  p_cases
 }
 
 
-plot_dates(dates[c(1, 28)])
+plots <- list(
+  plot_forecast("RSV", "QLD", "2025-04-04") +
+    ggtitle(NULL, "<b>i</b>. RSV – QLD - Round 2025-04-04"),
+  # Good result (closely matches)
+  
+  plot_forecast("flu", "VIC", "2025-06-05") +
+    ggtitle(NULL, "<b>ii</b>. Influenza – VIC - Round 2025-06-05"),
+  
+  plot_forecast("SARSCOV2", "ACT", "2025-04-24") +
+    ggtitle(NULL, "<b>iii</b>. SARS-CoV-2 – ACT - Round 2025-04-24"),
+  # Bad result (increase not predicted, although holidays perform ok)
+  
+  plot_forecast("flu", "NSW", "2025-07-03") +
+    ggtitle(NULL, "<b>iv</b>. Influenza – NSW - Round 2025-07-03")
+  # Bad result (f_ann pushes down too early)
+)
 
-plots <- expand_grid(
-  date_1 = dates[c(1, 7, 14, 21, 29)],
-  date_2 = dates[c(1, 7, 14, 21, 29)]
-) |> 
-  rowwise() |> 
-  mutate(date_plot = list(plot_dates(c(date_1, date_2))))
+
+p_examples <- wrap_plots(plots, ncol = 2) + 
+  plot_annotation("<b>A</b>. Example high- and low-skill forecasts",
+                  theme = plot_theme_annotation)
 
 
-wrap_plots(plots$date_plot)
+
+
+ggsave(
+  "paper_figures/f_3_examples.png",
+  p_examples,
+  width = 10, height = 6,
+  bg = "white"
+)
+
 
 
 

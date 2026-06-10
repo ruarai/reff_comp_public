@@ -93,7 +93,9 @@ p_heatmap <- ggplot(plot_data_skill) +
   
   scale_y_continuous(breaks = location_y$y_offset, labels = location_y$location) +
   
-  scale_x_date(date_breaks = "2 months", labels = scales::label_date_short(sep = "\n")) +
+  scale_x_date(date_breaks = "2 months", labels = scales::label_date_short(sep = "\n"),
+               date_minor_breaks = "1 months",
+               guide = guide_axis(minor.ticks = TRUE)) +
   
   ylab("Region") + xlab(NULL) +
   
@@ -102,6 +104,7 @@ p_heatmap <- ggplot(plot_data_skill) +
   theme(legend.position = "right",
         panel.background = element_facet_background)
 p_heatmap
+
 
 
 p_crps <- perf_data_paired |> 
@@ -196,3 +199,4 @@ ggsave(
   width = 10, height = 10,
   bg = "white"
 )
+

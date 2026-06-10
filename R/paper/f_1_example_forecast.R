@@ -13,7 +13,7 @@ x_location <- "VIC"
 job_name <- str_c(round_id, "/", x_pathogen, "_", x_location, "_case_incidence")
 # training_counts <- arrow::read_parquet(str_c("saved_results/results_baseline/", round_id, "/", x_pathogen, "_", x_location, "_training_counts.parquet"))
 
-training_counts <- arrow::read_parquet(str_c("saved_results/baseline_2/", job_name, "_training_counts.parquet"))
+training_counts <- arrow::read_parquet(str_c("saved_results/baseline/", job_name, "_training_counts.parquet"))
 
 origin_date <- training_counts$origin_date[[1]] - days(1)
 
@@ -27,7 +27,7 @@ school_holidays <- get_school_holidays() |>
 public_holidays <- get_public_holidays() |> 
   filter(location == x_location)
 
-results <- read_rds(str_c("saved_results/baseline_2/", job_name, ".rds"))
+results <- read_rds(str_c("saved_results/baseline/", job_name, ".rds"))
 
 date_range <- c(ymd("2024-05-01"), ymd("2025-10-01"))
 
@@ -41,7 +41,7 @@ plot_common <- list(
   geom_rect(aes(xmin = date - 0.5, xmax = date + 0.5, ymin = -Inf, ymax = Inf),
             alpha = 0.2, fill = "#e31a1c",
             public_holidays),
-  geom_rect(aes(xmin = start_date + 0.5, xmax = end_date + 0.5, ymin = -Inf, ymax = Inf),
+  geom_rect(aes(xmin = start_date - 0.5, xmax = end_date + 0.5, ymin = -Inf, ymax = Inf),
             school_holidays, alpha = 0.1),
   scale_x_date(breaks = scales::date_breaks(width = "3 months"),
                labels = scales::label_date_short()),
@@ -246,23 +246,21 @@ n_days_ahead <- 7 * 4
 date_range_forecast <- c(origin_date - days(7 * 8), origin_date + days(n_days_ahead))
 
 traj_data_backcast <- trajectory_data |> 
-  filter(date >= date_range_forecast[1], date <= origin_date + 1)
+  filter(date >= date_range_forecast[1], date <= origin_date)
 
 traj_data_forecast <- trajectory_data |> 
-  filter(date >= origin_date + 1, date <= date_range_forecast + 1)
+  filter(date >= origin_date, date <= date_range_forecast + 1)
 
 p_cases <- ggplot() +
   
   plot_common +
   
-  fastribbon::stat_fastribbon(aes(x = date - 0.5, y = cases, alpha = after_stat(level)),
+  fastribbon::stat_fastribbon(aes(x = date, y = cases, alpha = after_stat(level)),
                               fill = "#3182BD",
-                              geom = "stepribbon",
                               traj_data_backcast,
                               linewidth = 0.0) +
   
-  fastribbon::stat_fastribbon(aes(x = date - 0.5, y = cases, alpha = after_stat(level)),
-                              geom = "stepribbon",
+  fastribbon::stat_fastribbon(aes(x = date, y = cases, alpha = after_stat(level)),
                               fill = colour_fc,
                               traj_data_forecast,
                               linewidth = 0.0) +
