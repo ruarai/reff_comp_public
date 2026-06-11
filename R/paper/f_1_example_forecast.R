@@ -31,7 +31,6 @@ results <- read_rds(str_c("saved_results/baseline/", job_name, ".rds"))
 
 date_range <- c(ymd("2024-05-01"), ymd("2025-10-01"))
 
-year_starts <- tibble(year_start = ymd(c("2024-01-01", "2025-01-01", "2026-01-01")))
 colour_fc <- "#02818a"
 
 plot_margin <- 0.1
@@ -50,7 +49,7 @@ plot_common <- list(
 )
 plot_common_above <- list(
   geom_vline(xintercept = origin_date, linetype = "44", linewidth = 0.5),
-  geom_vline(aes(xintercept = year_start), year_starts, linewidth = 0.5, alpha = 0.5, linetype = "24")
+  geom_vline(xintercept = origin_date + days(28), linetype = "44", linewidth = 0.5, alpha = 0.5)
 )
 
 trajectory_data <- results |> 
@@ -249,7 +248,7 @@ traj_data_backcast <- trajectory_data |>
   filter(date >= date_range_forecast[1], date <= origin_date)
 
 traj_data_forecast <- trajectory_data |> 
-  filter(date >= origin_date, date <= date_range_forecast + 1)
+  filter(date > origin_date, date <= date_range_forecast)
 
 p_cases <- ggplot() +
   
@@ -274,7 +273,7 @@ p_cases <- ggplot() +
   geom_point(aes(x = date, y = y), size = 0.9,
              training_counts |> filter(date >= date_range_forecast[1])) +
   
-  geom_line(aes(x = notification_date, y = value), linetype = "41",
+  geom_line(aes(x = notification_date, y = value),
             eval_counts |> filter(notification_date <= date_range_forecast[2])) +
   geom_point(aes(x = notification_date, y = value), size = 0.9,
              eval_counts |> filter(notification_date <= date_range_forecast[2])) +
@@ -283,7 +282,8 @@ p_cases <- ggplot() +
   
   coord_cartesian(xlim = date_range_forecast, ylim = c(0, 1500)) +
   
-  scale_x_date(date_breaks = "2 weeks", labels = scales::label_date_short()) +
+  scale_x_date(breaks = scales::breaks_width("14 days", offset = -3),
+                labels = scales::label_date_short()) +
   
   scale_y_continuous(labels = scales::label_comma()) +
   
@@ -301,14 +301,27 @@ p_forecast <- (p_cases) +
   theme(plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "cm"))
 
 p_example <- (wrap_elements(full = p_Rt) | wrap_elements(full = p_decomp)) /
-  wrap_elements(full = p_forecast) +
-  plot_layout(heights = c(1.2, 1))
+  wrap_elements(full = p_forecast) /
+  plot_spacer() +
+  plot_layout(heights = c(1.2, 1, 0.1))
+
+p_example
 
 ggsave(
   "paper_figures/f_1_example.png", p_example,
-  width = 9, height = 7,
+  width = 9, height = 7.5,
   bg = "white"
 )
+
+library(magick)
+
+image_composite(
+  image = image_read("paper_figures/f_1_example.png"),
+  composite_image = image_read("paper_figures/f_1_example_overlay.png"),
+  operator = "over"
+) |> 
+  image_write(path = "paper_figures/f_1_example.png", format = "png")
+
 
 
   

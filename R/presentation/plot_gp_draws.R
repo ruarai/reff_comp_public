@@ -23,7 +23,8 @@ simulate_matern <- function(x, alpha_m, rho_m, seed = 0, ls_M = rho_m) {
   phi_matern <- PHI(N = N, M = M, L = L, x = x)
   
   set.seed(seed)
-  beta_matern <- rnorm(n = M, mean = 0, sd = sqrt(spd_matern))
+  # beta_matern <- rnorm(n = M, mean = 0, sd = sqrt(spd_matern))
+  beta_matern <- rnorm(n = M, mean = 0, sd = spd_matern)
   
   phi_matern %*% beta_matern
 }
@@ -42,7 +43,8 @@ simulate_periodic <- function(x, alpha_p, rho_p, seed = 0) {
   phi_periodic <- PHI_periodic(N = N, M = M, w0 = w0, x = x)
   
   set.seed(seed)
-  beta_periodic <- rnorm(n = 2 * M, mean = 0, sd = sqrt(spd_periodic))
+  # beta_periodic <- rnorm(n = 2 * M, mean = 0, sd = sqrt(spd_periodic))
+  beta_periodic <- rnorm(n = 2 * M, mean = 0, sd = spd_periodic)
   
   phi_periodic %*% beta_periodic
 }
@@ -238,6 +240,35 @@ tibble(
   scale_colour_discrete(name = "Length-scale") +
   
   plot_theme_pres
+
+
+
+# Relationship between alpha and sd/var of the signal
+
+x <- seq(0, 365 * 3, by = 1)
+
+f_noise_draws <- tibble(
+  seed = 1:1000
+) |> 
+  rowwise() |> 
+  mutate(sd = sd(simulate_matern(x, alpha_m = 1.5, rho_m = 5, seed = seed)))
+
+
+mean(f_noise_draws$sd)
+
+
+plot(simulate_periodic(x, alpha_p = 1, rho_p = 5, seed = 1))
+
+f_periodic_draws <- tibble(
+  seed = 1:1000
+) |> 
+  rowwise() |> 
+  mutate(sd = sd(simulate_periodic(x, alpha_p = 1.5, rho_p = 5, seed = seed)))
+
+f_periodic_draws$sd
+
+mean(f_periodic_draws$sd)
+
 
 
 

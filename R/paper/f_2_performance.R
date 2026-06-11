@@ -14,7 +14,6 @@ combined_counts <- read_csv("data/combined-count-smoothed-2026-04-22.csv")
 
 
 
-
 perf_data |> 
   filter(horizon == 7) |> 
   ggplot() + 
@@ -33,6 +32,9 @@ location_y <- tibble(
 ) |> 
   mutate(y_offset = row_number())
 
+
+
+
 plot_data_counts <- combined_counts |> 
   filter(notification_date >= ymd("2025-04-01") | (pathogen == "RSV" & notification_date >= ymd("2025-02-01")),
          notification_date <= ymd("2026-01-01")) |> 
@@ -41,7 +43,20 @@ plot_data_counts <- combined_counts |>
   mutate(y = y_offset + scales::rescale(value_trend, to = c(0.15, 0.9)),
          y_full = scales::rescale(value_trend)) |> 
   label_pathogen()
+
+example_points <- tribble(
+  ~round_id, ~location, ~pathogen, ~label,
+  "2025-04-04", "QLD", "RSV", "i",
+  "2025-06-05", "VIC", "flu", "ii",
+  "2025-04-24", "ACT", "SARSCOV2", "iii",
+  "2025-07-03", "NSW", "flu", "iv"
+) |> 
+  label_pathogen() |> 
+  mutate(notification_date = ymd(round_id) + days(23),
+         approx_date = ymd(round_id) + 23.5) |> 
   
+  left_join(location_y, by = join_by(location)) |> 
+  left_join(plot_data_counts)
 
 
 skill_days_ahead <- 7 * 3
@@ -79,6 +94,16 @@ p_heatmap <- ggplot(plot_data_skill) +
             colour = "white", linewidth = 1.5, alpha = 0.8) +
   geom_line(aes(x = notification_date, y = y - 0.5, group = location), plot_data_counts,
             linewidth = 0.4) +
+  
+  geom_point(aes(x = approx_date, y = y - 0.5),
+             example_points, size = 2) +
+  geom_point(aes(x = approx_date, y = y - 0.5),
+             colour = "white", size = 0.5, stroke = 0.5,
+             example_points) +
+  
+  geom_label(aes(x = approx_date, y = y_offset - 0.3, label = label),
+             size = 3, alpha = 0.8,
+             example_points) +
   
   # geom_text(aes(x = ymd("2025-02-05"), y = y_offset + 0.28, label = "*"),
   #           plot_data_note, size = 6) +

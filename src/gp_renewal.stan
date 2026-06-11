@@ -89,7 +89,7 @@ transformed parameters {
   // Calculate the GPs as the weighting vectors from the basis functions
   // and the weighting vectors
   vector[N] f_annual = phi_annual * (diag_SPD_annual .* beta_annual);
-  vector[N] f_noise  = phi_noise * (diag_SPD_noise .* beta_noise);
+  vector[N] f_noise  = phi_noise  * (diag_SPD_noise .* beta_noise);
   
   // Add a zero to the start of the school and public holiday effects
   // so that we can index into them using the holiday_type vectors

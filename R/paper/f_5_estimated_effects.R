@@ -72,7 +72,9 @@ plot_data_gp <- gp_draws |>
 plot_data_scaling <- holiday_draws |> 
   filter(location %in% locations_paper) |> 
   group_by(location, pathogen) |> 
-  summarise(scaling_noise = mean(scaling_noise)) |> 
+  summarise(scaling_noise = mean(scaling_noise),
+            scaling_lower = mean(exp(scaling_noise)),
+            scaling_upper = mean(exp(-scaling_noise))) |> 
   
   label_pathogen()
 
@@ -81,8 +83,11 @@ p_ann <- ggplot(plot_data_gp) +
   fastribbon::stat_fastribbon(aes(x = date, y = exp(f_annual)),
                               linewidth = 0.0) +
   
-  geom_hline(aes(yintercept = exp(scaling_noise)),  plot_data_scaling, alpha = 0.5, linetype = "11") +
-  geom_hline(aes(yintercept = exp(-scaling_noise)), plot_data_scaling, alpha = 0.5, linetype = "11") +
+  geom_hline(aes(yintercept = scaling_lower), plot_data_scaling,
+             alpha = 0.8, linetype = "11") +
+  
+  geom_hline(aes(yintercept = scaling_upper), plot_data_scaling,
+             alpha = 0.8, linetype = "11") +
   
   geom_hline(yintercept = 1, linetype = "44") +
   
@@ -97,7 +102,7 @@ p_ann <- ggplot(plot_data_gp) +
   plot_theme_paper +
   xlab(NULL) + ylab("Multiplicative effect") +
   theme(legend.position = "none",
-        panel.grid.major = element_gridline,
+        panel.grid.major.x = element_gridline,
         panel.background = element_facet_background,
         panel.spacing.x = unit(0.5, "cm")) + 
   plot_annotation("<b>C</b>. Multiplicative effect of periodic GP <i>f</i><sub>ann</sub>(<i>t</i>) on <i>R</i>(<i>t</i>)",
@@ -110,8 +115,6 @@ p_ann
 p_school <- wrap_elements(full = p_Rt) /
   wrap_elements(full = p_asc)
 
-p_bottom <- wrap_elements(full = p_ann) | wrap_elements(full = ggplot() + theme_void())
-
 
 wrap_elements(full = p_school) |
   wrap_elements(full = p_ann)
@@ -123,12 +126,21 @@ ggsave(
   bg = "white"
 )
 
-
-p_asc_2 <- plot_effect(plot_data, "school_holiday_asc_effect_raw", "Summer holidays", "Greens") +
-  ggtitle(NULL, "Summer holidays") + scale_asc +
-  theme(plot.margin = margin(t = 0.2, unit = "cm"))
-
-p_Rt_2 <- plot_effect(plot_data, "school_holiday_Rt_effect_raw", "Summer holidays") +
-  ggtitle(NULL, "Summer holidays") + scale_Rt +
-  theme(plot.margin = margin(t = 0.2, b = 0.2, unit = "cm"))
+# 
+# p_asc_2 <- plot_effect(plot_data, "school_holiday_asc_effect_raw", "Summer holidays", "Greens") +
+#   ggtitle(NULL, "Summer holidays") + scale_asc +
+#   theme(plot.margin = margin(t = 0.2, unit = "cm"))
+# 
+# p_Rt_2 <- plot_effect(plot_data, "school_holiday_Rt_effect_raw", "Summer holidays") +
+#   ggtitle(NULL, "Summer holidays") + scale_Rt +
+#   theme(plot.margin = margin(t = 0.2, b = 0.2, unit = "cm"))
+# 
+# 
+# 
+# 
+# 
+# ggplot(plot_data |> filter(ix_s == 1)) +
+#   geom_point(aes(x = school_holiday_Rt_effect_raw, y = school_holiday_asc_effect_raw)) +
+#   
+#   facet_wrap(~location)
 

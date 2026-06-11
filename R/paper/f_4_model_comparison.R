@@ -71,7 +71,8 @@ p_skill <- ggplot(plot_data_performance) +
   
   theme(legend.position = "none", panel.grid.major.x = element_gridline,
         axis.text.y.left = element_markdown(size = 11, hjust = 0),
-        panel.background = element_facet_background)
+        panel.background = element_facet_background,
+        panel.spacing.x = unit(0.5, "cm"))
 
 p_skill
 
@@ -169,7 +170,7 @@ p_top
 
 ggsave(
   "paper_figures/f_4_model_comparison.png",
-  width = 10, height = 4,
+  width = 9, height = 3,
   bg = "white"
 )
 
