@@ -42,16 +42,21 @@ transformed data {
 }
 
 parameters {
-  real<lower=0> scaling_annual;
-  real<lower=0> scaling_noise;
+  # These are standard deviations of the GPs
+  real<lower=0> scaling_annual; # \sigma_\text{ann}
+  real<lower=0> scaling_noise; # \sigma_\text{noise}
   
+  # Standard deviation of day of week term
   real<lower=0> scaling_weekly_asc;
   
+  # Length-scales
   real<lower=0, upper=365> ls_annual;
   real<lower=0, upper=120> ls_noise;
   
+  # logR(t) intercept term
   real log_R_0;
   
+  # NB dispersion term
   real<lower=0, upper=200> phi;
 
   vector[2 * M_annual] beta_annual;
