@@ -171,10 +171,10 @@ transformed parameters {
 }
 
 model {
-  scaling_annual ~ normal(0, 1);
-  scaling_noise  ~ normal(0, 1);
+  scaling_annual ~ exponential(1.0);
+  scaling_noise  ~ exponential(1.0);
   
-  scaling_weekly_asc ~ normal(0, 1);
+  scaling_weekly_asc ~ exponential(1.0);
   
   school_holiday_Rt_effect_raw ~ std_normal();
   school_holiday_asc_effect_raw ~ std_normal();
