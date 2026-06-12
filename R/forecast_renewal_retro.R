@@ -15,19 +15,24 @@ jobs <- make_retrospective_jobs() |>
     by = join_by(location, pathogen, target)
   ) |> 
   expand_grid(model_version = c(
-    # "baseline",
-    # 
+    "baseline",
+    
     # "no_school_holidays",
     # "no_public_holidays"
     
-    # "no_holidays",
+    "no_holidays",
     # "no_asc_holidays",
     # "no_Rt_holidays"
     # 
     "no_annual",
 
     "no_holidays_no_annual"
-  ))
+  )) |> 
+  
+  filter(
+    round_id %in% seq(ymd("2025-04-10"), ymd("2025-05-01"), by = "7 days"),
+    location == "VIC"
+  )
 
 print(str_c("Generated ", nrow(jobs), " jobs"))
 
@@ -48,8 +53,7 @@ results_dir <- str_c("saved_results/", x_version)
 
 print(str_c("Performing job ", ix_job, " (", x_location, "-", x_pathogen, "-", x_target, "), saving to ", results_dir))
 
-year <- as.character(year(round_id))
-combined_counts <- read_csv(str_c("../forecast-hub/processed-data/", year, "/", round_id, "/combined-count-smoothed-", round_id, ".csv"))
+combined_counts <- read_csv(str_c("data/retro_rounds/", round_id, "/combined-count-smoothed-", round_id, ".csv"))
 
 
 origin_date <- get_origin_date(combined_counts, x_pathogen, x_location, x_target)

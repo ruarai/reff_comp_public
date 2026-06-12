@@ -226,18 +226,15 @@ ggsave(
 )
 
 
-plot_data_skill <- perf_data_paired |> 
+plot_data_skill <- perf_data |> 
   filter(horizon > skill_days_ahead, horizon <= skill_days_ahead + 7) |> 
   group_by(pathogen, location, round_id, date) |> 
-  mutate(crps_log_snaive = crps_log[.model == "snaive"]) |> 
   filter(.model == "baseline") |> 
   group_by(pathogen, location, round_id) |> 
-  summarise(skill_score = 1 - mean(crps_log) / mean(crps_log_snaive),
-            crps_log = mean(crps_log),
+  summarise(crps_log = mean(crps_log),
             date = first(date)) |> 
   label_pathogen() |> 
-  mutate(skill_score = pmax(-1, skill_score),
-         crps_log = pmin(0.75, crps_log)) |> 
+  mutate(crps_log = pmin(0.75, crps_log)) |> 
   
   ungroup() |> 
   

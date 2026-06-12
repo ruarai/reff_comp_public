@@ -29,9 +29,8 @@ get_training_dates <- function() {
 }
 
 make_retrospective_jobs <- function() {
-  hub_path <- "../forecast-hub/"
   
-  rounds <- fs::dir_ls(fs::path(hub_path, "processed-data", "2025"))
+  rounds <- fs::dir_ls(fs::path("data", "retro_rounds"))
   
   tibble(
     round_dir = rounds

@@ -220,10 +220,7 @@ plots <- list(
 p_examples <- (
   wrap_plots(plots, ncol = 2) /
   plot_spacer() +
-    plot_layout(heights = c(1, 0.1)))+ 
-  plot_annotation("Example high- and low-skill forecasts",
-                  theme = plot_theme_annotation)
-
+    plot_layout(heights = c(1, 0.1)))
 
 
 
