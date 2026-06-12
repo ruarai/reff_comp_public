@@ -13,7 +13,6 @@ round_id <- "2025-04-04"
 x_pathogen <- "RSV"
 x_location <- "QLD"
 title <- NULL
-colour_fc <- "#02818a"
 
 plot_forecast <- function(x_pathogen, x_location, round_id, title) {
   x_target <- "case_incidence"
@@ -181,6 +180,8 @@ plot_forecast <- function(x_pathogen, x_location, round_id, title) {
     
     scale_y_continuous(breaks = c(0.75, 1, 1.25)) +
     
+    scale_x_date(labels = scales::label_date_short()) +
+    
     ylab("Effect") +
     
     coord_cartesian(ylim = c(0.75, 1.3),
@@ -190,7 +191,7 @@ plot_forecast <- function(x_pathogen, x_location, round_id, title) {
     
     plots_common +
     
-    theme(axis.text.x = element_text())
+    theme(axis.text.x = element_text(colour = "black"))
   
   p_cases / p_Rt / p_ann / p_noise +
     plot_layout(heights = c(1.5, 1, 1, 1))
@@ -198,7 +199,7 @@ plot_forecast <- function(x_pathogen, x_location, round_id, title) {
 
 
 plots <- list(
-  plot_forecast("RSV", "QLD", "2025-04-04", "<b>i</b>. RSV – QLD – Round 2025-04-04"),
+  plot_forecast("RSV", "QLD", "2025-04-04", "<b>i</b>. RSV – Queensland – Round 2025-04-04"),
   # Good result (closely matches)
   
   # plot_forecast("flu", "VIC", "2025-06-05", "<b>ii</b>. Influenza – VIC – Round 2025-06-05"),
@@ -212,7 +213,7 @@ plots <- list(
   # plot_forecast("RSV", "NSW", "2025-03-14", "<b>i</b>. RSV – NSW – Round 2025-03-14"),
   
   # plot_forecast("RSV", "flu", "2025-08-07", "<b>i</b>. RSV – Influenza – Round 2025-08-07")
-  plot_forecast("SARSCOV2", "VIC", "2025-05-08", "<b>ii</b>. SARS-CoV-2 – VIC – Round 2025-05-08")
+  plot_forecast("SARSCOV2", "VIC", "2025-05-08", "<b>ii</b>. SARS-CoV-2 – Victoria – Round 2025-05-08")
 )
 
 

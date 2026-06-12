@@ -122,7 +122,7 @@ wrap_elements(full = p_school) |
 
 ggsave(
   "paper_figures/f_5_estimated_effects.png",
-  width = 10, height = 6,
+  width = 10, height = 6.5,
   bg = "white"
 )
 

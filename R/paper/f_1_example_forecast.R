@@ -29,8 +29,6 @@ results <- read_rds(str_c("saved_results/baseline/", job_name, ".rds"))
 
 date_range <- c(ymd("2024-05-01"), ymd("2025-10-01"))
 
-colour_fc <- "#02818a"
-
 plot_margin <- 0.1
 
 plot_common <- list(
@@ -135,7 +133,7 @@ p_noise <- ggplot() +
         axis.text.x = element_blank(),
         panel.grid.major.x = element_blank()) +
   
-  ggtitle(NULL, "Noise <i>f</i><sub>noise</sub>(<i>t</i>)")
+  ggtitle(NULL, "Noise GP <i>f</i><sub>noise</sub>(<i>t</i>)")
 
 p_ann <- ggplot() +
   
@@ -167,7 +165,7 @@ p_ann <- ggplot() +
         axis.text.x = element_blank(),
         panel.grid.major.x = element_blank()) +
   
-  ggtitle(NULL, "Annual periodic variation <i>f</i><sub>ann</sub>(<i>t</i>)")
+  ggtitle(NULL, "Annual periodic GP <i>f</i><sub>ann</sub>(<i>t</i>)")
 
 
 p_Rt_exp <- ggplot() +

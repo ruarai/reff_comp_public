@@ -153,7 +153,7 @@ p_heatmap <- ggplot(plot_data_heatmap) +
 
 
 p_top <- p_skill + 
-  plot_annotation("<b>A</b>. 4th week forecast skill relative to null model",
+  plot_annotation("4th week forecast skill relative to null model",
                   theme = plot_theme_annotation)
 
 p_bottom <- p_heatmap + 
