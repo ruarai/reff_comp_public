@@ -100,7 +100,7 @@ public_holidays |>
 
 plot_data_public <- public_holidays |> 
   filter(location %in% locations_paper) |> 
-  filter(year(date) == 2024) |> 
+  filter(year(date) == 2025) |> 
   
   arrange(date) |> 
   mutate(holiday_name = factor(holiday_name, unique(holiday_name)))
@@ -112,14 +112,16 @@ plot_data_public_labels <- plot_data_public |>
   group_by(holiday_name, date) |> 
   slice(1) |> 
   mutate(holiday_label = str_wrap(holiday_name, width = 10),
+         location = if_else(holiday_name == "ANZAC Day", "NSW", location),
+         location = if_else(holiday_name == "Australia Day (Observed)", "NSW", location),
          location = if_else(holiday_name == "Boxing Day", "NSW", location),
-         location = if_else(holiday_name == "King's Birthday" & date < ymd("2024-10-01"),
+         location = if_else(holiday_name == "King's Birthday" & date < ymd("2025-10-01"),
                             "NSW", location))
 
 
 plot_data_school <- get_school_holidays() |> 
   filter(location %in% locations_paper) |> 
-  filter(year(end_date) == 2024 | year(start_date) == 2024)
+  filter(year(end_date) == 2025 | year(start_date) == 2025)
 
 
 ggplot() +
@@ -139,7 +141,7 @@ ggplot() +
   
   xlab(NULL) + ylab("Region") +
   
-  coord_cartesian(xlim = c(ymd("2024-01-01"), ymd("2025-01-01"))) +
+  coord_cartesian(xlim = c(ymd("2025-01-01"), ymd("2026-01-01"))) +
   
   plot_theme_paper +
   

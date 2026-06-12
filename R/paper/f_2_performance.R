@@ -47,9 +47,9 @@ plot_data_counts <- combined_counts |>
 example_points <- tribble(
   ~round_id, ~location, ~pathogen, ~label,
   "2025-04-04", "QLD", "RSV", "i",
-  "2025-06-05", "VIC", "flu", "ii",
-  "2025-04-24", "ACT", "SARSCOV2", "iii",
-  "2025-07-03", "NSW", "flu", "iv"
+  # "2025-06-05", "VIC", "flu", "ii",
+  # "2025-04-24", "ACT", "SARSCOV2", "iii",
+  "2025-05-08", "VIC", "SARSCOV2", "ii"
 ) |> 
   label_pathogen() |> 
   mutate(notification_date = ymd(round_id) + days(23),
@@ -201,16 +201,16 @@ p_skill <- perf_data_paired |>
 
 
 p_top <- p_crps + 
-  plot_annotation("<b>A</b>. Forecast performance by horizon",
+  plot_annotation("<b>A</b>. Forecast performance by horizon (lower value is better)",
                   theme = plot_theme_annotation)
 
 p_mid <- p_skill + 
-  plot_annotation("<b>B</b>. Forecast skill by horizon",
+  plot_annotation("<b>B</b>. Forecast skill by horizon (higher value is better)",
                   theme = plot_theme_annotation)
 
 
 p_bottom <- p_heatmap + 
-  plot_annotation("<b>C</b>. 4th week forecast skill by epidemic period",
+  plot_annotation("<b>C</b>. 4th week forecast performance by epidemic period",
                   theme = plot_theme_annotation)
 
 
@@ -224,4 +224,77 @@ ggsave(
   width = 10, height = 10,
   bg = "white"
 )
+
+
+plot_data_skill <- perf_data_paired |> 
+  filter(horizon > skill_days_ahead, horizon <= skill_days_ahead + 7) |> 
+  group_by(pathogen, location, round_id, date) |> 
+  mutate(crps_log_snaive = crps_log[.model == "snaive"]) |> 
+  filter(.model == "baseline") |> 
+  group_by(pathogen, location, round_id) |> 
+  summarise(skill_score = 1 - mean(crps_log) / mean(crps_log_snaive),
+            crps_log = mean(crps_log),
+            date = first(date)) |> 
+  label_pathogen() |> 
+  mutate(skill_score = pmax(-1, skill_score),
+         crps_log = pmin(0.75, crps_log)) |> 
+  
+  ungroup() |> 
+  
+  left_join(location_y, by = join_by(location)) |> 
+  arrange(location, desc(date))
+
+p_heatmap <- ggplot(plot_data_skill) +
+  
+  geom_rect(aes(xmin = date, xmax = date + days(7),
+                ymin = y_offset - 0.4, ymax = y_offset + 0.4, fill = crps_log,
+                label = round_id),
+            colour = "white", linewidth = 0.25) +
+  
+  geom_rect(aes(xmin = date, xmax = date + days(7),
+                ymin = y_offset - 0.46, ymax = y_offset - 0.4),
+            fill = "black",
+            colour = "white", linewidth = 0.25) +
+  
+  geom_line(aes(x = notification_date, y = y - 0.5, group = location), plot_data_counts,
+            colour = "white", linewidth = 1.5, alpha = 0.8) +
+  geom_line(aes(x = notification_date, y = y - 0.5, group = location), plot_data_counts,
+            linewidth = 0.4) +
+  
+  geom_point(aes(x = approx_date, y = y - 0.5),
+             example_points, size = 2) +
+  geom_point(aes(x = approx_date, y = y - 0.5),
+             colour = "white", size = 0.5, stroke = 0.5,
+             example_points) +
+  
+  geom_label(aes(x = approx_date, y = y_offset - 0.3, label = label),
+             size = 3, alpha = 0.8,
+             example_points) +
+  
+  # geom_text(aes(x = ymd("2025-02-05"), y = y_offset + 0.28, label = "*"),
+  #           plot_data_note, size = 6) +
+  
+  
+  scale_fill_gradientn(
+    name = "CRPS", limits = c(0, 0.75),
+    breaks = c(0, 0.25, 0.5, 0.75), labels = c("0", "0.25", "0.5", "≥0.75"),
+    colours = RColorBrewer::brewer.pal(10, "RdYlBu") |> rev()
+  ) +
+  
+  facet_wrap(~pathogen_label, ncol = 3,
+             scales = "free_x") +
+  
+  scale_y_continuous(breaks = location_y$y_offset, labels = location_y$location) +
+  
+  scale_x_date(date_breaks = "2 months", labels = scales::label_date_short(sep = "\n"),
+               date_minor_breaks = "1 months",
+               guide = guide_axis(minor.ticks = TRUE)) +
+  
+  ylab("Region") + xlab(NULL) +
+  
+  plot_theme_paper +
+  
+  theme(legend.position = "right",
+        panel.background = element_facet_background)
+p_heatmap
 

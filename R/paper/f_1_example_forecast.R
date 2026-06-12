@@ -11,8 +11,6 @@ round_id <- "2025-07-03"
 x_pathogen <- "flu"
 x_location <- "VIC"
 job_name <- str_c(round_id, "/", x_pathogen, "_", x_location, "_case_incidence")
-# training_counts <- arrow::read_parquet(str_c("saved_results/results_baseline/", round_id, "/", x_pathogen, "_", x_location, "_training_counts.parquet"))
-
 training_counts <- arrow::read_parquet(str_c("saved_results/baseline/", job_name, "_training_counts.parquet"))
 
 origin_date <- training_counts$origin_date[[1]] - days(1)

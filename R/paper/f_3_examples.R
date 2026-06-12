@@ -6,11 +6,16 @@ library(pammtools)
 
 eval_counts <- read_csv("data/combined-count-smoothed-2026-04-15.csv", show_col_types = FALSE)
 
-round_id <- "2025-07-10"
-x_pathogen <- "SARSCOV2"
-x_location <- "VIC"
 
-plot_forecast <- function(x_pathogen, x_location, round_id) {
+gp_draws <- read_parquet("data/paper/gp_draws.parquet")
+
+round_id <- "2025-04-04"
+x_pathogen <- "RSV"
+x_location <- "QLD"
+title <- NULL
+colour_fc <- "#02818a"
+
+plot_forecast <- function(x_pathogen, x_location, round_id, title) {
   x_target <- "case_incidence"
   
   job_name <- str_c(x_pathogen, "_", x_location, "_", x_target)
@@ -21,16 +26,17 @@ plot_forecast <- function(x_pathogen, x_location, round_id) {
   origin_date <- training_counts$origin_date[[1]] - days(1)
   
   trajectory_data <- fit |> 
-    spread_draws(c(log_R, inf, inf_delayed, cases, f_annual,
-                   f_noise, latent_cases_log)[ix_t],
+    spread_draws(c(log_R, cases, f_annual, f_noise)[ix_t],
                  log_R_0) |> 
-    mutate(date = training_counts$date[ix_t],
-           latent_cases = exp(latent_cases_log),
-           holiday_effect = log_R - log_R_0 - f_annual - f_noise)
+    mutate(date = training_counts$date[ix_t])
   
   plot_data <- trajectory_data |> 
     filter(date > origin_date - days(7 * 8),
            date <= origin_date + days(7 * 4))
+  
+  plot_data_backcast <- trajectory_data |> 
+    filter(date > origin_date - days(7 * 8),
+           date <= origin_date)
   
   plot_data_forecast <- trajectory_data |> 
     filter(date > origin_date,
@@ -58,6 +64,16 @@ plot_forecast <- function(x_pathogen, x_location, round_id) {
   
   pathogen_label <- c("RSV" = "RSV", "flu" = "Influenza", "SARSCOV2" = "SARS-CoV-2")[x_pathogen]
   
+  plots_common <- list(
+    geom_vline(xintercept = origin_date,
+               linetype = "44"),
+    xlab(NULL),
+    plot_theme_paper,
+    theme(legend.position = "none", axis.text.x = element_blank(),
+          panel.grid.major.x = element_gridline),
+    scale_alpha_manual(values = c(0.2, 0.5, 1))
+  )
+  
   p_cases <- ggplot(plot_data_forecast) +
     
     geom_rect(aes(xmin = date - 0.5, xmax = date + 0.5, ymin = -Inf, ymax = Inf),
@@ -69,47 +85,134 @@ plot_forecast <- function(x_pathogen, x_location, round_id) {
                                 fill = colour_fc,
                                 linewidth = 0.0) +
     
-    scale_alpha_manual(values = c(0.2, 0.5, 1)) +
-    
-    geom_vline(xintercept = origin_date,
-               linetype = "44") +
+    fastribbon::stat_fastribbon(aes(x = date, y = cases, alpha = after_stat(level)),
+                                plot_data_backcast, fill = "#3182BD",
+                                linewidth = 0.0) +
     
     geom_line(aes(x = date, y = y), plot_data_training) +
-    geom_point(aes(x = date, y = y), plot_data_training) +
+    geom_point(aes(x = date, y = y), plot_data_training, size = 1.0) +
     
     geom_line(aes(x = notification_date, y = value),
               plot_data_eval) +
     geom_point(aes(x = notification_date, y = value),
-               plot_data_eval) +
+               plot_data_eval, size = 1.0) +
     
-    scale_fill_brewer() +
-    xlab(NULL) + ylab("Count") +
+    ylab("Count") +
     
     coord_cartesian(xlim = c(origin_date - days(7 * 8), origin_date + days(7 * 4))) +
     
-    plot_theme_paper +
+    ggtitle(title, "Case incidence") +
     
-    theme(legend.position = "none")
+    plots_common
   
-  p_cases
+  gp_eval <- gp_draws |> 
+    filter(location == x_location, pathogen == x_pathogen,
+           date > origin_date - days(7 * 8),
+           date < origin_date + days(7 * 4))
+  
+  p_Rt <- ggplot(plot_data_forecast) +
+    
+    geom_rect(aes(xmin = date - 0.5, xmax = date + 0.5, ymin = -Inf, ymax = Inf),
+              alpha = 0.2, fill = "#e31a1c",
+              public_holidays) +
+    geom_rect(aes(xmin = start_date - 0.5, xmax = end_date + 0.5, ymin = -Inf, ymax = Inf),
+              school_holidays, alpha = 0.1) +
+    fastribbon::stat_fastribbon(aes(x = date - 0.5, y = exp(log_R), alpha = after_stat(level)),
+                                fill = colour_fc, geom = "stepribbon",
+                                linewidth = 0.0) +
+    fastribbon::stat_fastribbon(aes(x = date - 0.5, y = exp(log_R), alpha = after_stat(level)),
+                                plot_data_backcast, fill = "#3182BD", geom = "stepribbon",
+                                linewidth = 0.0) +
+    fastribbon::stat_fastribbon(aes(x = date, y = exp(log_R)),
+                                gp_eval, .width = 0.5, geom = "linerange",
+                                linewidth = 0.7, colour = "black", alpha = 0.8) +
+    
+    geom_hline(yintercept = 1, linetype = "44", linewidth = 0.7, alpha = 0.5) +
+    
+    scale_y_continuous(breaks = c(0.75, 1, 1.25)) +
+    
+    ylab("<i>R</i>(<i>t</i>)") +
+    
+    coord_cartesian(ylim = c(0.6, 1.4),
+                    xlim = c(origin_date - days(7 * 8), origin_date + days(7 * 4))) +
+    
+    ggtitle(NULL, "Instantaneous reproduction number <i>R</i>(<i>t</i>)") +
+    
+    plots_common
+  
+  p_ann <- ggplot(plot_data_forecast) +
+
+    fastribbon::stat_fastribbon(aes(x = date - 0.5, y = exp(f_annual), alpha = after_stat(level)),
+                                fill = colour_fc, geom = "stepribbon",
+                                linewidth = 0.0) +
+    fastribbon::stat_fastribbon(aes(x = date - 0.5, y = exp(f_annual), alpha = after_stat(level)),
+                                plot_data_backcast, fill = "#3182BD", geom = "stepribbon",
+                                linewidth = 0.0) +
+    fastribbon::stat_fastribbon(aes(x = date, y = exp(f_annual)),
+                                gp_eval, .width = 0.5, geom = "linerange",
+                                linewidth = 0.7, colour = "black", alpha = 0.8) +
+
+    geom_hline(yintercept = 1, linetype = "44", linewidth = 0.7, alpha = 0.5) +
+
+    scale_y_continuous(breaks = c(0.75, 1, 1.25)) +
+
+    ylab("Effect") +
+
+    coord_cartesian(ylim = c(0.75, 1.3),
+                    xlim = c(origin_date - days(7 * 8), origin_date + days(7 * 4))) +
+
+    ggtitle(NULL, "Multiplicative effect of annual periodic GP <i>f</i><sub>ann</sub>(<i>t</i>)") +
+    
+    plots_common
+  
+  p_noise <- ggplot(plot_data_forecast) +
+    
+    fastribbon::stat_fastribbon(aes(x = date - 0.5, y = exp(f_noise), alpha = after_stat(level)),
+                                fill = colour_fc, geom = "stepribbon",
+                                linewidth = 0.0) +
+    fastribbon::stat_fastribbon(aes(x = date - 0.5, y = exp(f_noise), alpha = after_stat(level)),
+                                plot_data_backcast, fill = "#3182BD", geom = "stepribbon",
+                                linewidth = 0.0) +
+    fastribbon::stat_fastribbon(aes(x = date, y = exp(f_noise)),
+                                gp_eval, .width = 0.5, geom = "linerange",
+                                linewidth = 0.7, colour = "black", alpha = 0.8) +
+    
+    geom_hline(yintercept = 1, linetype = "44", linewidth = 0.7, alpha = 0.5) +
+    
+    scale_y_continuous(breaks = c(0.75, 1, 1.25)) +
+    
+    ylab("Effect") +
+    
+    coord_cartesian(ylim = c(0.75, 1.3),
+                    xlim = c(origin_date - days(7 * 8), origin_date + days(7 * 4))) +
+    
+    ggtitle(NULL, "Multiplicative effect of noise GP <i>f</i><sub>noise</sub>(<i>t</i>)") +
+    
+    plots_common +
+    
+    theme(axis.text.x = element_text())
+  
+  p_cases / p_Rt / p_ann / p_noise +
+    plot_layout(heights = c(1.5, 1, 1, 1))
 }
 
 
 plots <- list(
-  plot_forecast("RSV", "QLD", "2025-04-04") +
-    ggtitle(NULL, "<b>i</b>. RSV – QLD – Round 2025-04-04"),
+  plot_forecast("RSV", "QLD", "2025-04-04", "<b>i</b>. RSV – QLD – Round 2025-04-04"),
   # Good result (closely matches)
   
-  plot_forecast("flu", "VIC", "2025-06-05") +
-    ggtitle(NULL, "<b>ii</b>. Influenza – VIC – Round 2025-06-05"),
+  # plot_forecast("flu", "VIC", "2025-06-05", "<b>ii</b>. Influenza – VIC – Round 2025-06-05"),
   
-  plot_forecast("SARSCOV2", "ACT", "2025-04-24") +
-    ggtitle(NULL, "<b>iii</b>. SARS-CoV-2 – ACT – Round 2025-04-24"),
+  # plot_forecast("SARSCOV2", "ACT", "2025-04-24", "<b>ii</b>. SARS-CoV-2 – ACT – Round 2025-04-24")
   # Bad result (increase not predicted, although holidays perform ok)
   
-  plot_forecast("flu", "NSW", "2025-07-03") +
-    ggtitle(NULL, "<b>iv</b>. Influenza – NSW – Round 2025-07-03")
+  # plot_forecast("flu", "NSW", "2025-07-03", "<b>ii</b>. Influenza – NSW – Round 2025-07-03")
   # Bad result (f_ann pushes down too early)
+  
+  # plot_forecast("RSV", "NSW", "2025-03-14", "<b>i</b>. RSV – NSW – Round 2025-03-14"),
+  
+  # plot_forecast("RSV", "flu", "2025-08-07", "<b>i</b>. RSV – Influenza – Round 2025-08-07")
+  plot_forecast("SARSCOV2", "VIC", "2025-05-08", "<b>ii</b>. SARS-CoV-2 – VIC – Round 2025-05-08")
 )
 
 
@@ -117,7 +220,7 @@ p_examples <- (
   wrap_plots(plots, ncol = 2) /
   plot_spacer() +
     plot_layout(heights = c(1, 0.1)))+ 
-  plot_annotation("<b>A</b>. Example high- and low-skill forecasts",
+  plot_annotation("Example high- and low-skill forecasts",
                   theme = plot_theme_annotation)
 
 
@@ -126,7 +229,7 @@ p_examples <- (
 ggsave(
   "paper_figures/f_3_examples.png",
   p_examples,
-  width = 10, height = 6,
+  width = 10, height = 8,
   bg = "white"
 )
 
