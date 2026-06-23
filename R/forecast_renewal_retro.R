@@ -27,12 +27,7 @@ jobs <- make_retrospective_jobs() |>
     "no_annual",
 
     "no_holidays_no_annual"
-  )) |> 
-  
-  filter(
-    round_id %in% seq(ymd("2025-04-10"), ymd("2025-05-01"), by = "7 days"),
-    location == "VIC"
-  )
+  ))
 
 print(str_c("Generated ", nrow(jobs), " jobs"))
 

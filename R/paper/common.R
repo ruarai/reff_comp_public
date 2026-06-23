@@ -44,7 +44,7 @@ process_perf_data <- function(perf_data) {
   processed_perf <- perf_data |> 
     mutate(horizon = as.numeric(date - origin_date)) |> 
     
-    # Drop dates with known issues
+    # Drop some specific dates with known issues
     anti_join(
       tribble(
         ~location, ~pathogen, ~date,
@@ -58,8 +58,12 @@ process_perf_data <- function(perf_data) {
       by = join_by(location, pathogen, date)
     ) |> 
     
-    filter(date >= ymd("2025-01-01"),
+    filter(date >= ymd("2025-01-01"), # Remove forecasts that actually were produced on 2024 data
            ymd(round_id) < ymd("2025-11-27"),
+           
+           # Remove an early artificial VIC round for consistency with other locations
+           !(round_id == "2025-04-10" & location == "VIC" & pathogen == "flu"),
+           
            location %in% locations_paper)
   
   return(processed_perf)

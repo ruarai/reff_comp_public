@@ -56,7 +56,7 @@ start_date <- ymd("2024-01-01")
 
 
 combined_count_latest <- read_csv(
-  "../forecast-hub/processed-data/2026/2026-05-06/combined-count-2026-05-06.csv",
+  "data/combined-count-smoothed-2026-04-15.csv",
   show_col_types = FALSE
 ) |> 
   filter(target == "case_incidence")
@@ -72,7 +72,7 @@ forecast_data <- tibble(
   round_id = c(seq(ymd("2025-04-10"), ymd("2025-12-25"), by = "1 week"),
                seq(ymd("2025-01-17"), ymd("2025-04-10"), by = "1 week"))
 ) |> 
-  mutate(case_file = glue::glue("../forecast-hub/processed-data/2025/{round_id}/combined-count-{round_id}.csv")) |> 
+  mutate(case_file = glue::glue("data/retro_rounds/{round_id}/combined-count-{round_id}.csv")) |> 
   
   pmap(function(round_id, case_file) {
     if(!fs::file_exists(case_file)) {

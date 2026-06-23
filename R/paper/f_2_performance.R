@@ -64,14 +64,12 @@ skill_days_ahead <- 7 * 3
 plot_data_skill <- perf_data_paired |> 
   filter(horizon > skill_days_ahead, horizon <= skill_days_ahead + 7) |> 
   group_by(pathogen, location, round_id, date) |> 
-  mutate(crps_log_snaive = crps_log[.model == "snaive"]) |> 
   filter(.model == "baseline") |> 
   group_by(pathogen, location, round_id) |> 
-  summarise(skill_score = 1 - mean(crps_log) / mean(crps_log_snaive),
-            crps_log = mean(crps_log),
+  summarise(crps_log = mean(crps_log),
             date = first(date)) |> 
   label_pathogen() |> 
-  mutate(skill_score = pmax(-1, skill_score)) |> 
+  mutate(crps_log = pmin(0.75, crps_log)) |> 
   
   ungroup() |> 
   
@@ -81,7 +79,7 @@ plot_data_skill <- perf_data_paired |>
 p_heatmap <- ggplot(plot_data_skill) +
   
   geom_rect(aes(xmin = date, xmax = date + days(7),
-                ymin = y_offset - 0.4, ymax = y_offset + 0.4, fill = skill_score,
+                ymin = y_offset - 0.4, ymax = y_offset + 0.4, fill = crps_log,
                 label = round_id),
             colour = "white", linewidth = 0.25) +
   
@@ -109,9 +107,11 @@ p_heatmap <- ggplot(plot_data_skill) +
   #           plot_data_note, size = 6) +
   
   
-  scale_fill_distiller(type = "div", direction = 1, palette = "RdBu",
-                       limits = c(-1, 1), name = "Skill score",
-                       breaks = c(-1, 0, 1), labels = c("≤-1", "0", "1")) +
+  scale_fill_gradientn(
+    name = "CRPS", limits = c(0, 0.75),
+    breaks = c(0, 0.25, 0.5, 0.75), labels = c("0", "0.25", "0.5", "≥0.75"),
+    colours = RColorBrewer::brewer.pal(10, "RdYlBu") |> rev()
+  ) +
   
   facet_wrap(~pathogen_label, ncol = 3,
              scales = "free_x") +
@@ -183,7 +183,7 @@ p_skill <- perf_data_paired |>
   ggokabeito::scale_colour_okabe_ito(order = c(1, 2, 3, 5, 6, 7, 8, 9, 4),
                                      name = "Region") +
   
-  coord_cartesian(ylim = c(-0.1, NA),
+  coord_cartesian(ylim = c(-0.1, 0.7),
                   xlim = c(0, 8)) +
   
   scale_x_continuous(breaks = c(0, 2, 4, 6, 8)) +
@@ -226,72 +226,5 @@ ggsave(
 )
 
 
-plot_data_skill <- perf_data |> 
-  filter(horizon > skill_days_ahead, horizon <= skill_days_ahead + 7) |> 
-  group_by(pathogen, location, round_id, date) |> 
-  filter(.model == "baseline") |> 
-  group_by(pathogen, location, round_id) |> 
-  summarise(crps_log = mean(crps_log),
-            date = first(date)) |> 
-  label_pathogen() |> 
-  mutate(crps_log = pmin(0.75, crps_log)) |> 
-  
-  ungroup() |> 
-  
-  left_join(location_y, by = join_by(location)) |> 
-  arrange(location, desc(date))
 
-p_heatmap <- ggplot(plot_data_skill) +
-  
-  geom_rect(aes(xmin = date, xmax = date + days(7),
-                ymin = y_offset - 0.4, ymax = y_offset + 0.4, fill = crps_log,
-                label = round_id),
-            colour = "white", linewidth = 0.25) +
-  
-  geom_rect(aes(xmin = date, xmax = date + days(7),
-                ymin = y_offset - 0.46, ymax = y_offset - 0.4),
-            fill = "black",
-            colour = "white", linewidth = 0.25) +
-  
-  geom_line(aes(x = notification_date, y = y - 0.5, group = location), plot_data_counts,
-            colour = "white", linewidth = 1.5, alpha = 0.8) +
-  geom_line(aes(x = notification_date, y = y - 0.5, group = location), plot_data_counts,
-            linewidth = 0.4) +
-  
-  geom_point(aes(x = approx_date, y = y - 0.5),
-             example_points, size = 2) +
-  geom_point(aes(x = approx_date, y = y - 0.5),
-             colour = "white", size = 0.5, stroke = 0.5,
-             example_points) +
-  
-  geom_label(aes(x = approx_date, y = y_offset - 0.3, label = label),
-             size = 3, alpha = 0.8,
-             example_points) +
-  
-  # geom_text(aes(x = ymd("2025-02-05"), y = y_offset + 0.28, label = "*"),
-  #           plot_data_note, size = 6) +
-  
-  
-  scale_fill_gradientn(
-    name = "CRPS", limits = c(0, 0.75),
-    breaks = c(0, 0.25, 0.5, 0.75), labels = c("0", "0.25", "0.5", "≥0.75"),
-    colours = RColorBrewer::brewer.pal(10, "RdYlBu") |> rev()
-  ) +
-  
-  facet_wrap(~pathogen_label, ncol = 3,
-             scales = "free_x") +
-  
-  scale_y_continuous(breaks = location_y$y_offset, labels = location_y$location) +
-  
-  scale_x_date(date_breaks = "2 months", labels = scales::label_date_short(sep = "\n"),
-               date_minor_breaks = "1 months",
-               guide = guide_axis(minor.ticks = TRUE)) +
-  
-  ylab("Region") + xlab(NULL) +
-  
-  plot_theme_paper +
-  
-  theme(legend.position = "right",
-        panel.background = element_facet_background)
-p_heatmap
 

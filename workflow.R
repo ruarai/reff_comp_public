@@ -3,7 +3,7 @@ library(tidyverse)
 library(processx)
 source("R/functions.R")
 
-round_id <- "2026-05-27"
+round_id <- "2026-06-17"
 
 check_and_log_git_status(round_id)
 
@@ -11,7 +11,7 @@ repo_dir <- "../forecast-hub"
 
 # Switch to main branch and pull latest changes
 message(run("git", c("fetch"), wd = repo_dir, echo = TRUE)$stdout)
-message(run("git", c("switch", "main"), wd = repo_dir, echo = TRUE)$stdout)
+message(run("git", c("switch", "process-raw-data-June2026"), wd = repo_dir, echo = TRUE)$stdout)
 message(run("git", c("pull"), wd = repo_dir, echo = TRUE)$stdout)
 
 # Run the forecasts

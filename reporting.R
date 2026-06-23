@@ -119,7 +119,7 @@ ribbon_plot_path <- fs::path("plots", str_c("uom-reff_comp_plots-ribbon-", round
 
 ggsave(
   ribbon_plot_path,
-  height = 4.5,
+  height = 10,
   width = 10
 )
 
@@ -129,7 +129,7 @@ smooth_ribbon_plot_path <- fs::path("plots", str_c("uom-reff_comp_plots-ribbon-s
 
 ggsave(
   smooth_ribbon_plot_path,
-  height = 4.5,
+  height = 10,
   width = 10
 )
 
