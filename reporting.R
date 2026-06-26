@@ -18,6 +18,8 @@ plot_theme <- list(
   )
 )
 
+school_holidays <- get_school_holidays()
+public_holidays <- get_public_holidays()
 
 plot_model_ribbon <- function(forecasts, combined_counts) {
   model_submissions <- forecasts |> 
@@ -39,6 +41,12 @@ plot_model_ribbon <- function(forecasts, combined_counts) {
   
   ggplot() +
     
+    geom_rect(aes(xmin = date - 0.5, xmax = date + 0.5, ymin = -Inf, ymax = Inf),
+              alpha = 0.2, fill = "#e31a1c",
+              public_holidays) +
+    geom_rect(aes(xmin = start_date - 0.5, xmax = end_date + 0.5, ymin = -Inf, ymax = Inf),
+              school_holidays, alpha = 0.1) +
+    
     fastribbon::stat_fastribbon(aes(x = origin_date + horizon, y = value),
                                 model_submissions,
                                 geom = "stepribbon",
@@ -57,7 +65,9 @@ plot_model_ribbon <- function(forecasts, combined_counts) {
     
     scale_y_continuous(breaks = scales::breaks_extended(3)) +
     
-    coord_cartesian(ylim = c(0, NA)) +
+    coord_cartesian(ylim = c(0, NA),
+                    xlim = c(min(origin_dates$origin_date) - 7 * 8,
+                             max(origin_dates$origin_date) + 7 * 4)) +
     
     plot_theme +
     
@@ -85,6 +95,12 @@ plot_model_ribbon_smooth <- function(forecasts, combined_counts) {
   
   ggplot() +
     
+    geom_rect(aes(xmin = date - 0.5, xmax = date + 0.5, ymin = -Inf, ymax = Inf),
+              alpha = 0.2, fill = "#e31a1c",
+              public_holidays) +
+    geom_rect(aes(xmin = start_date - 0.5, xmax = end_date + 0.5, ymin = -Inf, ymax = Inf),
+              school_holidays, alpha = 0.1) +
+    
     fastribbon::stat_fastribbon(aes(x = origin_date + horizon, y = value),
                                 model_submissions,
                                 geom = "stepribbon",
@@ -103,7 +119,9 @@ plot_model_ribbon_smooth <- function(forecasts, combined_counts) {
     
     scale_y_continuous(breaks = scales::breaks_extended(3)) +
     
-    coord_cartesian(ylim = c(0, NA)) +
+    coord_cartesian(ylim = c(0, NA),
+                    xlim = c(min(origin_dates$origin_date) - 7 * 8,
+                             max(origin_dates$origin_date) + 7 * 4)) +
     
     plot_theme +
     
@@ -114,16 +132,16 @@ year <- as.character(year(round_id))
 
 combined_counts <- read_csv(str_c("../forecast-hub/processed-data/", year, "/", round_id, "/combined-count-smoothed-", round_id, ".csv"))
 
-plot_model_ribbon(forecasts |> filter(location != "NZ"), combined_counts |> filter(location != "NZ"))
+plot_model_ribbon(forecasts, combined_counts)
 ribbon_plot_path <- fs::path("plots", str_c("uom-reff_comp_plots-ribbon-", round_id, ".png"))
 
 ggsave(
   ribbon_plot_path,
-  height = 10,
+  height = 11,
   width = 10
 )
 
-plot_model_ribbon_smooth(forecasts |> filter(location != "NZ"), combined_counts |> filter(location != "NZ"))
+plot_model_ribbon_smooth(forecasts, combined_counts)
 
 smooth_ribbon_plot_path <- fs::path("plots", str_c("uom-reff_comp_plots-ribbon-smoothed-", round_id, ".png"))
 
