@@ -68,7 +68,7 @@ p_hol <- ggplot() +
   plot_common +
   
   fastribbon::stat_fastribbon(aes(x = date - 0.5, y = holiday_effect, alpha = after_stat(level)),
-                              fill = "#3182BD",
+                              fill = colour_fit,
                               geom = "stepribbon",
                               traj_data_backcast_long,
                               linewidth = 0.0) +
@@ -83,7 +83,7 @@ p_hol <- ggplot() +
   
   plot_common_above +
   
-  geom_hline(yintercept = 0, linetype = "22", linewidth = 0.7) +
+  geom_hline(yintercept = 0, linetype = "11", linewidth = 0.7) +
   
   scale_fill_brewer() +
   
@@ -108,7 +108,7 @@ p_noise <- ggplot() +
   plot_common +
   
   fastribbon::stat_fastribbon(aes(x = date - 0.5, y = f_noise, alpha = after_stat(level)),
-                              fill = "#3182BD",
+                              fill = colour_fit,
                               traj_data_backcast_long,
                               linewidth = 0.0) +
   
@@ -119,7 +119,7 @@ p_noise <- ggplot() +
   
   plot_common_above +
   
-  geom_hline(yintercept = 0, linetype = "22", linewidth = 0.7) +
+  geom_hline(yintercept = 0, linetype = "11", linewidth = 0.7) +
   
   scale_fill_brewer(palette = "Blues") +
   
@@ -140,7 +140,7 @@ p_ann <- ggplot() +
   plot_common +
   
   fastribbon::stat_fastribbon(aes(x = date - 0.5, y = f_annual, alpha = after_stat(level)),
-                              fill = "#3182BD",
+                              fill = colour_fit,
                               traj_data_backcast_long,
                               linewidth = 0.0) +
   
@@ -151,7 +151,7 @@ p_ann <- ggplot() +
   
   plot_common_above +
   
-  geom_hline(yintercept = 0, linetype = "22", linewidth = 0.7) +
+  geom_hline(yintercept = 0, linetype = "11", linewidth = 0.7) +
   
   scale_fill_brewer(palette = "Blues") +
   
@@ -174,7 +174,7 @@ p_Rt_exp <- ggplot() +
   
   fastribbon::stat_fastribbon(aes(x = date - 0.5, y = exp(log_R), alpha = after_stat(level)),
                               geom = "stepribbon",
-                              fill = "#3182BD",
+                              fill = colour_fit,
                               traj_data_backcast_long,
                               linewidth = 0.0) +
   
@@ -186,7 +186,7 @@ p_Rt_exp <- ggplot() +
   
   plot_common_above +
   
-  geom_hline(yintercept = 1, linetype = "22", linewidth = 0.7) +
+  geom_hline(yintercept = 1, linetype = "11", linewidth = 0.7) +
   
   scale_fill_brewer(palette = "Blues") +
   
@@ -251,7 +251,7 @@ p_cases <- ggplot() +
   plot_common +
   
   fastribbon::stat_fastribbon(aes(x = date, y = cases, alpha = after_stat(level)),
-                              fill = "#3182BD",
+                              fill = colour_fit,
                               traj_data_backcast,
                               linewidth = 0.0) +
   

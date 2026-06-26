@@ -125,22 +125,3 @@ ggsave(
   width = 10, height = 6.5,
   bg = "white"
 )
-
-# 
-# p_asc_2 <- plot_effect(plot_data, "school_holiday_asc_effect_raw", "Summer holidays", "Greens") +
-#   ggtitle(NULL, "Summer holidays") + scale_asc +
-#   theme(plot.margin = margin(t = 0.2, unit = "cm"))
-# 
-# p_Rt_2 <- plot_effect(plot_data, "school_holiday_Rt_effect_raw", "Summer holidays") +
-#   ggtitle(NULL, "Summer holidays") + scale_Rt +
-#   theme(plot.margin = margin(t = 0.2, b = 0.2, unit = "cm"))
-# 
-# 
-# 
-# 
-# 
-# ggplot(plot_data |> filter(ix_s == 1)) +
-#   geom_point(aes(x = school_holiday_Rt_effect_raw, y = school_holiday_asc_effect_raw)) +
-#   
-#   facet_wrap(~location)
-

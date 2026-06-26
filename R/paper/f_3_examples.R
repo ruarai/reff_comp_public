@@ -126,7 +126,7 @@ plot_forecast <- function(x_pathogen, x_location, round_id, title) {
                                 gp_eval, .width = 0.5, geom = "linerange",
                                 linewidth = 0.7, colour = "black", alpha = 0.8) +
     
-    geom_hline(yintercept = 1, linetype = "44", linewidth = 0.7, alpha = 0.5) +
+    geom_hline(yintercept = 1, linetype = "11", linewidth = 0.7, alpha = 0.5) +
     
     scale_y_continuous(breaks = c(0.75, 1, 1.25)) +
     
@@ -151,7 +151,7 @@ plot_forecast <- function(x_pathogen, x_location, round_id, title) {
                                 gp_eval, .width = 0.5, geom = "linerange",
                                 linewidth = 0.7, colour = "black", alpha = 0.8) +
 
-    geom_hline(yintercept = 1, linetype = "44", linewidth = 0.7, alpha = 0.5) +
+    geom_hline(yintercept = 1, linetype = "11", linewidth = 0.7, alpha = 0.5) +
 
     scale_y_continuous(breaks = c(0.75, 1, 1.25)) +
 
@@ -176,7 +176,7 @@ plot_forecast <- function(x_pathogen, x_location, round_id, title) {
                                 gp_eval, .width = 0.5, geom = "linerange",
                                 linewidth = 0.7, colour = "black", alpha = 0.8) +
     
-    geom_hline(yintercept = 1, linetype = "44", linewidth = 0.7, alpha = 0.5) +
+    geom_hline(yintercept = 1, linetype = "11", linewidth = 0.7, alpha = 0.5) +
     
     scale_y_continuous(breaks = c(0.75, 1, 1.25)) +
     
@@ -199,7 +199,7 @@ plot_forecast <- function(x_pathogen, x_location, round_id, title) {
 
 
 plots <- list(
-  plot_forecast("RSV", "QLD", "2025-04-04", "<b>i</b>. RSV – Queensland – Round 2025-04-04"),
+  plot_forecast("RSV", "QLD", "2025-04-04", "<b>i</b>. RSV – Queensland – Round 2025-04-04<br>(exemplar good forecasting performance)"),
   # Good result (closely matches)
   
   # plot_forecast("flu", "VIC", "2025-06-05", "<b>ii</b>. Influenza – VIC – Round 2025-06-05"),
@@ -213,7 +213,7 @@ plots <- list(
   # plot_forecast("RSV", "NSW", "2025-03-14", "<b>i</b>. RSV – NSW – Round 2025-03-14"),
   
   # plot_forecast("RSV", "flu", "2025-08-07", "<b>i</b>. RSV – Influenza – Round 2025-08-07")
-  plot_forecast("SARSCOV2", "VIC", "2025-05-08", "<b>ii</b>. SARS-CoV-2 – Victoria – Round 2025-05-08")
+  plot_forecast("SARSCOV2", "VIC", "2025-05-08", "<b>ii</b>. SARS-CoV-2 – Victoria – Round 2025-05-08<br>(exemplar poor forecasting performance)")
 )
 
 

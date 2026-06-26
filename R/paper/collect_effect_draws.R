@@ -29,6 +29,35 @@ holiday_draws <- map(
 write_parquet(holiday_draws, "data/paper/holiday_draws.parquet")
 
 
+public_holiday_draws <- map(
+  fit_files,
+  function(fit_file) {
+    
+    fit <- read_rds(fit_file)
+    
+    round_id <- ymd(str_extract(fit_file, "\\d{4}-\\d{2}-\\d{2}"))
+    job_name <- fs::path_file(fit_file) |> fs::path_ext_remove()
+    pathogen <- str_split_fixed(job_name, "_", 3)[1]
+    location <- str_split_fixed(job_name, "_", 3)[2]
+    target <- str_split_fixed(job_name, "_", 3)[3]
+    
+    public_holidays <- get_public_holidays()
+    
+    fit |> 
+      
+      spread_draws(public_holiday_Rt_effect_raw[ix_p],
+                   public_holiday_asc_effect_raw[ix_p]
+      ) |> 
+      mutate(location = !!location, pathogen = !!pathogen, target = !!target,
+             public_holiday_name = unique(public_holidays$holiday_name)[ix_p])
+  },
+  .progress = TRUE
+) |> 
+  bind_rows()
+
+write_parquet(public_holiday_draws, "data/paper/public_holiday_draws.parquet")
+
+
 gp_draws <- map(
   fit_files,
   function(fit_file) {

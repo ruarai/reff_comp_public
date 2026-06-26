@@ -26,7 +26,9 @@ plot_theme_annotation <- theme(plot.title = element_markdown(family = "Helvetica
 element_gridline <- element_line(colour = "grey70", linetype = "28", linewidth = 0.3)
 element_facet_background <- element_rect(fill = "white", colour = "grey50", linewidth = 0.5)
 
-colour_fc <- "#0f7ea3"
+# colour_fc <- "#0f7ea3"
+colour_fc <- "#9831bd"
+colour_fit <- "#3182BD"
 
 label_pathogen <- function(tbl) {
   tbl |> 
