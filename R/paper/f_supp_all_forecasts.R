@@ -42,7 +42,7 @@ plot_forecasts <- function(x_location, x_pathogen) {
   public_holidays <- get_public_holidays() |> 
     filter(location == x_location)
   
-  y_lim <- max(50, max(plot_counts$value_trend) * 3.5)
+  y_lim <- max(50, max(plot_counts$value_trend) * 2)
   
   
   ggplot() +
