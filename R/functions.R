@@ -26,6 +26,7 @@ get_training_dates <- function() {
     expand_grid(location = locations, pathogen = "RSV", cutoff_date = ymd("2023-01-01")),
   )
   
+  return(training_dates)
 }
 
 make_retrospective_jobs <- function() {

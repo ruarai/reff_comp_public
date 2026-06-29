@@ -56,7 +56,7 @@ public_holidays |>
 
 
 ggsave(
-  "paper_figures/f_supp_public_holiday_effect.png",
+  "paper_figures/supp/f_rel_public_holiday.png",
   width = 10, height = 7,
   bg = "white"
 )
@@ -150,7 +150,7 @@ ggplot() +
 
 
 ggsave(
-  "paper_figures/f_supp_holidays.png",
+  "paper_figures/supp/f_holidays.png",
   width = 10, height = 5,
   bg = "white"
 )

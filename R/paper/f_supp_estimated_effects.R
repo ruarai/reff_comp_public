@@ -71,7 +71,7 @@ p_school <- wrap_elements(full = p_Rt) /
 p_school
 
 ggsave(
-  "paper_figures/f_supp_summer_holiday_estimates.png",
+  "paper_figures/supp/f_summer_holiday_estimates.png",
   width = 8, height = 5.5,
   bg = "white"
 )
@@ -144,7 +144,7 @@ p_asc_public <- plot_data_public |>
 p_Rt_public / p_asc_public
 
 ggsave(
-  "paper_figures/f_supp_public_holiday_estimates.png",
+  "paper_figures/supp/f_public_holiday_estimates.png",
   width = 10, height = 14,
   bg = "white"
 )

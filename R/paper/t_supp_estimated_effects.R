@@ -74,4 +74,4 @@ table_data |>
   style_tt(j = 5, i = which(table_data$bold_Rt_summer), bold = TRUE) |> 
   style_tt(j = 6, i = which(table_data$bold_asc_summer), bold = TRUE) |> 
   
-  save_tt("paper_figures/t_1_estimated_effects.tex", overwrite = TRUE)
+  save_tt("paper_figures/supp/t_estimated_effects.tex", overwrite = TRUE)

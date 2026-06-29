@@ -102,7 +102,7 @@ p_skill
 
 
 ggsave(
-  "paper_figures/f_supp_model_comparison.png",
+  "paper_figures/supp/f_model_comparison.png",
   width = 9, height = 6,
   bg = "white"
 )

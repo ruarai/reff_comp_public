@@ -104,7 +104,7 @@ p_heatmap
 
 
 ggsave(
-  "paper_figures/f_supp_perf_heatmap.png",
+  "paper_figures/supp/f_perf_heatmap.png",
   width = 10, height = 8,
   bg = "white"
 )
