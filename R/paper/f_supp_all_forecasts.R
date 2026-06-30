@@ -42,7 +42,11 @@ plot_forecasts <- function(x_location, x_pathogen) {
   public_holidays <- get_public_holidays() |> 
     filter(location == x_location)
   
-  y_lim <- max(50, max(plot_counts$value_trend) * 2)
+  y_lim <- max(
+    50, 
+    quantile(plot_counts$value_trend_and_remainder, 0.95) * 1.5,
+    quantile(loc_quants$upper_95, 0.95) * 1.5
+  )
   
   
   ggplot() +
@@ -80,6 +84,7 @@ plot_forecasts <- function(x_location, x_pathogen) {
 }
 
 plot_forecasts("NT", "flu")
+plot_forecasts("NSW", "flu")
 
 sort(locations_paper) |> 
   map(function(location) {
@@ -100,7 +105,7 @@ sort(locations_paper) |>
       p + 
         plot_annotation(glue::glue("All case incidence forecasts ({location})"),
                         theme = plot_theme_annotation),
-      width = 10, height = 10
+      width = 10, height = 13
     )
     
   })
