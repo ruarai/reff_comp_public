@@ -12,6 +12,15 @@ plot_data <- holiday_draws |>
   
   label_pathogen()
 
+plot_data_scaling <- holiday_draws |> 
+  filter(location %in% locations_paper) |> 
+  group_by(location, pathogen) |> 
+  summarise(scaling_noise = mean(scaling_noise),
+            scaling_lower = mean(exp(scaling_noise)),
+            scaling_upper = mean(exp(-scaling_noise))) |> 
+  
+  label_pathogen()
+
 
 plot_effect <- function(plot_data, effect_name, holiday_name, pal = "Blues") {
   plot_data |> 
@@ -46,8 +55,12 @@ scale_Rt <- list(
 )
 
 p_Rt_1 <- plot_effect(plot_data, "school_holiday_Rt_effect_raw", "Between-term holidays") +
+  
+  # geom_linerange(aes(y = location, xmin = scaling_lower, xmax = scaling_upper), plot_data_scaling,
+  #            alpha = 0.8, linetype = "11") +
   scale_Rt
 
+p_Rt_1
 
 p_Rt <- (p_Rt_1) + 
   plot_annotation("<b>A</b>. Multiplicative effect of between-term school<br>holidays on <i>R</i>(<i>t</i>)",
@@ -69,14 +82,6 @@ plot_data_gp <- gp_draws |>
   
   label_pathogen()
 
-plot_data_scaling <- holiday_draws |> 
-  filter(location %in% locations_paper) |> 
-  group_by(location, pathogen) |> 
-  summarise(scaling_noise = mean(scaling_noise),
-            scaling_lower = mean(exp(scaling_noise)),
-            scaling_upper = mean(exp(-scaling_noise))) |> 
-  
-  label_pathogen()
 
 
 p_ann <- ggplot(plot_data_gp) +

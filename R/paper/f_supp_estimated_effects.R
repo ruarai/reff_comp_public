@@ -145,6 +145,6 @@ p_Rt_public / p_asc_public
 
 ggsave(
   "paper_figures/supp/f_public_holiday_estimates.png",
-  width = 10, height = 14,
+  width = 10, height = 15,
   bg = "white"
 )

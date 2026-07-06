@@ -41,7 +41,8 @@ public_holiday_draws <- map(
     location <- str_split_fixed(job_name, "_", 3)[2]
     target <- str_split_fixed(job_name, "_", 3)[3]
     
-    public_holidays <- get_public_holidays()
+    public_holidays <- get_public_holidays() |> 
+      filter(location == !!location)
     
     fit |> 
       
@@ -85,3 +86,32 @@ gp_draws <- map(
   bind_rows()
 
 write_parquet(gp_draws, "data/paper/gp_draws.parquet")
+
+
+delay_draws <- map(
+  fit_files,
+  function(fit_file) {
+    
+    fit <- read_rds(fit_file)
+    
+    round_id <- ymd(str_extract(fit_file, "\\d{4}-\\d{2}-\\d{2}"))
+    job_name <- fs::path_file(fit_file) |> fs::path_ext_remove()
+    pathogen <- str_split_fixed(job_name, "_", 3)[1]
+    location <- str_split_fixed(job_name, "_", 3)[2]
+    target <- str_split_fixed(job_name, "_", 3)[3]
+    
+    fit |> 
+      
+      spread_draws(
+        delay_mean, delay_sd,
+        delay_dist[days]
+      ) |> 
+      mutate(location = !!location, pathogen = !!pathogen, target = !!target,
+             days = days - 1)
+  },
+  .progress = TRUE
+) |> 
+  bind_rows()
+
+
+write_parquet(delay_draws, "data/paper/delay_draws.parquet")

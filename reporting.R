@@ -135,21 +135,13 @@ combined_counts <- read_csv(str_c("../forecast-hub/processed-data/", year, "/", 
 plot_model_ribbon(forecasts, combined_counts)
 ribbon_plot_path <- fs::path("plots", str_c("uom-reff_comp_plots-ribbon-", round_id, ".png"))
 
-ggsave(
-  ribbon_plot_path,
-  height = 11,
-  width = 10
-)
+ggsave(ribbon_plot_path, height = 11, width = 10)
 
 plot_model_ribbon_smooth(forecasts, combined_counts)
 
 smooth_ribbon_plot_path <- fs::path("plots", str_c("uom-reff_comp_plots-ribbon-smoothed-", round_id, ".png"))
 
-ggsave(
-  smooth_ribbon_plot_path,
-  height = 10,
-  width = 10
-)
+ggsave(smooth_ribbon_plot_path, height = 10, width = 10)
 
 library(magick)
 forecast_plot_files <- fs::dir_ls(fs::path("results", round_id), glob = "*plot_forecast.png")
@@ -157,7 +149,6 @@ latent_plot_files <- fs::dir_ls(fs::path("results", round_id), glob = "*plot_lat
 diagnostic_plot_files <- fs::dir_ls(fs::path("results", round_id), glob = "*plot_MCMC.png")
 
 image_write(
-  # c(ribbon_plot_path, forecast_plot_files, latent_plot_files) |> 
   c(forecast_plot_files, latent_plot_files) |> 
     image_read() |> 
     image_resize("50%"),

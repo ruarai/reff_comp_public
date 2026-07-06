@@ -110,5 +110,71 @@ ggsave(
 )
 
 
+plot_data_skill |> 
+  mutate(x_2 = date,
+         x_1 = date + days(7),
+         x_3 = date + days(7),
+         x_4 = date + days(14),
+         y_2 = days_ahead_group / 7 - 0.5,
+         y_1 = days_ahead_group / 7 - 0.5,
+         y_3 = days_ahead_group / 7 + 0.5,
+         y_4 = days_ahead_group / 7 + 0.5) |> 
+  expand_grid(corner = 1:4) |> 
+  group_by(days_ahead_group, pathogen, location, round_id) |> 
+  mutate(
+    x = c(first(x_1), first(x_2), first(x_3), first(x_4))[corner],
+    y = c(first(y_1), first(y_2), first(y_3), first(y_4))[corner],
+  ) |> 
+  
+  filter(location == "VIC", pathogen == "RSV") |> 
+  
+  ggplot() +
+  
+  geom_polygon(aes(x, y, fill = crps_log, group = interaction(days_ahead_group, round_id))) +
+  
+  # geom_rect(aes(xmin = date, xmax = date + days(7),
+  #               ymin = days_ahead_group / 7 - 0.4, ymax = days_ahead_group / 7 + 0.4, fill = crps_log,
+  #               label = round_id),
+  #           colour = "white", linewidth = 0.25) +
+  
+  
+  
+  # geom_rect(aes(xmin = date, xmax = date + days(7),
+  #               ymin = days_ahead_group / 7 - 0.46, ymax = days_ahead_group / 7 - 0.4),
+  #           fill = "black",
+  #           colour = "white", linewidth = 0.25) +
+  
+  geom_line(aes(x = notification_date, y = y - 0.5, group = location), plot_data_counts |> filter(location == "VIC", pathogen == "RSV"),
+            colour = "white", linewidth = 1.5, alpha = 0.8) +
+  geom_line(aes(x = notification_date, y = y - 0.5, group = location), plot_data_counts |> filter(location == "VIC", pathogen == "RSV"),
+            linewidth = 0.4) +
+  
+  
+  scale_fill_gradientn(
+    name = "CRPS", limits = c(0, 0.75),
+    breaks = c(0, 0.25, 0.5, 0.75), labels = c("0", "0.25", "0.5", "≥0.75"),
+    colours = RColorBrewer::brewer.pal(10, "RdYlBu") |> rev()
+  ) +
+  
+  facet_grid(rows = vars(location),
+             cols = vars(pathogen_label),
+             scales = "free_x") +
+  
+  scale_y_continuous(breaks = 0:3, labels = c("1-7 days", "8-14 days", "15-21 days", "22-28 days")) +
+  
+  scale_x_date(date_breaks = "2 months", labels = scales::label_date_short(sep = "\n"),
+               date_minor_breaks = "1 months",
+               guide = guide_axis(minor.ticks = TRUE)) +
+  
+  ylab("Horizon (days ahead)") + xlab(NULL) +
+  
+  plot_theme_paper +
+  
+  theme(legend.position = "right",
+        panel.background = element_facet_background) +
+  
+  ggtitle("Forecast performance by horizon (days ahead)")
+
+
 
 

@@ -45,3 +45,52 @@ consolidate_result <- function(results_name) {
   
   fs::dir_delete(str_c("saved_results/", results_name))
 }
+
+download_traj <- function() {
+  library(processx)
+  
+  
+  jobs <- make_retrospective_jobs() |> 
+    anti_join(
+      ignore_jobs <- tribble(
+        ~location, ~pathogen, ~target,
+        "NZ", "RSV", "hospital_incidence",
+        "NZ", "flu", "hospital_incidence",
+      ),
+      by = join_by(location, pathogen, target)
+    ) |> 
+    expand_grid(model_version = "baseline")
+  
+  jobs |> 
+    distinct(round_id) |> 
+    pmap(function(round_id) {
+      jobs |> 
+        filter(round_id == !!round_id) |> 
+        mutate(path = glue::glue("/projects/proj-5050_reffcomp_model_evaluation-1128.4.1617/baseline/{round_id}/{pathogen}_{location}_forecast-trajectories.parquet")) |> 
+        pull(path) |> 
+        str_c(collapse = "")
+    })
+  
+  jobs |> 
+    pmap(function(location, pathogen, target, round_id, ...) {
+      
+      fs::dir_create(glue::glue("saved_results/baseline/{round_id}/"))
+      
+      if(!fs::file_exists(glue::glue("saved_results/baseline/{round_id}/{pathogen}_{location}_forecast-trajectories.parquet"))) {
+        
+        x <- run(
+          "/apps/unimelb-mf-clients/current/bin/unimelb-mf-download",
+          c("--mf.config", "data/mflux.cfg",
+            "--nb-workers", "4",
+            "--out", glue::glue("saved_results/baseline/{round_id}/"),
+            glue::glue("/projects/proj-5050_reffcomp_model_evaluation-1128.4.1617/baseline/{round_id}/{pathogen}_{location}_forecast-trajectories.parquet")
+          ),
+          echo = TRUE
+        )
+      }
+      
+    })
+  
+  
+  
+}
