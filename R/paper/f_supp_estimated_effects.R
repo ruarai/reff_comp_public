@@ -110,7 +110,7 @@ p_Rt_public <- plot_data_public |>
   
   xlab("Multiplicative effect") + ylab(NULL) +
   
-  ggtitle("<b>B</b>. Multiplicative effect of public holidays on <i>R</i>(<i>t</i>)")
+  ggtitle("<b>A</b>. Multiplicative effect of public holidays on <i>R</i>(<i>t</i>)")
 
 
 p_asc_public <- plot_data_public |>

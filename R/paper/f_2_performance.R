@@ -25,7 +25,8 @@ perf_data |>
 perf_data_paired <- perf_data |> 
   group_by(pathogen, location, round_id, date) |> 
   filter(n() == 2) |> 
-  ungroup()
+  ungroup() |> 
+  filter(horizon <= 7 * 4)
 
 location_y <- tibble(
   location = unique(perf_data_paired$location)
@@ -148,9 +149,8 @@ p_crps <- perf_data_paired |>
   ggokabeito::scale_colour_okabe_ito(order = c(1, 2, 3, 5, 6, 7, 8, 9, 4),
                                      name = "Region") +
   
-  coord_cartesian(ylim = c(-0, NA), xlim = c(0, 8)) +
-  
-  scale_x_continuous(breaks = c(0, 2, 4, 6, 8)) +
+  coord_cartesian(ylim = c(-0, NA), xlim = c(1, 4)) +
+  scale_x_continuous(breaks = c(1, 2, 3, 4)) +
   
   facet_wrap(~pathogen_label) +
   
@@ -183,10 +183,8 @@ p_skill <- perf_data_paired |>
   ggokabeito::scale_colour_okabe_ito(order = c(1, 2, 3, 5, 6, 7, 8, 9, 4),
                                      name = "Region") +
   
-  coord_cartesian(ylim = c(-0.1, 0.7),
-                  xlim = c(0, 8)) +
-  
-  scale_x_continuous(breaks = c(0, 2, 4, 6, 8)) +
+  coord_cartesian(ylim = c(-0.1, 0.7), xlim = c(1, 4)) +
+  scale_x_continuous(breaks = c(1, 2, 3, 4)) +
   
   facet_wrap(~pathogen_label) +
   
@@ -215,7 +213,7 @@ p_bottom <- p_heatmap +
 
 
 (wrap_elements(full = p_top) / 
-    wrap_elements(full = p_mid) / 
+    wrap_elements(full = p_mid) /
     wrap_elements(full = p_bottom)) +
   plot_layout(heights = c(1, 1, 1.5))
 

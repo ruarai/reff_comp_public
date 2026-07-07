@@ -7,12 +7,12 @@ fit_model <- function(data_list, model_file = "src/gp_renewal.stan", n_warmup = 
   
   fit <- model$sample(
     data = data_list,
-    seed = 5,
+    seed = 2,
     chains = 4,
     parallel_chains = 4,
     refresh = 50,
     
-    iter_warmup = n_warmup, iter_sampling = 100,
+    iter_warmup = n_warmup, iter_sampling = 1000,
     init = 0.2
   )
   
