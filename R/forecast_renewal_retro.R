@@ -14,19 +14,20 @@ jobs <- make_retrospective_jobs() |>
     ),
     by = join_by(location, pathogen, target)
   ) |> 
+  filter(round_id == "2025-11-27") |> 
   expand_grid(model_version = c(
-    "baseline",
+    "baseline"#,
     
     # "no_school_holidays",
     # "no_public_holidays"
     
-    "no_holidays",
+    # "no_holidays",
     # "no_asc_holidays",
     # "no_Rt_holidays"
     # 
-    "no_annual",
+    # "no_annual",
 
-    "no_holidays_no_annual"
+    # "no_holidays_no_annual"
   ))
 
 print(str_c("Generated ", nrow(jobs), " jobs"))
@@ -65,7 +66,7 @@ data_list <- assign_retro_varietals(data_list, x_version)
 
 fit_file <- str_c(results_dir, "/", round_id, "/", x_pathogen, "_", x_location, "_", x_target, ".rds")
 
-fit <- fit_model(data_list, model_file = "src/gp_renewal_varietal.stan")
+fit <- fit_model(data_list, model_file = "src/gp_renewal_varietal.stan", n_warmup = 4000, n_samples = 4000)
 
 print("Saving fit object and training data")
 

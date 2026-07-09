@@ -77,7 +77,7 @@ parameters {
   vector[N_public_holiday_types] public_holiday_Rt_effect_raw;
   vector[N_public_holiday_types] public_holiday_asc_effect_raw;
   
-  real<lower=0, upper=21> delay_mean;
+  real<lower=3, upper=21> delay_mean;
   real<lower=1.0> delay_sd;
 }
 
@@ -229,8 +229,8 @@ model {
   log_I_0 ~ normal(3.2, 1);
   r_0 ~ normal(0, 0.2);
   
-  delay_mean ~ lognormal(2.0, 0.5);
-  delay_sd ~ lognormal(1, 0.5);
+  delay_mean ~ normal(9, 2.5);
+  delay_sd ~ lognormal(0, 0.5);
   
   // Data likelihood
   y ~ neg_binomial_2_log(latent_cases_weekly_log[1:N_data], phi);
