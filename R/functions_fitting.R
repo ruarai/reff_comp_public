@@ -1,7 +1,7 @@
 
 fit_model <- function(
   data_list, model_file = "src/gp_renewal.stan",
-  n_warmup = 1000, n_samples = 1000
+  n_warmup = 1000, n_samples = 1000, thin = 1
 ) {
   print(str_c("Fitting model ", model_file))
   
@@ -16,6 +16,7 @@ fit_model <- function(
     refresh = 50,
     
     iter_warmup = n_warmup, iter_sampling = n_samples,
+    thin = thin,
     init = 0.2
   )
   

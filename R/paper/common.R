@@ -39,8 +39,8 @@ label_pathogen <- function(tbl) {
     ))
 }
 
-# locations_paper <- c("NSW", "QLD", "VIC", "NT", "ACT")
-locations_paper <- c("NSW", "WA", "VIC", "NT", "ACT")
+locations_paper <- c("NSW", "QLD", "VIC", "NT", "ACT")
+# locations_paper <- c("NSW", "WA", "VIC", "NT", "ACT")
 
 process_perf_data <- function(perf_data) {
   

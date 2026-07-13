@@ -133,14 +133,13 @@ year <- as.character(year(round_id))
 combined_counts <- read_csv(str_c("../forecast-hub/processed-data/", year, "/", round_id, "/combined-count-smoothed-", round_id, ".csv"))
 
 plot_model_ribbon(forecasts, combined_counts)
-ribbon_plot_path <- fs::path("plots", str_c("uom-reff_comp_plots-ribbon-", round_id, ".png"))
 
+ribbon_plot_path <- fs::path("plots", str_c("uom-reff_comp_plots-ribbon-", round_id, ".png"))
 ggsave(ribbon_plot_path, height = 11, width = 10)
 
 plot_model_ribbon_smooth(forecasts, combined_counts)
 
 smooth_ribbon_plot_path <- fs::path("plots", str_c("uom-reff_comp_plots-ribbon-smoothed-", round_id, ".png"))
-
 ggsave(smooth_ribbon_plot_path, height = 10, width = 10)
 
 library(magick)

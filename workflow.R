@@ -3,7 +3,7 @@ library(tidyverse)
 library(processx)
 source("R/functions.R")
 
-round_id <- "2026-07-01"
+round_id <- "2026-07-08"
 
 check_and_log_git_status(round_id)
 
