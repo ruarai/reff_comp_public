@@ -40,7 +40,8 @@ scale_Rt <- list(
 
 plot_data <- holiday_draws |> 
   mutate(school_holiday_name = c("Summer holidays", "Between-term holidays")[ix_s]) |> 
-  filter(location %in% locations_paper) |> 
+  filter(location %in% locations_paper,
+         ) |> 
   
   label_pathogen()
 
@@ -80,8 +81,15 @@ ggsave(
 
 public_holiday_draws <- read_parquet("data/paper/public_holiday_draws.parquet")
 
+# Make a list of pre-2026 holidays (so we don't plot any that haven't been hit yet)
+public_holidays <- get_public_holidays() |> 
+  filter(date < ymd("2025-12-01")) |> 
+  distinct(location, public_holiday_name = holiday_name)
+
 plot_data_public <- public_holiday_draws |> 
   filter(location %in% locations_paper) |> 
+  
+  inner_join(public_holidays) |> 
   
   label_pathogen()
 
@@ -141,10 +149,11 @@ p_asc_public <- plot_data_public |>
   ggtitle("<b>B</b>. Multiplicative effect of public holidays on case reporting")
 
 
-p_Rt_public / p_asc_public
+p_pub <- p_Rt_public / p_asc_public
 
 ggsave(
   "paper_figures/supp/f_public_holiday_estimates.png",
+  p_pub,
   width = 10, height = 15,
   bg = "white"
 )
