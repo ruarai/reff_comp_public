@@ -75,7 +75,7 @@ parameters {
   vector[N_public_holiday_types] public_holiday_Rt_effect_raw;
   vector[N_public_holiday_types] public_holiday_asc_effect_raw;
   
-  real<lower=0, upper=21> delay_mean;
+  real<lower=3, upper=21> delay_mean;
   real<lower=1.0> delay_sd;
 }
 
