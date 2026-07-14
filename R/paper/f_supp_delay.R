@@ -75,7 +75,7 @@ p_sd <- ggplot(plot_data_summ) +
   
   plot_theme_paper +
   
-  coord_cartesian(xlim = c(0, 10)) +
+  coord_cartesian(xlim = c(0, 6)) +
   
   theme(panel.grid.major = element_gridline,
         legend.position = "none")

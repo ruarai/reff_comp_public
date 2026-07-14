@@ -5,7 +5,6 @@ library(tinytable)
 
 
 holiday_draws <- read_parquet("data/paper/holiday_draws.parquet")
-gp_draws <- read_parquet("data/paper/gp_draws.parquet")
 
 
 plot_data <- holiday_draws |> 

@@ -62,7 +62,7 @@ process_perf_data <- function(perf_data) {
     ) |> 
     
     filter(date >= ymd("2025-01-01"), # Remove forecasts that actually were produced on 2024 data
-           ymd(round_id) < ymd("2025-11-27"),
+           ymd(round_id) <= ymd("2025-11-27"),
            
            # Remove an early artificial VIC round for consistency with other locations
            !(round_id == "2025-04-10" & location == "VIC" & pathogen == "flu"),

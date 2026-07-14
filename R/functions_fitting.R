@@ -189,6 +189,16 @@ process_counts <- function(
       filter(notification_date < max(notification_date))
   }
   
+  # Fix issue with QLD RSV data
+  if(x_location == "QLD" & x_pathogen == "RSV" & x_target == "case_incidence") {
+    bad_date <- ymd("2025-01-13")
+    
+    reduced_counts <- reduced_counts |> 
+      mutate(value = if_else(notification_date == bad_date, round(value_trend), value),
+             value_trend = if_else(notification_date == bad_date, value_trend, value_trend),
+             value_trend_and_remainder = if_else(notification_date == bad_date, value_trend, value_trend_and_remainder))
+  }
+  
   
   training_counts <- reduced_counts |> 
     select(location, pathogen, target, date = notification_date, 
