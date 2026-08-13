@@ -46,24 +46,22 @@ plot_effect <- function(plot_data, effect_name, holiday_name, pal = "Blues") {
           panel.grid.major = element_gridline,
           plot.margin = margin()) +
     
-    xlab("Multiplicative effect") + ylab(NULL)
+    xlab("Effect") + ylab(NULL)
 }
 
 scale_Rt <- list(
-  scale_x_log10(breaks = c(0.8, 1, 1.2)),
+  scale_x_log10(breaks = c(0.8, 1, 1.25), labels = c("-20%", "0%", "+25%")),
   coord_cartesian(xlim = exp(c(-0.3, 0.3)))
 )
 
 p_Rt_1 <- plot_effect(plot_data, "school_holiday_Rt_effect_raw", "Between-term holidays") +
   
-  # geom_linerange(aes(y = location, xmin = scaling_lower, xmax = scaling_upper), plot_data_scaling,
-  #            alpha = 0.8, linetype = "11") +
   scale_Rt
 
 p_Rt_1
 
 p_Rt <- (p_Rt_1) + 
-  plot_annotation("<b>A</b>. Multiplicative effect of between-term school<br>holidays on <i>R</i>(<i>t</i>)",
+  plot_annotation("<b>A</b>. Effect of between-term school<br>holidays on <i>R</i>(<i>t</i>)",
                   theme = plot_theme_annotation)
 
 
@@ -73,7 +71,7 @@ p_asc_1 <- plot_effect(plot_data, "school_holiday_asc_effect_raw", "Between-term
 
 
 p_asc <- (p_asc_1) + 
-  plot_annotation("<b>B</b>. Multiplicative effect of between-term school<br>holidays on reporting",
+  plot_annotation("<b>B</b>. Effect of between-term school<br>holidays on reporting",
                   theme = plot_theme_annotation)
 
 plot_data_gp <- gp_draws |> 
@@ -98,19 +96,19 @@ p_ann <- ggplot(plot_data_gp) +
   
   facet_grid(rows = vars(fct_rev(location)), cols = vars(pathogen_label)) +
   
-  scale_y_log10(breaks = c(0.8, 1, 1.25)) +
+  scale_y_log10(breaks = c(0.8, 1, 1.25), labels = c("-20%", "0%", "+25%")) +
   
   scale_x_date(labels = scales::label_date_short(format = c("", "%b"))) +
   
   scale_fill_brewer() +
   
   plot_theme_paper +
-  xlab(NULL) + ylab("Multiplicative effect") +
+  xlab(NULL) + ylab("Effect") +
   theme(legend.position = "none",
         panel.grid.major.x = element_gridline,
         panel.background = element_facet_background,
         panel.spacing.x = unit(0.5, "cm")) + 
-  plot_annotation("<b>C</b>. Multiplicative effect of periodic GP <i>f</i><sub>ann</sub>(<i>t</i>) on <i>R</i>(<i>t</i>)",
+  plot_annotation("<b>C</b>. Effect of annually-periodic Gaussian process <i>f</i><sub>ann</sub>(<i>t</i>)<br> on <i>R</i>(<i>t</i>)",
                   theme = theme(plot.title = element_markdown(family = "Helvetica"),
                                 plot.margin = margin(t = 0.4, l = 0.2, b = 0.0, r = 0.2, unit = "cm")))
 

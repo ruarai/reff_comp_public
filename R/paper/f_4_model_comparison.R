@@ -61,7 +61,7 @@ p_skill <- ggplot(plot_data_performance) +
   
   scale_x_continuous(breaks = c(-0.15, -0.1, -0.05, 0, 0.05, 0.1, 0.15)) +
   
-  # coord_cartesian(xlim = c(-0.15, 0.15)) +
+  coord_cartesian(xlim = c(-0.15, 0.15)) +
   
   ylab(NULL) + xlab("Skill-score") +
   

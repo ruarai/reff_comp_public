@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --ntasks=1
-#SBATCH --time=08:00:00
+#SBATCH --time=24:00:00
 #SBATCH --partition=cascade,sapphire
 #SBATCH --cpus-per-task=4
 #SBATCH --mem-per-cpu=6G
-#SBATCH --array=1-122
+#SBATCH --array=1-925
 #SBATCH --job-name=periodicgpcast
 #SBATCH -o ./slurm_out/periodicgpcast_dist_%a.txt # STDOUT
 

@@ -40,8 +40,7 @@ scale_Rt <- list(
 
 plot_data <- holiday_draws |> 
   mutate(school_holiday_name = c("Summer holidays", "Between-term holidays")[ix_s]) |> 
-  filter(location %in% locations_paper,
-         ) |> 
+  filter(location %in% locations_paper) |> 
   
   label_pathogen()
 

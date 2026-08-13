@@ -139,5 +139,3 @@ ggsave(
   width = 8, height = 10,
   bg = "white"
 )
-
-

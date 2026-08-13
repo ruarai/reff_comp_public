@@ -9,7 +9,7 @@ traj_quants <- map(
   trajectory_files,
   function(x) {
     open_dataset(x) |> 
-      filter(target == "case_incidence_smoothed") |> 
+      filter(target == "case_incidence") |> 
       group_by(location, pathogen, target, origin_date, round_id, horizon) |> 
       summarise(lower_95 = quantile(value, 0.025),
                 upper_95 = quantile(value, 0.975),
@@ -26,7 +26,7 @@ traj_quants <- map(
 
 traj_quants |> 
   bind_rows() |> 
-  write_parquet("saved_results/baseline_quants_smooth.parquet")
+  write_parquet("saved_results/baseline_quants.parquet")
 
 
 

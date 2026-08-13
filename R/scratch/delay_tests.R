@@ -1,12 +1,17 @@
 
-n_draws <- 50
+source("R/functions.R")
+
+n_draws <- 250
 
 tibble(
-  delay_mean = rnorm(n_draws, 9, 2.0),
-  delay_sd = rlnorm(n_draws, 0, 0.5),
+  # delay_mean = rnorm(n_draws, 9, 2.0),
+  # delay_sd = rlnorm(n_draws, 0, 0.5),
+  
+  delay_mean = rlnorm(n_draws, 2, 0.5),
+  delay_sd = rlnorm(n_draws, 1, 0.5),
   draw = 1:n_draws
 ) |> 
-  filter(delay_mean > 3,
+  filter(#delay_mean > 3,
          delay_sd > 1) |> 
   mutate(
     sigma = sqrt(log(1 + (delay_sd ^ 2) / (delay_mean ^ 2))),

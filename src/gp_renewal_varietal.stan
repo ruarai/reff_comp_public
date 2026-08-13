@@ -34,6 +34,8 @@ data {
   int<lower=0, upper=1> include_public_holiday_Rt_effect;
   
   int<lower=0, upper=1> include_f_annual;
+  
+  int<lower=0, upper=1> no_delay;
 }
 
 transformed data {
@@ -128,6 +130,11 @@ transformed parameters {
   
   // Calculate the delay distribution between infection onset and reporting
   vector[K] delay_dist = construct_delay_dist(delay_mean, delay_sd, K);
+  
+  if(no_delay) {
+    delay_dist = rep_vector(0.0, K);
+    delay_dist[1] = 1.0;
+  }
   
   // Number of new infections by time of infection onset
   vector[N] inf; 
