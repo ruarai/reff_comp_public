@@ -83,13 +83,11 @@ p_skill <- ggplot(plot_data_performance) +
   
   geom_linerange(aes(y = model_label, xmin = 0, xmax = skill_score,
                      colour = skill_score < 0),
-                 linewidth = 6.0) +
+                 linewidth = 4.0) +
   
   geom_vline(xintercept = 0, linetype = "22") +
   
   scale_colour_brewer(type = "qual", palette = 2) +
-  
-  # scale_x_continuous(breaks = c(-0.15, -0.1, -0.05, 0, 0.05)) +
   
   coord_cartesian(xlim = c(-0.05, 0.05)) +
   

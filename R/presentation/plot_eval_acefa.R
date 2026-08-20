@@ -1,11 +1,13 @@
 
+
 source("R/functions.R")
+
 source("R/presentation/plot_theme.R")
 
-perf_files <- fs::dir_ls("saved_results/results_baseline/", glob = "*_performance.parquet", recurse = TRUE)
-perf_data <- collect(open_dataset(perf_files)) |> 
-  mutate(.model = "uom-reff-comp", .before = 1)
-
+perf_data <- read_perf("baseline") |> 
+  mutate(.model = "uom-reff-comp") |> 
+  bind_rows(snaive_perf_data) |> 
+  process_perf_data()
 
 acefa_perf_data <- read_rds("data/case_forecast_measures.rds") |> 
   filter(measure_name == "crps", target == "case_incidence") |> 
@@ -16,18 +18,10 @@ acefa_perf_data <- read_rds("data/case_forecast_measures.rds") |>
   rename(crps = natural, crps_log = log)
 
 
-autogp_perf_data <- read_rds("data/autogp_measures.rds") |> 
-  filter(measure_name == "crps", target == "case_incidence") |> 
-  mutate(pathogen = as.character(if_else(pathogen == "Influenza", "flu", pathogen)),
-         round_id = as.character(round_id)) |> 
-  select(-c(measure_name, target)) |> 
-  pivot_wider(names_from = measure_scale) |> 
-  rename(crps = natural, crps_log = log)
-
 
 
 perf_data_full <- bind_rows(
-  perf_data, acefa_perf_data, autogp_perf_data
+  perf_data, acefa_perf_data
 ) |> 
   select(.model, location, pathogen, round_id, origin_date, date, crps, crps_log) |> 
   mutate(horizon = as.numeric(date - origin_date)) |> 

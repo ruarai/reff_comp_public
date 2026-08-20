@@ -147,7 +147,7 @@ p_crps <- perf_data_paired |>
              size = 0.8) +
   
   ggokabeito::scale_colour_okabe_ito(order = c(1, 2, 3, 5, 6, 7, 8, 9, 4),
-                                     name = "Region") +
+                                     name = "Jurisdiction") +
   
   coord_cartesian(ylim = c(-0, NA), xlim = c(1, 4)) +
   scale_x_continuous(breaks = c(1, 2, 3, 4)) +
@@ -198,24 +198,57 @@ p_skill <- perf_data_paired |>
         panel.grid.major = element_gridline)
 
 
+p_skill <- perf_data_paired |> 
+  group_by(pathogen, location, round_id, date) |> 
+  mutate(crps_log_snaive = crps_log[.model == "snaive"]) |> 
+  filter(.model == "baseline") |> 
+  group_by(pathogen, location) |> 
+  summarise(skill_score = 1 - mean(crps_log) / mean(crps_log_snaive)) |> 
+  label_pathogen() |> 
+  
+  ggplot() +
+  geom_linerange(aes(x = location, ymin = 0, ymax = skill_score, colour = location),
+            linewidth = 5) +
+  
+  geom_hline(yintercept = 0.0, linetype = "44") +
+  
+  ggokabeito::scale_colour_okabe_ito(order = c(1, 2, 3, 5, 6, 7, 8, 9, 4),
+                                     name = "Jurisdiction") +
+  
+  coord_cartesian(ylim = c(-0.3, 0.7)) +
+  
+  facet_wrap(~pathogen_label) +
+  
+  plot_theme_paper +
+  
+  xlab("Jurisdiction") +
+  ylab("Skill score") +
+  
+  theme(legend.position = "none",
+        panel.background = element_facet_background,
+        panel.grid.major = element_gridline)
+
 p_top <- p_crps + 
   plot_annotation("<b>A</b>. Forecast performance by horizon (lower value is better)",
                   theme = plot_theme_annotation)
 
-p_mid <- p_skill + 
-  plot_annotation("<b>B</b>. Forecast skill by horizon (higher value is better)",
+
+p_mid <- p_heatmap + 
+  plot_annotation("<b>B</b>. 4th week forecast performance by epidemic period",
                   theme = plot_theme_annotation)
 
-
-p_bottom <- p_heatmap + 
-  plot_annotation("<b>C</b>. 4th week forecast performance by epidemic period",
+p_bottom <- (p_skill + plot_spacer()) +
+  plot_layout(widths = c(1, 0.1)) +
+  plot_annotation("<b>C</b>. Forecast skill against baseline by jurisdiction (higher value is better)",
                   theme = plot_theme_annotation)
+
+p_bottom
 
 
 (wrap_elements(full = p_top) / 
     wrap_elements(full = p_mid) /
     wrap_elements(full = p_bottom)) +
-  plot_layout(heights = c(1, 1, 1.5))
+  plot_layout(heights = c(1, 1.5, 1))
 
 ggsave(
   "paper_figures/f_2_performance.png",

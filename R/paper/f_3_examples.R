@@ -152,15 +152,16 @@ plot_forecast <- function(x_pathogen, x_location, round_id, title) {
                                 linewidth = 0.7, colour = "black", alpha = 0.8) +
 
     geom_hline(yintercept = 1, linetype = "11", linewidth = 0.7, alpha = 0.5) +
-
-    scale_y_continuous(breaks = c(0.75, 1, 1.25)) +
+    
+    coord_cartesian(xlim = date_range, ylim = exp(c(-0.25, 0.25))) +
+    scale_y_log10(breaks = c(0.8, 1, 1.25), labels = c("-20%", "0%", "+25%")) +
 
     ylab("Effect") +
 
     coord_cartesian(ylim = c(0.75, 1.3),
                     xlim = c(origin_date - days(7 * 8), origin_date + days(7 * 4))) +
 
-    ggtitle(NULL, "Multiplicative effect of annual periodic GP <i>f</i><sub>ann</sub>(<i>t</i>)") +
+    ggtitle(NULL, "Effect of annual periodic GP <i>f</i><sub>ann</sub>(<i>t</i>)") +
     
     plots_common
   
@@ -178,7 +179,8 @@ plot_forecast <- function(x_pathogen, x_location, round_id, title) {
     
     geom_hline(yintercept = 1, linetype = "11", linewidth = 0.7, alpha = 0.5) +
     
-    scale_y_continuous(breaks = c(0.75, 1, 1.25)) +
+    coord_cartesian(xlim = date_range, ylim = exp(c(-0.25, 0.25))) +
+    scale_y_log10(breaks = c(0.8, 1, 1.25), labels = c("-20%", "0%", "+25%")) +
     
     scale_x_date(labels = scales::label_date_short()) +
     
@@ -187,7 +189,7 @@ plot_forecast <- function(x_pathogen, x_location, round_id, title) {
     coord_cartesian(ylim = c(0.75, 1.3),
                     xlim = c(origin_date - days(7 * 8), origin_date + days(7 * 4))) +
     
-    ggtitle(NULL, "Multiplicative effect of noise GP <i>f</i><sub>noise</sub>(<i>t</i>)") +
+    ggtitle(NULL, "Effect of noise GP <i>f</i><sub>noise</sub>(<i>t</i>)") +
     
     plots_common +
     

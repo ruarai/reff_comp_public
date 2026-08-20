@@ -27,21 +27,21 @@ simulate_lp <- function(x, alpha, rho_se, rho_per, period = 365.25, seed = 0, M 
 }
 
 
-true_kernel <- function(tau, alpha, rho_se, rho_per, period = 365.25) {
-  
-  alpha * exp(
-    -tau^2 / (2 * rho_se ^ 2) -
-      
-      2 * (sin(pi * tau / period)^2) / (rho_per^2)
-  )
+centered_true_kernel <- function(tau, alpha, rho_se, rho_per, period = 365.25) {
+  b <- 1 / (rho_per^2)
+
+  dc_offset <- besselI(x = b, nu = 0, expon.scaled = TRUE)
+  se_part <- exp(-tau^2 / (2 * rho_se^2))
+  per_part <- exp(-2 * b * (sin(pi * tau / period)^2)) - dc_offset
+  alpha * se_part * per_part
 }
 
-x <- seq(0, 365 * 3, by = 1)
+x <- seq(0, 365 * 2, by = 1)
 x <- x - mean(x)
 N <- length(x)
 
-M <- 800
-c <- 3
+M <- 2000
+c <- 2
 L <- max(abs(x)) * c
 
 period <- 7
@@ -49,14 +49,17 @@ period <- 7
 phi <- PHI(N = N, M = M, L = L, x = x)
 
 alpha <- 1.0
-rho_se <- period * 2
-rho_per <- 2
+rho_se <- period * 12
+rho_per <- 0.5
+
 
 
 spd_lp <- diagSPD_LP(
   alpha = alpha, rho_se = rho_se, rho_per = rho_per * (2 * pi / period),
   period = period, L = L, M = M, log_bessel_cutoff = -10
 ) |> c()
+
+
 
 phi_scaled <- sweep(phi, 2, spd_lp^2, "*")
 k_matrix <- tcrossprod(phi_scaled, phi)
@@ -71,34 +74,36 @@ plot_data_true <- expand_grid(
   x_2 = x
 ) |> 
   mutate(tau = abs(x_1 - x_2),
-         k = true_kernel(tau, alpha ^ 2, rho_se, rho_per * (2 * pi / period), period)) |> 
+         k = centered_true_kernel(tau, alpha ^ 2, rho_se, rho_per * (2 * pi / period), period)) |> 
   
   left_join(plot_data |> rename(k_est = k))
 
 max(abs(plot_data_true$k - plot_data_true$k_est))
 
 
-ggplot(plot_data_true |> filter(x_1 %in% x_1[seq(1, length(x_1), length.out = 6)])) +
+ggplot(plot_data_true |> filter(x_1 == 50)) +
+  geom_line(aes(x = x_2, y = k, colour = "True")) +
+  
+  facet_wrap(~x_1) +
+  
+  coord_cartesian(xlim = c(50 - 7, 50 + 7)) +
+  
+  geom_vline(xintercept = 57)
+
+ggplot(plot_data_true |> filter(x_1 %in% c(-300, -150, 0, 150, 300))) +
   geom_line(aes(x = x_2, y = k, colour = "True")) +
   geom_line(aes(x = x_2, y = k_est, colour = "Approximate")) +
   
-  facet_wrap(~x_1)
-
-ggplot(plot_data_true) +
-  geom_raster(aes(x_1, x_2, fill = k_est))
-
-
-ggplot(plot_data_true) +
-  geom_raster(aes(x_1, x_2, fill = k - k_est))
+  facet_wrap(~x_1) +
+  
+  coord_cartesian(xlim = c(-500, 500))
 
 
 
-# x <- seq(0, 365, by = 1)
 sim_data <- tibble(x = x + 365 / 2, y = simulate_lp(x, alpha, rho_se, rho_per, period, M = M, c = c, seed = 1))
 
 ggplot(sim_data) +
   geom_line(aes(x = x, y = y))
-
 
 ggplot(sim_data) +
   geom_line(aes(x = x %% 365, y = y, colour = factor(floor(x / 365))))
@@ -130,7 +135,7 @@ get_error <- function(x, rho_se, rho_per, M, c) {
   ) |> 
     mutate(tau = abs(x_1 - x_2),
            k_est = as.vector(t(k_matrix)),
-           k = true_kernel(tau, alpha ^ 2, rho_se, rho_per * (2 * pi / period), period))
+           k = centered_true_kernel(tau, alpha ^ 2, rho_se, rho_per * (2 * pi / period), period))
   
   max(abs(plot_data_true$k - plot_data_true$k_est))
 }
@@ -138,10 +143,10 @@ get_error <- function(x, rho_se, rho_per, M, c) {
 
 # Determine what range of rho_per, rho_se is safe for our
 # range of x
-x <- seq(0, 365 * 5, by = 1)
+x <- seq(0, 365 * 2, by = 1)
 
 plot_data <- expand_grid(
-  rho_per = seq(2, 10, by = 1) * 7,
+  rho_per = seq(2, 5, by = 1) * 7,
   rho_se = seq(1, 5, by = 1) * 365
 ) |> 
   rowwise() |> 

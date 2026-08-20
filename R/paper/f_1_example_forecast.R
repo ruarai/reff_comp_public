@@ -67,13 +67,13 @@ p_hol <- ggplot() +
   
   plot_common +
   
-  fastribbon::stat_fastribbon(aes(x = date - 0.5, y = holiday_effect, alpha = after_stat(level)),
+  fastribbon::stat_fastribbon(aes(x = date - 0.5, y = exp(holiday_effect), alpha = after_stat(level)),
                               fill = colour_fit,
                               geom = "stepribbon",
                               traj_data_backcast_long,
                               linewidth = 0.0) +
   
-  fastribbon::stat_fastribbon(aes(x = date - 0.5, y = holiday_effect, alpha = after_stat(level)),
+  fastribbon::stat_fastribbon(aes(x = date - 0.5, y = exp(holiday_effect), alpha = after_stat(level)),
                               geom = "stepribbon",
                               fill = colour_fc,
                               traj_data_forecast_long,
@@ -83,12 +83,12 @@ p_hol <- ggplot() +
   
   plot_common_above +
   
-  geom_hline(yintercept = 0, linetype = "11", linewidth = 0.7) +
+  geom_hline(yintercept = 1, linetype = "11", linewidth = 0.7) +
   
   scale_fill_brewer() +
   
-  coord_cartesian(xlim = date_range, ylim = c(-0.25, 0.25)) +
-  scale_y_continuous(breaks = c(-0.2, 0, 0.2)) +
+  coord_cartesian(xlim = date_range, ylim = exp(c(-0.25, 0.25))) +
+  scale_y_log10(breaks = c(0.8, 1, 1.25), labels = c("-20%", "0%", "+25%")) +
   
   xlab(NULL) + ylab("Effect") +
   
@@ -107,24 +107,24 @@ p_noise <- ggplot() +
   
   plot_common +
   
-  fastribbon::stat_fastribbon(aes(x = date - 0.5, y = f_noise, alpha = after_stat(level)),
+  fastribbon::stat_fastribbon(aes(x = date - 0.5, y = exp(f_noise), alpha = after_stat(level)),
                               fill = colour_fit,
                               traj_data_backcast_long,
                               linewidth = 0.0) +
   
-  fastribbon::stat_fastribbon(aes(x = date - 0.5, y = f_noise, alpha = after_stat(level)),
+  fastribbon::stat_fastribbon(aes(x = date - 0.5, y = exp(f_noise), alpha = after_stat(level)),
                               fill = colour_fc,
                               traj_data_forecast_long,
                               linewidth = 0.0) +
   
   plot_common_above +
   
-  geom_hline(yintercept = 0, linetype = "11", linewidth = 0.7) +
+  geom_hline(yintercept = 1, linetype = "11", linewidth = 0.7) +
   
   scale_fill_brewer(palette = "Blues") +
   
-  coord_cartesian(xlim = date_range, ylim = c(-0.15, 0.15)) +
-  scale_y_continuous(breaks = c(-0.1, 0, 0.1)) +
+  coord_cartesian(xlim = date_range, ylim = exp(c(-0.25, 0.25))) +
+  scale_y_log10(breaks = c(0.8, 1, 1.25), labels = c("-20%", "0%", "+25%")) +
   
   xlab(NULL) + ylab("Effect") +
   
@@ -139,24 +139,24 @@ p_ann <- ggplot() +
   
   plot_common +
   
-  fastribbon::stat_fastribbon(aes(x = date - 0.5, y = f_annual, alpha = after_stat(level)),
+  fastribbon::stat_fastribbon(aes(x = date - 0.5, y = exp(f_annual), alpha = after_stat(level)),
                               fill = colour_fit,
                               traj_data_backcast_long,
                               linewidth = 0.0) +
   
-  fastribbon::stat_fastribbon(aes(x = date - 0.5, y = f_annual, alpha = after_stat(level)),
+  fastribbon::stat_fastribbon(aes(x = date - 0.5, y = exp(f_annual), alpha = after_stat(level)),
                               fill = colour_fc,
                               traj_data_forecast_long,
                               linewidth = 0.0) +
   
   plot_common_above +
   
-  geom_hline(yintercept = 0, linetype = "11", linewidth = 0.7) +
+  geom_hline(yintercept = 1, linetype = "11", linewidth = 0.7) +
   
   scale_fill_brewer(palette = "Blues") +
   
-  coord_cartesian(xlim = date_range, ylim = c(-0.15, 0.15)) +
-  scale_y_continuous(breaks = c(-0.1, 0, 0.1)) +
+  coord_cartesian(xlim = date_range, ylim = exp(c(-0.25, 0.25))) +
+  scale_y_log10(breaks = c(0.8, 1, 1.25), labels = c("-20%", "0%", "+25%")) +
   
   xlab(NULL) + ylab("Effect") +
   
@@ -233,7 +233,7 @@ p_Rt <- ((p_cases_long + theme(axis.text.x = element_blank())) / p_Rt_exp) +
                   theme = plot_theme_annotation)
 
 p_decomp <- (p_hol / p_ann / (p_noise + theme(axis.text.x = element_text(margin = margin(t = 0.3, unit = "cm"), colour = "black", vjust = 1)))) + 
-  plot_annotation("<b>B</b>. Decomposed log <i>R</i>(<i>t</i>) additive effects",
+  plot_annotation("<b>B</b>. Decomposed <i>R</i>(<i>t</i>) effects",
                   theme = plot_theme_annotation)
 
 n_days_ahead <- 7 * 4

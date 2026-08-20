@@ -29,11 +29,11 @@ plot_effect <- function(plot_data, effect_name, holiday_name, pal = "Blues") {
           panel.grid.major = element_gridline,
           plot.margin = margin()) +
     
-    xlab("Multiplicative effect") + ylab(NULL)
+    xlab("Effect") + ylab(NULL)
 }
 
 scale_Rt <- list(
-  scale_x_log10(breaks = c(0.6,  0.8, 1, 1.2, 1.67)),
+  scale_x_log10(breaks = c(0.6,  0.8, 1, 1.25, 1.65), labels = \(x) scales::label_percent()(x - 1)),
   coord_cartesian(xlim = exp(c(-0.6, 0.6)))
 )
 
@@ -53,12 +53,14 @@ p_Rt_2 <- plot_effect(plot_data, "school_holiday_Rt_effect_raw", "Summer holiday
   theme(plot.margin = margin(t = 0.2, b = 0.2, unit = "cm"))
 
 p_Rt <- (p_Rt_2) + 
-  plot_annotation("<b>A</b>. Multiplicative effect of summer school holidays on <i>R</i>(<i>t</i>)",
+  plot_annotation("<b>A</b>. Effect of summer school holidays on <i>R</i>(<i>t</i>)",
                   theme = plot_theme_annotation)
 
 
+p_Rt
+
 p_asc <- (p_asc_2) + 
-  plot_annotation("<b>B</b>. Multiplicative effect of summer school holidays on reporting",
+  plot_annotation("<b>B</b>. Effect of summer school holidays on reporting",
                   theme = plot_theme_annotation)
 
 
@@ -108,16 +110,16 @@ p_Rt_public <- plot_data_public |>
   
   plot_theme_paper +
   
-  scale_x_log10(breaks = c(0.5, 1, 2)) +
+  scale_x_log10(breaks = c(0.5, 1, 2), labels = \(x) scales::label_percent()(x - 1)) +
   coord_cartesian(xlim = exp(c(-1.1, 1.1))) +
   
   theme(panel.background = element_facet_background,
         panel.grid.major = element_gridline,
         legend.position = "none") +
   
-  xlab("Multiplicative effect") + ylab(NULL) +
+  xlab("Effect") + ylab(NULL) +
   
-  ggtitle("<b>A</b>. Multiplicative effect of public holidays on <i>R</i>(<i>t</i>)")
+  ggtitle("<b>A</b>. Effect of public holidays on <i>R</i>(<i>t</i>)")
 
 
 p_asc_public <- plot_data_public |>
@@ -136,16 +138,16 @@ p_asc_public <- plot_data_public |>
   
   plot_theme_paper +
   
-  scale_x_log10(breaks = c(0.5, 1, 2)) +
+  scale_x_log10(breaks = c(0.5, 1, 2), labels = \(x) scales::label_percent()(x - 1)) +
   coord_cartesian(xlim = exp(c(-1.1, 1.1))) +
   
   theme(panel.background = element_facet_background,
         panel.grid.major = element_gridline,
         legend.position = "none") +
   
-  xlab("Multiplicative effect") + ylab(NULL) +
+  xlab("Effect") + ylab(NULL) +
   
-  ggtitle("<b>B</b>. Multiplicative effect of public holidays on case reporting")
+  ggtitle("<b>B</b>. Effect of public holidays on case reporting")
 
 
 p_pub <- p_Rt_public / p_asc_public

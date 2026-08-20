@@ -95,7 +95,8 @@ vector diagSPD_LP(
     
   real d_coeff = -0.5 * square(rho_se);
   
-  for(n in 0:64) {
+  // Avoid mean offset by starting at 1
+  for(n in 1:64) {
     real log_bessel_scaled = log_modified_bessel_first_kind(n, b) - b;
     
     // If the log-bessel value gets too small, we can safely stop early

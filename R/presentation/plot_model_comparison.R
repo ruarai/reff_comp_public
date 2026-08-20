@@ -3,17 +3,12 @@ source("R/functions.R")
 source("R/presentation/plot_theme.R")
 
 perf_data <- bind_rows(
-  collect(open_dataset(fs::dir_ls("results_baseline", glob = "*_performance.parquet", recurse = TRUE))) |> 
-    mutate(.model = "baseline"),
-  collect(open_dataset(fs::dir_ls("results_no_holidays", glob = "*_performance.parquet", recurse = TRUE))) |> 
-    mutate(.model = "no_holidays"),
-  collect(open_dataset(fs::dir_ls("results_no_annual", glob = "*_performance.parquet", recurse = TRUE))) |> 
-    mutate(.model = "no_annual"),
-  collect(open_dataset(fs::dir_ls("results_neither", glob = "*_performance.parquet", recurse = TRUE))) |> 
-    mutate(.model = "neither")
+  read_perf("baseline"),
+  read_perf("no_holidays"),
+  read_perf("no_annual"),
+  read_perf("no_holidays_no_annual")
 ) |> 
-  filter(location != "NZ") |> 
-  mutate(horizon = as.numeric(date - origin_date))
+  process_perf_data()
 
 
 perf_data |> 
@@ -32,18 +27,18 @@ perf_data |>
 plot_data <- perf_data |> 
   filter(horizon > 21, horizon <= 28) |> 
   group_by(round_id, location, pathogen, horizon) |> 
-  mutate(crps_log_null = crps_log[[which(.model == "neither")]]) |> 
+  mutate(crps_log_null = crps_log[[which(.model == "no_holidays_no_annual")]]) |> 
   
-  filter(.model != "neither") |> 
+  filter(.model != "no_holidays_no_annual") |> 
   group_by(pathogen, .model) |> 
   summarise(skill_score = 1 - sum(crps_log) / sum(crps_log_null)) |> 
-  label_pathogens() |> 
+  label_pathogen() |> 
   
   mutate(
     .model = factor(
       .model,
       c("baseline", "no_holidays", "no_annual"),
-      c("With both", "With annual periodic variation", "With holiday effects")
+      c("With both", "With annual periodic GP", "With holiday effects")
     )
   )
   
@@ -55,16 +50,19 @@ ggplot(plot_data) +
                  position = position_dodge(width = 0.75),
                  linewidth = 8.0) +
   
-  ggokabeito::scale_colour_okabe_ito(order = c(6, 3)) +
+  ggokabeito::scale_colour_okabe_ito(order = c(3, 6)) +
   ylab(NULL) + xlab("Skill score") +
   
   plot_theme_pres +
   
   facet_wrap(~pathogen, ncol = 1) +
   
-  theme(legend.position = "none") +
+  coord_cartesian(xlim = c(-0.15, 0.15)) +
   
-  ggtitle("Forecasting skill (against null model)")
+  theme(legend.position = "none",
+        plot.title = element_text(size = 18)) +
+  
+  ggtitle("Forecasting skill\n(against a model without either component)")
 
 
 
@@ -76,8 +74,8 @@ perf_data |>
   mutate(
     .model = factor(
       .model,
-      c("baseline", "no_holidays", "no_annual", "neither"),
-      c("With both", "With annual periodic term", "With holiday effects", "Null model")
+      c("baseline", "no_holidays", "no_annual", "no_holidays_no_annual"),
+      c("With both", "With annual periodic term", "With holiday effects", "Without both")
     )
   ) |> 
   

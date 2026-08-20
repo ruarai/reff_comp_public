@@ -4,9 +4,13 @@ source("R/functions.R")
 
 source("R/presentation/plot_theme.R")
 
-perf_files <- fs::dir_ls("saved_results/results_no_annual/", glob = "*_performance.parquet", recurse = TRUE)
-perf_data <- collect(open_dataset(perf_files)) |> 
-  mutate(.model = "uom-reff-comp", .before = 1)
+snaive_perf_data <- read_parquet("data/snaive_perf_extended.parquet")
+
+
+
+perf_data <- read_perf("baseline") |> 
+  bind_rows(snaive_perf_data) |> 
+  process_perf_data()
 
 
 acefa_perf_data <- read_rds("data/case_forecast_measures.rds") |> 
