@@ -36,21 +36,25 @@ training_counts <- process_counts(combined_counts, x_location, x_pathogen, x_tar
 
 data_list <- create_stan_data(training_counts, n_days_ahead, x_pathogen, x_location)
 
-peak_prior <- get_peak_priors() |> 
-  filter(location == x_location, pathogen == x_pathogen)
 
-data_list$log_peak_size_mean <- peak_prior$log_peak_size_mean
-data_list$log_peak_size_sd <- peak_prior$log_peak_size_sd
-data_list$peak_day_mean <- peak_prior$peak_yday_mean
-data_list$peak_day_sd <- peak_prior$peak_yday_sd
+window_size <- 100
 
-data_list$peak_season_start <- which(training_counts$date == ymd("2026-01-01"))
-data_list$peak_season_end <- which(training_counts$date == ymd("2027-01-01")) - 1
+data_list$N_sus_window <- window_size
 
-fit <- fit_model(data_list, model_file = "src/gp_renewal_peak.stan")
+data_list$past_infections <- combined_counts |> 
+  filter(location == x_location, pathogen == x_pathogen, target == x_target) |> 
+  complete(notification_date = seq(ymd("2022-01-01"), max(notification_date), "days"), fill = list(value_trend = 0)) |> 
+  arrange(notification_date) |> 
+  filter(notification_date >= min(training_counts$date) - days(window_size),
+         notification_date < min(training_counts$date)) |> 
+  pull(value_trend)
 
 
-results_dir <- str_c("saved_results/peak_prior")
+
+fit <- fit_model(data_list, model_file = "src/gp_renewal_sus.stan")
+
+
+results_dir <- str_c("saved_results/gp_renewal_sus")
 
 
 print("Saving fit object and training data")
@@ -69,9 +73,9 @@ print("Writing trajectories...")
 
 write_forecast_file(round_id, x_pathogen, x_location, x_target, results_dir = results_dir)
 
-print("Calculating performance metrics...")
-
-calculate_performance_metrics(round_id, x_pathogen, x_location, x_target, results_dir = results_dir)
+# print("Calculating performance metrics...")
+# 
+# calculate_performance_metrics(round_id, x_pathogen, x_location, x_target, results_dir = results_dir)
 
 print("Making plots...")
 

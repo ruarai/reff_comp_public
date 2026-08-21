@@ -338,7 +338,7 @@ make_fit_plots <- function(round_id, x_pathogen, x_location, x_target, results_d
     pull(date) |> 
     max()
   
-  eval_counts <- read_csv("../forecast-hub/processed-data/2026/2026-05-27/combined-count-smoothed-2026-05-27.csv", show_col_types = FALSE) |> 
+  eval_counts <- read_csv("../forecast-hub/processed-data/2026/2026-08-19/combined-count-smoothed-2026-08-19.csv", show_col_types = FALSE) |> 
     filter(notification_date > origin_date, location == x_location, pathogen == x_pathogen)
   
   school_holidays <- get_school_holidays() |> 

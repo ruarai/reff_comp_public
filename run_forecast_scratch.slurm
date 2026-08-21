@@ -8,7 +8,7 @@
 #SBATCH --job-name=periodicgpcast
 #SBATCH -o ./slurm_out/periodicgpcast_dist_%a.txt # STDOUT
 
-export round_id="2026-05-27"
+export round_id="2026-04-29"
 
 cd /data/gpfs/projects/punim1541/periodic_gp_cast/
   
@@ -16,7 +16,7 @@ module load R/4.5.0
 
 export R_LIBS_USER="/home/ruarai/R_libs"
 
-Rscript --vanilla R/forecast_renewal_peak_prior.R ${SLURM_ARRAY_TASK_ID} $round_id
+Rscript --vanilla R/forecast_renewal_scratch.R ${SLURM_ARRAY_TASK_ID} $round_id
 
 # Log this job's resource usage stats
 my-job-stats -a -n -s
