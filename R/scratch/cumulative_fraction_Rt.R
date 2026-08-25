@@ -67,7 +67,7 @@ plot_data <- combined_counts |>
   group_by(location, pathogen, lag) |> 
   mutate(cumulative_cases = cumsum(value_trend) - lag(cumsum(value_trend), lag[1], default = 0)) |> 
   ungroup() |> 
-  filter(pathogen == "RSV") |> 
+  filter(pathogen == "RSV", location == "VIC") |> 
   left_join(Rt_draws) |> 
   
   mutate(pop_size = get_pop_size(location)) |> 
@@ -81,7 +81,7 @@ plot_data <- combined_counts |>
 
 
 ggplot(plot_data) +
-  geom_path(aes(x = cumulative_frac, y = log_R_holidayless, colour = day_of_year)) +
+  geom_path(aes(x = cumulative_frac, y = exp(log_R_holidayless), colour = day_of_year)) +
   
   theme_bw() +
   
@@ -123,9 +123,9 @@ combined_counts |>
 
 fit_data <- combined_counts |> 
   group_by(location, pathogen) |> 
-  mutate(cumulative_cases = cumsum(value_trend) - lag(cumsum(value_trend), 70, default = 0)) |> 
+  mutate(cumulative_cases = cumsum(value_trend) - lag(cumsum(value_trend), 100, default = 0)) |> 
   ungroup() |> 
-  filter(pathogen == "SARSCOV2") |> 
+  filter(pathogen == "RSV") |> 
   left_join(Rt_draws) |> 
   
   mutate(pop_size = get_pop_size(location)) |> 
@@ -155,6 +155,15 @@ fit <- gam(
   data = fit_data
 )
 
+library(scam)
+
+fit <- scam(
+  log_R_holidayless ~ s(day_of_year, bs = "cc", by = location) +
+    s(cumulative_frac, by = location, bs = "mpd") + location,
+  
+  data = fit_data
+)
+
 summary(fit)
 
 plot(fit, all.terms = TRUE, pages = 1)
@@ -175,7 +184,7 @@ var_explained <- map_dbl(
       group_by(location, pathogen) |> 
       mutate(cumulative_cases = cumsum(value_trend) - lag(cumsum(value_trend), lag, default = 0)) |> 
       ungroup() |> 
-      filter(pathogen == "SARSCOV2") |> 
+      filter(pathogen == "RSV") |> 
       left_join(Rt_draws) |> 
       
       mutate(pop_size = get_pop_size(location)) |> 

@@ -20,13 +20,16 @@ eval_counts <- read_csv("../forecast-hub/processed-data/2026/2026-08-19/combined
 
 n_days_ahead <- 365
 
-training_counts <- process_counts(combined_counts, x_location, x_pathogen, x_target, n_days_ahead, origin_date)
+weather_data <- read_csv("data/weather_data.csv")
+
+training_counts <- process_counts(combined_counts, x_location, x_pathogen, x_target, n_days_ahead, origin_date) |> 
+  left_join(weather_data)
 
 data_list <- create_stan_data(training_counts, n_days_ahead, x_pathogen, x_location)
 
 max_window_size <- 360
 
-data_list$max_window_size <- max_window_size
+data_list$N_max_window <- max_window_size
 
 data_list$past_infections <- combined_counts |> 
   filter(location == x_location, pathogen == x_pathogen, target == x_target) |> 
@@ -50,20 +53,18 @@ fit <- model$sample(
   init = 0.1
 )
 
+fit <- read_rds("saved_results/gp_renewal_sus/2026-04-29/RSV_VIC_case_incidence.rds")
+
 
 draws <- fit$draws(c(
   "scaling_noise", "ls_noise", "phi", "ls_annual", "scaling_annual",
-  "cumulative_infections_effect"
+  "cumulative_infections_effect", "sus_window_size"
 ))
 
-p_hist <- mcmc_hist(draws) +
+mcmc_hist(draws) +
   theme_bw()
-
-p_hist
-
-p_trace <- mcmc_trace(draws) +
+mcmc_trace(draws) +
   theme_bw()
-p_trace
 
 trajectory_data <- fit |> 
   spread_draws(log_R[ix_t], inf[ix_t], inf_delayed[ix_t],
@@ -73,7 +74,9 @@ trajectory_data <- fit |>
   ) |> 
   mutate(date = training_counts$date[ix_t],
          latent_cases = exp(latent_cases_log),
-         cases = replace_na(cases, 0))
+         cases = replace_na(cases, 0)) |> 
+  
+  filter(.chain != 3)
 
 
 wrap_plots(
@@ -110,7 +113,7 @@ ggplot(trajectory_data) +
   geom_line(aes(x = notification_date, y = value_trend), eval_counts,
             colour = "orangered") +
   
-  coord_cartesian(ylim = c(0, 450)) +
+  coord_cartesian(ylim = c(0, 400)) +
   
   scale_fill_brewer() +
   
@@ -145,7 +148,9 @@ trajectory_data <- fit |>
   mutate(date = training_counts$date[ix_t],
          latent_cases = exp(latent_cases_log),
          
-         cases = replace_na(cases, 0))
+         cases = replace_na(cases, 0)) |> 
+  
+  filter(.chain != 3)
 
 
 school_holidays <- get_school_holidays() |> 

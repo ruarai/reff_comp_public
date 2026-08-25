@@ -395,7 +395,7 @@ make_fit_plots <- function(round_id, x_pathogen, x_location, x_target, results_d
   
   pars <- c(
     "scaling_annual", "scaling_noise", "ls_noise", "ls_annual", "phi",
-    "delay_mean", "delay_sd", "log_R_0"
+    "delay_mean", "delay_sd", "log_R_0", "sus_window_size"
   ) |> 
     intersect(fit$metadata()$model_params)
   

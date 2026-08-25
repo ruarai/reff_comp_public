@@ -37,21 +37,21 @@ training_counts <- process_counts(combined_counts, x_location, x_pathogen, x_tar
 data_list <- create_stan_data(training_counts, n_days_ahead, x_pathogen, x_location)
 
 
-window_size <- 100
+max_window_size <- 365
 
-data_list$N_sus_window <- window_size
+data_list$N_max_window <- max_window_size
 
 data_list$past_infections <- combined_counts |> 
   filter(location == x_location, pathogen == x_pathogen, target == x_target) |> 
   complete(notification_date = seq(ymd("2022-01-01"), max(notification_date), "days"), fill = list(value_trend = 0)) |> 
   arrange(notification_date) |> 
-  filter(notification_date >= min(training_counts$date) - days(window_size),
+  filter(notification_date >= min(training_counts$date) - days(max_window_size),
          notification_date < min(training_counts$date)) |> 
   pull(value_trend)
 
 
 
-fit <- fit_model(data_list, model_file = "src/gp_renewal_sus.stan")
+fit <- fit_model(data_list, model_file = "src/gp_renewal_sus.stan", init = 0.1)
 
 
 results_dir <- str_c("saved_results/gp_renewal_sus")

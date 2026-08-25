@@ -18,8 +18,8 @@ data {
   vector[N] x;
   array[N_data] int y;
   
-  int<lower=1> max_window_size;
-  vector[max_window_size] past_infections;
+  int<lower=1> N_max_window;
+  vector[N_max_window] past_infections;
   
   vector[21] gi_reversed;
 
@@ -80,7 +80,7 @@ parameters {
   real<lower=3, upper=21> delay_mean;
   real<lower=1.0> delay_sd;
   
-  real<lower=0, upper=max_window_size> sus_window_size;
+  real<lower=0, upper=N_max_window> sus_window_size;
 }
 
 transformed parameters {
@@ -135,24 +135,24 @@ transformed parameters {
     // Calculate initial infections as exp growth: I(t) = I_0 * exp(r * t)
     inf_full[1:K] = exp(log_I_0 + r_0 * linspaced_vector(K, -K + 1, 0));
     
-    real running_inf = sum(past_infections);
+    vector[N_max_window] delta_t_vec = linspaced_vector(N_max_window, -N_max_window, -1);
+    vector[N_max_window] immunity_kernel = inv_logit(1.0 * (sus_window_size + delta_t_vec));
     
-    for(t in 1:N) {
+    vector[N_max_window + N] imm_history;
+    imm_history[1:N_max_window] = past_infections;
+    
+    for(t in 1:N) 
+    {
+      real running_inf = dot_product(immunity_kernel, segment(imm_history, t, N_max_window));
+      
       cumulative_effect[t] = cumulative_infections_effect * running_inf;
       
       real R_t = exp(log_R[t] - cumulative_effect[t]);
       
       real new_infections = R_t * dot_product(gi_reversed, segment(inf_full, t, K));
+      
       inf_full[t + K] = new_infections;
-      
-      // Update the rolling sum for the next iteration
-      running_inf += new_infections;
-      
-      if (t <= N_sus_window) {
-        running_inf -= past_infections[t];
-      } else {
-        running_inf -= inf_full[t - N_sus_window + K];
-      }
+      imm_history[N_max_window + t] = new_infections;
     }
     
     // We only care about t = 1..N, so drop the first K days
@@ -193,8 +193,8 @@ transformed parameters {
 }
 
 model {
-  scaling_annual ~ exponential(1.0);
-  scaling_noise   ~ exponential(1.0);
+  scaling_annual ~ normal(0.0, 1.0);
+  scaling_noise   ~ normal(0.0, 0.1);
   
   scaling_weekly_asc ~ exponential(1.0);
   
@@ -228,6 +228,8 @@ model {
   
   delay_mean ~ normal(9, 2.5);
   delay_sd ~ lognormal(0, 0.5);
+  
+  sus_window_size ~ normal(150, 100);
   
   // Data likelihood
   y ~ neg_binomial_2_log(latent_cases_weekly_log[1:N_data], phi);
