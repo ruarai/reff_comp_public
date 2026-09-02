@@ -20,10 +20,7 @@ eval_counts <- read_csv("../forecast-hub/processed-data/2026/2026-08-19/combined
 
 n_days_ahead <- 365
 
-weather_data <- read_csv("data/weather_data.csv")
-
-training_counts <- process_counts(combined_counts, x_location, x_pathogen, x_target, n_days_ahead, origin_date) |> 
-  left_join(weather_data)
+training_counts <- process_counts(combined_counts, x_location, x_pathogen, x_target, n_days_ahead, origin_date)
 
 data_list <- create_stan_data(training_counts, n_days_ahead, x_pathogen, x_location)
 
@@ -40,7 +37,7 @@ data_list$past_infections <- combined_counts |>
   pull(value_trend)
 
 library(cmdstanr)
-model <- cmdstan_model("src/gp_renewal_sus.stan")
+model <- cmdstan_model("src/gp_renewal_sus.stan", stanc_options = list("O1"))
 
 
 fit <- model$sample(

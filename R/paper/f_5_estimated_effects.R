@@ -108,7 +108,7 @@ p_ann <- ggplot(plot_data_gp) +
         panel.grid.major.x = element_gridline,
         panel.background = element_facet_background,
         panel.spacing.x = unit(0.5, "cm")) + 
-  plot_annotation("<b>C</b>. Effect of annually-periodic Gaussian process <i>f</i><sub>ann</sub>(<i>t</i>)<br> on <i>R</i>(<i>t</i>)",
+  plot_annotation("<b>C</b>. Effect of seasonal Gaussian process <i>f</i><sub>seasonal</sub>(<i>t</i>)<br>on <i>R</i>(<i>t</i>)",
                   theme = theme(plot.title = element_markdown(family = "Helvetica"),
                                 plot.margin = margin(t = 0.4, l = 0.2, b = 0.0, r = 0.2, unit = "cm")))
 

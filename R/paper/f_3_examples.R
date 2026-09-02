@@ -135,7 +135,7 @@ plot_forecast <- function(x_pathogen, x_location, round_id, title) {
     coord_cartesian(ylim = c(0.6, 1.4),
                     xlim = c(origin_date - days(7 * 8), origin_date + days(7 * 4))) +
     
-    ggtitle(NULL, "Instantaneous reproduction number <i>R</i>(<i>t</i>)") +
+    ggtitle(NULL, "Effective reproduction number <i>R</i>(<i>t</i>)") +
     
     plots_common
   
@@ -161,7 +161,7 @@ plot_forecast <- function(x_pathogen, x_location, round_id, title) {
     coord_cartesian(ylim = c(0.75, 1.3),
                     xlim = c(origin_date - days(7 * 8), origin_date + days(7 * 4))) +
 
-    ggtitle(NULL, "Effect of annual periodic GP <i>f</i><sub>ann</sub>(<i>t</i>)") +
+    ggtitle(NULL, "Effect of seasonal GP <i>f</i><sub>seasonal</sub>(<i>t</i>)") +
     
     plots_common
   

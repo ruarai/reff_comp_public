@@ -41,7 +41,9 @@ plot_data_counts <- combined_counts |>
          notification_date <= ymd("2026-01-01")) |> 
   inner_join(location_y, by = join_by(location)) |> 
   group_by(location, pathogen) |> 
-  mutate(y = y_offset + scales::rescale(value_trend, to = c(0.15, 0.9)),
+  mutate(y_clipped = pmin(value_trend_and_remainder, max(value_trend) * 1.2),
+         y = y_offset + scales::rescale(y_clipped, to = c(0.15, 0.9), from = c(0, max(value_trend) * 1.2)),
+         y_trend = y_offset + scales::rescale(value_trend, to = c(0.15, 0.9), from = c(0, max(value_trend) * 1.2)),
          y_full = scales::rescale(value_trend)) |> 
   label_pathogen()
 
@@ -77,6 +79,29 @@ plot_data_skill <- perf_data_paired |>
   left_join(location_y, by = join_by(location)) |> 
   arrange(location, desc(date))
 
+
+school_holidays <- get_school_holidays() |> 
+  filter(location %in% locations_paper) |> 
+  left_join(location_y, by = join_by(location)) |> 
+  filter(year(start_date) == 2025) |> 
+  expand_grid(pathogen = c("RSV", "flu", "SARSCOV2")) |> 
+  label_pathogen() |> 
+  filter(
+    # pathogen == "RSV" | (end_date > ymd("2025-05-01")),
+    # !(pathogen == "RSV" & end_date < ymd("2025-05-01") & location %in% c("VIC", "NT", "ACT"))
+  )
+
+public_holidays <- get_public_holidays() |> 
+  filter(location %in% locations_paper) |> 
+  left_join(location_y, by = join_by(location)) |> 
+  filter(date > ymd("2025-02-01")) |> 
+  expand_grid(pathogen = c("RSV", "flu", "SARSCOV2")) |> 
+  label_pathogen() |> 
+  filter(
+    pathogen == "RSV" | (date > ymd("2025-05-01")),
+    # !(pathogen == "RSV" & date < ymd("2025-05-01") & location %in% c("VIC", "NT", "ACT"))
+  )
+
 p_heatmap <- ggplot(plot_data_skill) +
   
   geom_rect(aes(xmin = date, xmax = date + days(7),
@@ -85,27 +110,37 @@ p_heatmap <- ggplot(plot_data_skill) +
             colour = "white", linewidth = 0.25) +
   
   geom_rect(aes(xmin = date, xmax = date + days(7),
-                ymin = y_offset - 0.46, ymax = y_offset - 0.4),
+                ymin = y_offset - 0.44, ymax = y_offset - 0.4),
             fill = "black",
             colour = "white", linewidth = 0.25) +
   
-  geom_line(aes(x = notification_date, y = y - 0.5, group = location), plot_data_counts,
+  geom_rect(aes(xmin = start_date, xmax = end_date,
+                ymin = y_offset - 0.44, ymax = y_offset - 0.48),
+            fill = "#017A4AFF", school_holidays,
+            linewidth = 0.25) +
+  
+  # geom_rect(aes(xmin = date - days(2), xmax = date + days(2),
+  #               ymin = y_offset - 0.48, ymax = y_offset - 0.52),
+  #           fill = "#00496FFF", public_holidays) +
+  
+  # geom_point(aes(x = notification_date, y = y - 0.5, group = location), plot_data_counts,
+  #           colour = "white", size = 1.0, alpha = 0.8) +
+  # geom_point(aes(x = notification_date, y = y - 0.5, group = location), plot_data_counts,
+  #            size = 0.2) +
+  geom_line(aes(x = notification_date, y = y_trend - 0.5, group = location), plot_data_counts,
             colour = "white", linewidth = 1.5, alpha = 0.8) +
-  geom_line(aes(x = notification_date, y = y - 0.5, group = location), plot_data_counts,
+  geom_line(aes(x = notification_date, y = y_trend - 0.5, group = location), plot_data_counts,
             linewidth = 0.4) +
   
-  geom_point(aes(x = approx_date, y = y - 0.5),
+  geom_point(aes(x = approx_date, y = y_trend - 0.5),
              example_points, size = 2) +
-  geom_point(aes(x = approx_date, y = y - 0.5),
+  geom_point(aes(x = approx_date, y = y_trend - 0.5),
              colour = "white", size = 0.5, stroke = 0.5,
              example_points) +
   
   geom_label(aes(x = approx_date, y = y_offset - 0.3, label = label),
              size = 3, alpha = 0.8,
              example_points) +
-  
-  # geom_text(aes(x = ymd("2025-02-05"), y = y_offset + 0.28, label = "*"),
-  #           plot_data_note, size = 6) +
   
   
   scale_fill_gradientn(
@@ -126,6 +161,8 @@ p_heatmap <- ggplot(plot_data_skill) +
   ylab("Region") + xlab(NULL) +
   
   plot_theme_paper +
+  
+  coord_cartesian(xlim = c(NA_Date_, ymd("2026-01-01")), ylim = c(0.5, 5.5)) +
   
   theme(legend.position = "right",
         panel.background = element_facet_background)
@@ -228,14 +265,15 @@ p_skill <- perf_data_paired |>
         panel.background = element_facet_background,
         panel.grid.major = element_gridline)
 
-p_top <- p_crps + 
-  plot_annotation("<b>A</b>. Forecast performance by horizon (lower value is better)",
+
+p_top <- p_heatmap + 
+  plot_annotation("<b>A</b>. 4th week forecast performance by epidemic period",
                   theme = plot_theme_annotation)
 
-
-p_mid <- p_heatmap + 
-  plot_annotation("<b>B</b>. 4th week forecast performance by epidemic period",
+p_mid <- p_crps + 
+  plot_annotation("<b>B</b>. Forecast performance by horizon week (lower value is better)",
                   theme = plot_theme_annotation)
+
 
 p_bottom <- (p_skill + plot_spacer()) +
   plot_layout(widths = c(1, 0.1)) +
@@ -248,7 +286,7 @@ p_bottom
 (wrap_elements(full = p_top) / 
     wrap_elements(full = p_mid) /
     wrap_elements(full = p_bottom)) +
-  plot_layout(heights = c(1, 1.5, 1))
+  plot_layout(heights = c(1.5, 1, 1))
 
 ggsave(
   "paper_figures/f_2_performance.png",

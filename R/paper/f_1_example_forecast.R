@@ -165,7 +165,7 @@ p_ann <- ggplot() +
         axis.text.x = element_blank(),
         panel.grid.major.x = element_blank()) +
   
-  ggtitle(NULL, "Annual periodic GP <i>f</i><sub>ann</sub>(<i>t</i>)")
+  ggtitle(NULL, "Seasonal GP <i>f</i><sub>seasonal</sub>(<i>t</i>)")
 
 
 p_Rt_exp <- ggplot() +
@@ -199,7 +199,7 @@ p_Rt_exp <- ggplot() +
         plot.subtitle = ggtext::element_markdown(),
         panel.grid.major.x = element_blank()) +
   
-  ggtitle(NULL, "Instantaneous reproduction number <i>R</i>(<i>t</i>)")
+  ggtitle(NULL, "Effective reproduction number <i>R</i>(<i>t</i>)")
 
 p_Rt_exp
 
