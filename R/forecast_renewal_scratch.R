@@ -40,6 +40,7 @@ data_list <- create_stan_data(training_counts, n_days_ahead, x_pathogen, x_locat
 max_window_size <- 365
 
 data_list$N_max_window <- max_window_size
+data_list$population_size <- get_pop_size(x_location)
 
 data_list$past_infections <- combined_counts |> 
   filter(location == x_location, pathogen == x_pathogen, target == x_target) |> 

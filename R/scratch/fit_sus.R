@@ -24,9 +24,10 @@ training_counts <- process_counts(combined_counts, x_location, x_pathogen, x_tar
 
 data_list <- create_stan_data(training_counts, n_days_ahead, x_pathogen, x_location)
 
-max_window_size <- 360
+max_window_size <- 365
 
 data_list$N_max_window <- max_window_size
+data_list$population_size <- get_pop_size(x_location)
 
 data_list$past_infections <- combined_counts |> 
   filter(location == x_location, pathogen == x_pathogen, target == x_target) |> 
@@ -46,16 +47,16 @@ fit <- model$sample(
   chains = 4,
   parallel_chains = 4,
   refresh = 50,
-  iter_warmup = 500, iter_sampling = 500,
+  iter_warmup = 250, iter_sampling = 250,
   init = 0.1
 )
 
-fit <- read_rds("saved_results/gp_renewal_sus/2026-04-29/RSV_VIC_case_incidence.rds")
+# fit <- read_rds("saved_results/gp_renewal_sus/2026-04-29/RSV_VIC_case_incidence.rds")
 
 
 draws <- fit$draws(c(
   "scaling_noise", "ls_noise", "phi", "ls_annual", "scaling_annual",
-  "cumulative_infections_effect", "sus_window_size"
+  "log_immunity_effect", "infections_window_size"
 ))
 
 mcmc_hist(draws) +
@@ -67,13 +68,11 @@ trajectory_data <- fit |>
   spread_draws(log_R[ix_t], inf[ix_t], inf_delayed[ix_t],
                cases[ix_t], f_noise[ix_t],
                latent_cases_log[ix_t],
-               cumulative_effect[ix_t],
+               immunity_t[ix_t],
   ) |> 
   mutate(date = training_counts$date[ix_t],
          latent_cases = exp(latent_cases_log),
-         cases = replace_na(cases, 0)) |> 
-  
-  filter(.chain != 3)
+         cases = replace_na(cases, 0))
 
 
 wrap_plots(
@@ -85,14 +84,14 @@ wrap_plots(
     coord_cartesian(ylim = c(0.5, 1.8)) +
     theme_bw(),
   ggplot(trajectory_data) + 
-    fastribbon::stat_fastribbon(aes(x = date, y = exp(-cumulative_effect))) + 
+    fastribbon::stat_fastribbon(aes(x = date, y = exp(-immunity_t))) + 
     scale_fill_brewer() + 
     geom_hline(yintercept = 1) +
     
     coord_cartesian(ylim = c(0.5, 1.8)) +
     theme_bw(),
   ggplot(trajectory_data) + 
-    fastribbon::stat_fastribbon(aes(x = date, y = exp(log_R - cumulative_effect))) + 
+    fastribbon::stat_fastribbon(aes(x = date, y = exp(log_R - immunity_t))) + 
     scale_fill_brewer() + 
     geom_hline(yintercept = 1) +
     
@@ -145,9 +144,7 @@ trajectory_data <- fit |>
   mutate(date = training_counts$date[ix_t],
          latent_cases = exp(latent_cases_log),
          
-         cases = replace_na(cases, 0)) |> 
-  
-  filter(.chain != 3)
+         cases = replace_na(cases, 0))
 
 
 school_holidays <- get_school_holidays() |> 

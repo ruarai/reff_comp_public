@@ -266,13 +266,14 @@ p_skill <- perf_data_paired |>
         panel.grid.major = element_gridline)
 
 
-p_top <- p_heatmap + 
-  plot_annotation("<b>A</b>. 4th week forecast performance by epidemic period",
+p_top <- p_crps + 
+  plot_annotation("<b>A</b>. Forecast performance by horizon week (lower value is better)",
                   theme = plot_theme_annotation)
 
-p_mid <- p_crps + 
-  plot_annotation("<b>B</b>. Forecast performance by horizon week (lower value is better)",
+p_mid <- p_heatmap + 
+  plot_annotation("<b>B</b>. 4th week forecast performance by epidemic period",
                   theme = plot_theme_annotation)
+
 
 
 p_bottom <- (p_skill + plot_spacer()) +
@@ -286,7 +287,7 @@ p_bottom
 (wrap_elements(full = p_top) / 
     wrap_elements(full = p_mid) /
     wrap_elements(full = p_bottom)) +
-  plot_layout(heights = c(1.5, 1, 1))
+  plot_layout(heights = c(1, 1.5, 1))
 
 ggsave(
   "paper_figures/f_2_performance.png",
@@ -295,5 +296,13 @@ ggsave(
 )
 
 
+library(magick)
+
+image_composite(
+  image = image_read("paper_figures/f_2_performance.png"),
+  composite_image = image_read("paper_figures/f_2_performance_overlay.png"),
+  operator = "over"
+) |> 
+  image_write(path = "paper_figures/f_2_performance.png", format = "png")
 
 

@@ -69,6 +69,20 @@ create_stan_data <- function(
   return(data_list)
 }
 
+get_pop_size <- function(location) {
+  # 2025 ABS ERP
+  case_when(
+    location == "VIC" ~ 7.121 * 1e6,
+    location == "NSW" ~ 8.641 * 1e6,
+    location == "QLD" ~ 5.712 * 1e6,
+    location == "SA" ~ 1.910 * 1e6,
+    location == "WA" ~ 3.076 * 1e6,
+    location == "TAS" ~ 0.579 * 1e6,
+    location == "NT" ~ 0.267 * 1e6,
+    location == "ACT" ~ 0.487 * 1e6
+  )
+}
+
 get_origin_date <- function(combined_counts, x_pathogen, x_location, x_target) {
   combined_counts |> 
     filter(location == x_location, pathogen == x_pathogen, target == x_target,

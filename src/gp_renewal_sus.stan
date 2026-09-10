@@ -18,6 +18,8 @@ data {
   vector[N] x;
   array[N_data] int y;
   
+  real<lower=0.0> population_size;
+  
   int<lower=1> N_max_window;
   vector[N_max_window] past_infections;
   
@@ -67,7 +69,6 @@ parameters {
   real r_0;
   real log_I_0;
   
-  real<lower=0.0> cumulative_infections_effect;
   
   // For school holidays and public holidays, type = 1 is no holiday
   // Only fit effects to type > 1
@@ -80,7 +81,8 @@ parameters {
   real<lower=3, upper=21> delay_mean;
   real<lower=1.0> delay_sd;
   
-  real<lower=0, upper=N_max_window> sus_window_size;
+  real log_immunity_effect;
+  real<lower=0, upper=N_max_window> infections_window_size;
 }
 
 transformed parameters {
@@ -126,7 +128,7 @@ transformed parameters {
   // but not affected by any reporting/ascertainment effects
   vector[N] inf_delayed;
   
-  vector[N] cumulative_effect;
+  vector[N] immunity_t;
   
   {
     // The full time-series of infections including M days prior to t = 1
@@ -136,23 +138,23 @@ transformed parameters {
     inf_full[1:K] = exp(log_I_0 + r_0 * linspaced_vector(K, -K + 1, 0));
     
     vector[N_max_window] delta_t_vec = linspaced_vector(N_max_window, -N_max_window, -1);
-    vector[N_max_window] immunity_kernel = inv_logit(1.0 * (sus_window_size + delta_t_vec));
+    vector[N_max_window] immunity_kernel = inv_logit(0.1 * (infections_window_size + delta_t_vec));
     
-    vector[N_max_window + N] imm_history;
-    imm_history[1:N_max_window] = past_infections;
+    vector[N_max_window + N] infections_history;
+    infections_history[1:N_max_window] = past_infections;
     
     for(t in 1:N) 
     {
-      real running_inf = dot_product(immunity_kernel, segment(imm_history, t, N_max_window));
+      real running_infections = dot_product(immunity_kernel, segment(infections_history, t, N_max_window));
       
-      cumulative_effect[t] = cumulative_infections_effect * running_inf;
+      immunity_t[t] = exp(log_immunity_effect) * running_infections / population_size;
       
-      real R_t = exp(log_R[t] - cumulative_effect[t]);
+      real R_t = exp(log_R[t] - immunity_t[t]);
       
       real new_infections = R_t * dot_product(gi_reversed, segment(inf_full, t, K));
       
       inf_full[t + K] = new_infections;
-      imm_history[N_max_window + t] = new_infections;
+      infections_history[N_max_window + t] = new_infections;
     }
     
     // We only care about t = 1..N, so drop the first K days
@@ -204,7 +206,6 @@ model {
   public_holiday_Rt_effect_raw ~ normal(0, 0.25);
   public_holiday_asc_effect_raw ~ normal(0, 0.25);
   
-  cumulative_infections_effect ~ normal(0, 0.001);
   
   // Inv-gamma priors derived from:
   // find_inv_gamma_params(7.0, 90.0)
@@ -229,7 +230,8 @@ model {
   delay_mean ~ normal(9, 2.5);
   delay_sd ~ lognormal(0, 0.5);
   
-  sus_window_size ~ normal(150, 100);
+  log_immunity_effect ~ normal(3, 4.0);
+  infections_window_size ~ normal(150, 100);
   
   // Data likelihood
   y ~ neg_binomial_2_log(latent_cases_weekly_log[1:N_data], phi);
@@ -239,3 +241,4 @@ generated quantities {
   // Calculate out case incidence for backcasting and forecasting
   array[N] int cases = neg_binomial_2_log_rng(latent_cases_weekly_log, phi);
 }
+

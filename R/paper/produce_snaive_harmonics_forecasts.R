@@ -2,7 +2,7 @@
 
 source("R/functions.R")
 
-snaive_harmonics_forecast <- function(cases) {
+snaive_harmonics_forecast <- function(cases, horizon_days = 7 * 8) {
   library(tsibble)
   library(fabletools)
   library(distributional)
@@ -19,9 +19,9 @@ snaive_harmonics_forecast <- function(cases) {
     model(ARIMA(
       log_counts ~ PDQ(0, 0, 0) + pdq(d = 1) +
         fourier(period = "week", K = 3) +
-        fourier(period = "year", K = 5)
+        fourier(period = "year", K = 10)
     )) |>
-    forecast(h = 7 * 8) |>
+    forecast(h = horizon_days) |>
     as_tibble() |>
     group_by(pathogen, location, target) |>
     mutate(
@@ -65,18 +65,29 @@ combined_count_latest <- read_csv(
   "data/combined-count-smoothed-2026-04-15.csv",
   show_col_types = FALSE
 ) |> 
-  filter(target == "case_incidence")
+  filter(target == "case_incidence", location == "SA", pathogen == "RSV")
 
 test_forecast <- snaive_harmonics_forecast(combined_count_latest)
 
 ggplot() +
   stat_lineribbon(aes(x = date, ydist = value),
-                  test_forecast |> filter(location == "SA", pathogen == "RSV")) +
+                  linewidth = 0,
+                  test_forecast) +
   
   geom_line(aes(x = notification_date, y = value),
-            combined_count_latest |> filter(location == "SA", pathogen == "RSV", notification_date >= ymd("2025-01-01")))
+            filter(combined_count_latest, location == "SA", pathogen == "RSV", notification_date >= ymd("2023-01-01"))) +
+  
+  
+  coord_cartesian(ylim = c(0, 150)) +
+  
+  theme_bw() +
+  
+  scale_fill_brewer()
 
+library(furrr)
+library(future.callr)
 
+plan(callr, workers = 4)
 
 forecast_data <- tibble(
   round_id = c(seq(ymd("2025-04-10"), ymd("2025-12-25"), by = "1 week"),
@@ -84,7 +95,7 @@ forecast_data <- tibble(
 ) |> 
   mutate(case_file = glue::glue("data/retro_rounds/{round_id}/combined-count-{round_id}.csv")) |> 
   
-  pmap(function(round_id, case_file) {
+  future_pmap(function(round_id, case_file) {
     print(round_id)
     if(!fs::file_exists(case_file)) {
       print(glue::glue("No data found for {round_id}"))
@@ -96,7 +107,7 @@ forecast_data <- tibble(
     
     case_forecast <- snaive_harmonics_forecast(cases) |> 
       mutate(round_id = round_id, .before = 1)
-  }, .progress = TRUE) |> 
+  }) |> 
   bind_rows() |> 
   left_join(combined_count_latest |> rename(date = notification_date, true_value = value))
 

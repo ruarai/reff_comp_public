@@ -94,7 +94,7 @@ p_hol <- ggplot() +
   
   theme(legend.position = "none") +
   
-  ggtitle(NULL, "Holiday effects <i>ω</i><sub>S</sub>(<i>t</i>) + <i>ω</i><sub>P</sub>(<i>t</i>)")  +
+  ggtitle(NULL, "Holiday effects <i>ω</i><sub>S</sub>(<i>t</i>) and <i>ω</i><sub>P</sub>(<i>t</i>)")  +
   
   theme(legend.position = "none",
         plot.subtitle = ggtext::element_markdown(),
@@ -133,7 +133,7 @@ p_noise <- ggplot() +
         axis.text.x = element_blank(),
         panel.grid.major.x = element_blank()) +
   
-  ggtitle(NULL, "Noise GP <i>f</i><sub>noise</sub>(<i>t</i>)")
+  ggtitle(NULL, "Noise Gaussian process <i>f</i><sub>noise</sub>(<i>t</i>)")
 
 p_ann <- ggplot() +
   
@@ -165,7 +165,7 @@ p_ann <- ggplot() +
         axis.text.x = element_blank(),
         panel.grid.major.x = element_blank()) +
   
-  ggtitle(NULL, "Seasonal GP <i>f</i><sub>seasonal</sub>(<i>t</i>)")
+  ggtitle(NULL, "Seasonal Gaussian process <i>f</i><sub>seasonal</sub>(<i>t</i>)")
 
 
 p_Rt_exp <- ggplot() +
@@ -229,11 +229,11 @@ p_cases_long
 
 
 p_Rt <- ((p_cases_long + theme(axis.text.x = element_blank())) / p_Rt_exp) + 
-  plot_annotation("<b>A</b>. Conditioned case incidence and inferred <i>R</i>(<i>t</i>)",
+  plot_annotation("<b>B</b>. Conditioned case incidence and inferred <i>R</i>(<i>t</i>)",
                   theme = plot_theme_annotation)
 
 p_decomp <- (p_hol / p_ann / (p_noise + theme(axis.text.x = element_text(margin = margin(t = 0.3, unit = "cm"), colour = "black", vjust = 1)))) + 
-  plot_annotation("<b>B</b>. Decomposed <i>R</i>(<i>t</i>) effects",
+  plot_annotation("<b>C</b>. Decomposed <i>R</i>(<i>t</i>) effects",
                   theme = plot_theme_annotation)
 
 n_days_ahead <- 7 * 4
@@ -266,12 +266,18 @@ p_cases <- ggplot() +
   
   geom_line(aes(x = date, y = y),
             training_counts |> filter(date >= date_range_forecast[1])) +
-  geom_point(aes(x = date, y = y), size = 0.9,
+  geom_point(aes(x = date, y = y), size = 1.8,
+             training_counts |> filter(date >= date_range_forecast[1])) +
+  geom_point(aes(x = date, y = y), size = 0.85, stroke = 0.1, colour = "white",
              training_counts |> filter(date >= date_range_forecast[1])) +
   
   geom_line(aes(x = notification_date, y = value),
             eval_counts |> filter(notification_date <= date_range_forecast[2])) +
-  geom_point(aes(x = notification_date, y = value), size = 0.9,
+  geom_point(aes(x = notification_date, y = value),
+             size = 1.8,
+             eval_counts |> filter(notification_date <= date_range_forecast[2])) +
+  geom_point(aes(x = notification_date, y = value),
+             size = 0.85, stroke = 0.1, colour = "white",
              eval_counts |> filter(notification_date <= date_range_forecast[2])) +
   
   scale_fill_brewer(palette = "Blues") +
@@ -291,21 +297,30 @@ p_cases
 
 
 p_forecast <- (p_cases) + 
-  plot_annotation("<b>C</b>. Forecast case incidence",
+  plot_annotation("<b>D</b>. Forecast case incidence",
                   theme = plot_theme_annotation) +
   
   theme(plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "cm"))
 
-p_example <- (wrap_elements(full = p_Rt) | wrap_elements(full = p_decomp)) /
+
+# p_equation_title <- plot_spacer() + 
+#   plot_annotation("<b>A</b>. Decomposition of the effective reproduction number",
+#                   theme = plot_theme_annotation) +
+#   
+#   theme(plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "cm"))
+
+p_example <- plot_spacer() /
+  (wrap_elements(full = p_Rt) | wrap_elements(full = p_decomp)) /
   wrap_elements(full = p_forecast) /
   plot_spacer() +
-  plot_layout(heights = c(1.2, 1, 0.1))
+  plot_layout(heights = c(0.6, 1.2, 1, 0.13))
 
-p_example
+
+
 
 ggsave(
   "paper_figures/f_1_example.png", p_example,
-  width = 9, height = 7.5,
+  width = 9, height = 9.5,
   bg = "white"
 )
 
