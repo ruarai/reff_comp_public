@@ -36,7 +36,7 @@ ggplot() +
   
   scale_fill_discrete(name = "Public holiday name") +
   
-  xlab(NULL) + ylab("Region") +
+  xlab(NULL) + ylab("Jurisdiction") +
   
   coord_cartesian(xlim = c(ymd("2027-01-01"), ymd("2028-01-01"))) +
   

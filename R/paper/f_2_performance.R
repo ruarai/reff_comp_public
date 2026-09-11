@@ -85,22 +85,8 @@ school_holidays <- get_school_holidays() |>
   left_join(location_y, by = join_by(location)) |> 
   filter(year(start_date) == 2025) |> 
   expand_grid(pathogen = c("RSV", "flu", "SARSCOV2")) |> 
-  label_pathogen() |> 
-  filter(
-    # pathogen == "RSV" | (end_date > ymd("2025-05-01")),
-    # !(pathogen == "RSV" & end_date < ymd("2025-05-01") & location %in% c("VIC", "NT", "ACT"))
-  )
+  label_pathogen()
 
-public_holidays <- get_public_holidays() |> 
-  filter(location %in% locations_paper) |> 
-  left_join(location_y, by = join_by(location)) |> 
-  filter(date > ymd("2025-02-01")) |> 
-  expand_grid(pathogen = c("RSV", "flu", "SARSCOV2")) |> 
-  label_pathogen() |> 
-  filter(
-    pathogen == "RSV" | (date > ymd("2025-05-01")),
-    # !(pathogen == "RSV" & date < ymd("2025-05-01") & location %in% c("VIC", "NT", "ACT"))
-  )
 
 p_heatmap <- ggplot(plot_data_skill) +
   
@@ -119,14 +105,6 @@ p_heatmap <- ggplot(plot_data_skill) +
             fill = "#017A4AFF", school_holidays,
             linewidth = 0.25) +
   
-  # geom_rect(aes(xmin = date - days(2), xmax = date + days(2),
-  #               ymin = y_offset - 0.48, ymax = y_offset - 0.52),
-  #           fill = "#00496FFF", public_holidays) +
-  
-  # geom_point(aes(x = notification_date, y = y - 0.5, group = location), plot_data_counts,
-  #           colour = "white", size = 1.0, alpha = 0.8) +
-  # geom_point(aes(x = notification_date, y = y - 0.5, group = location), plot_data_counts,
-  #            size = 0.2) +
   geom_line(aes(x = notification_date, y = y_trend - 0.5, group = location), plot_data_counts,
             colour = "white", linewidth = 1.5, alpha = 0.8) +
   geom_line(aes(x = notification_date, y = y_trend - 0.5, group = location), plot_data_counts,
@@ -158,7 +136,7 @@ p_heatmap <- ggplot(plot_data_skill) +
                date_minor_breaks = "1 months",
                guide = guide_axis(minor.ticks = TRUE)) +
   
-  ylab("Region") + xlab(NULL) +
+  ylab("Jurisdiction") + xlab(NULL) +
   
   plot_theme_paper +
   
@@ -218,7 +196,7 @@ p_skill <- perf_data_paired |>
   geom_hline(yintercept = 0.0, linetype = "44") +
   
   ggokabeito::scale_colour_okabe_ito(order = c(1, 2, 3, 5, 6, 7, 8, 9, 4),
-                                     name = "Region") +
+                                     name = "Jurisdiction") +
   
   coord_cartesian(ylim = c(-0.1, 0.7), xlim = c(1, 4)) +
   scale_x_continuous(breaks = c(1, 2, 3, 4)) +

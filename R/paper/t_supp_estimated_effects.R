@@ -60,7 +60,7 @@ table_data |>
   mutate(location = if_else(lag(location, default = "") != location &
                               lead(location, default = "") == location, location, "")) |> 
   
-  `colnames<-`(c("Region", "Pathogen", 
+  `colnames<-`(c("Jurisdiction", "Pathogen", 
                  "$R(t)$ effect", "Reporting effect",
                  "$R(t)$ effect", "Reporting effect")) |> 
   

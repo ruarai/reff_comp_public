@@ -184,3 +184,38 @@ rhat_tbl |>
 
 
 
+fit_files_no_holidays <- fs::dir_ls("saved_results/no_holidays/2025-11-27/", recurse = TRUE, glob = "*.rds")
+
+
+no_holidays_gp_draws <- map(
+  fit_files_no_holidays,
+  function(fit_file) {
+    
+    round_id <- ymd(str_extract(fit_file, "\\d{4}-\\d{2}-\\d{2}"))
+    job_name <- fs::path_file(fit_file) |> fs::path_ext_remove()
+    pathogen <- str_split_fixed(job_name, "_", 3)[1]
+    location <- str_split_fixed(job_name, "_", 3)[2]
+    target <- str_split_fixed(job_name, "_", 3)[3]
+    
+    if(!(location %in% locations_paper)) {
+      return(NULL)
+    }
+    
+    fit <- read_rds(fit_file)
+    
+    training_counts <- read_parquet(
+      str_c("saved_results/baseline/", round_id, "/", job_name, "_training_counts.parquet")
+    )
+    
+    fit |> 
+      spread_draws(f_annual[ix_t], f_noise[ix_t], log_R[ix_t]) |> 
+      filter(.draw %% 10 == 0) |> 
+      mutate(date = training_counts$date[ix_t]) |> 
+      mutate(round_id = round_id, location = location, pathogen = pathogen, target = target)
+  },
+  .progress = TRUE
+) |> 
+  bind_rows()
+
+write_parquet(no_holidays_gp_draws, "data/paper/no_holidays_gp_draws.parquet")
+

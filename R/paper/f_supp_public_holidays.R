@@ -137,9 +137,12 @@ ggplot() +
                  plot_data_school, linewidth = 20.0,
                  alpha = 0.1) +
   
-  scale_fill_discrete(name = "Public holiday name") +
+  scale_fill_manual(
+    name = "Public holiday name",
+    values = rep(scico::scico(8, palette = "romaO")[1:7], 30)
+  ) +
   
-  xlab(NULL) + ylab("Region") +
+  xlab(NULL) + ylab("Jurisdiction") +
   
   coord_cartesian(xlim = c(ymd("2025-01-01"), ymd("2026-01-01"))) +
   

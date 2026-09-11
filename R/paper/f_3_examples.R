@@ -89,12 +89,15 @@ plot_forecast <- function(x_pathogen, x_location, round_id, title) {
                                 linewidth = 0.0) +
     
     geom_line(aes(x = date, y = y), plot_data_training) +
-    geom_point(aes(x = date, y = y), plot_data_training, size = 1.0) +
+    geom_point(aes(x = date, y = y), plot_data_training, size = 1.3) +
+    geom_point(aes(x = date, y = y), plot_data_training, size = 0.5, stroke = 0.1, colour = "white") +
     
     geom_line(aes(x = notification_date, y = value),
               plot_data_eval) +
     geom_point(aes(x = notification_date, y = value),
-               plot_data_eval, size = 1.0) +
+               plot_data_eval, size = 1.3) +
+    geom_point(aes(x = notification_date, y = value),
+               plot_data_eval, size = 0.5, stroke = 0.1, colour = "white") +
     
     ylab("Count") +
     
@@ -153,7 +156,6 @@ plot_forecast <- function(x_pathogen, x_location, round_id, title) {
 
     geom_hline(yintercept = 1, linetype = "11", linewidth = 0.7, alpha = 0.5) +
     
-    coord_cartesian(xlim = date_range, ylim = exp(c(-0.25, 0.25))) +
     scale_y_log10(breaks = c(0.8, 1, 1.25), labels = c("-20%", "0%", "+25%")) +
 
     ylab("Effect") +
@@ -179,7 +181,6 @@ plot_forecast <- function(x_pathogen, x_location, round_id, title) {
     
     geom_hline(yintercept = 1, linetype = "11", linewidth = 0.7, alpha = 0.5) +
     
-    coord_cartesian(xlim = date_range, ylim = exp(c(-0.25, 0.25))) +
     scale_y_log10(breaks = c(0.8, 1, 1.25), labels = c("-20%", "0%", "+25%")) +
     
     scale_x_date(labels = scales::label_date_short()) +
@@ -198,6 +199,8 @@ plot_forecast <- function(x_pathogen, x_location, round_id, title) {
   p_cases / p_Rt / p_ann / p_noise +
     plot_layout(heights = c(1.5, 1, 1, 1))
 }
+
+plot_forecast("flu", "VIC", "2025-06-26", "vic flu")
 
 
 plots <- list(
