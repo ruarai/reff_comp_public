@@ -362,3 +362,30 @@ assign_retro_varietals <- function(data_list, x_version) {
   
   return(data_list)
 }
+
+
+
+check_convergence <- function(fit) {
+  params_diag_match <- c(
+    "scaling_annual", "scaling_noise", "scaling_weekly_asc", "ls_annual",
+    "ls_noise", "log_R_0", "phi", "beta",
+    "beta_offset_weekly", "r_0", "log_I_0",
+    "school_holiday", "public_holiday", "delay_mean", "delay_sd"
+  )
+  
+  require(posterior)
+  
+  params_all <- fit$metadata()$model_params
+  params_diag <- params_all[str_starts(params_all, str_c(params_diag_match, collapse = "|"))]
+  
+  draws_summ <- fit$summary(
+    variables = params_diag, 
+    rhat = rhat, ess_bulk = ess_bulk, mean = mean
+  )
+  
+  return(list(
+    max_rhat = max(draws_summ$rhat, na.rm = TRUE),
+    min_ess = min(draws_summ$ess_bulk, na.rm = TRUE)
+  ))
+}
+

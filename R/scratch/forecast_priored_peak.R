@@ -25,64 +25,25 @@ training_counts <- process_counts(combined_counts, x_location, x_pathogen, x_tar
 
 data_list <- create_stan_data(training_counts, n_days_ahead, x_pathogen, x_location)
 
-peak_prior <- get_peak_priors() |> 
-  filter(location == x_location, pathogen == x_pathogen)
-
-data_list$log_peak_size_mean <- peak_prior$log_peak_size_mean
-data_list$log_peak_size_sd <- peak_prior$log_peak_size_sd
-data_list$peak_day_mean <- peak_prior$peak_yday_mean
-data_list$peak_day_sd <- peak_prior$peak_yday_sd
-
-data_list$peak_season_start <- which(training_counts$date == ymd("2026-01-01"))
-data_list$peak_season_end <- which(training_counts$date == ymd("2027-01-01")) - 1
-
-
-n_samples <- 1000
-peak_prior_samples <- peak_prior |> 
-  rowwise() |> 
-  mutate(
-    day_of_year = list(rnorm(n_samples, peak_yday_mean, peak_yday_sd)),
-    peak_size = list(exp(rnorm(n_samples, log_peak_size_mean, log_peak_size_sd)))
-  ) |> 
-  unnest(c(day_of_year, peak_size))
-
-ggplot(training_counts) +
-  geom_line(aes(x = date, y = y_trend)) +
-  
-  geom_density2d(aes(x = ymd("2026-01-01") + day_of_year - 1, y = peak_size),
-                 peak_prior_samples) +
-  
-  theme_bw()
-
 library(cmdstanr)
-model <- cmdstan_model("src/gp_renewal_peak.stan")
+model <- cmdstan_model("src/gp_renewal.stan")
 
-fit <- model$optimize(
-  data = data_list, seed = 4, iter = 2e4, init = 0.1,
-  
-  algorithm = "lbfgs",
-  tol_obj     = 1e-15,
-  tol_rel_obj = 1,    
-  tol_param   = 1e-12,
-  tol_grad    = 1e-12,
-  tol_rel_grad = 1e4,
-  jacobian = TRUE
+sample_with_callback(
+  model, data_list, 10, 200, 
+  function(x) {
+    x <- posterior::as_draws_df(x)
+    
+    p <- ggplot(x) +
+      geom_line(aes(x = .iteration, y = ls_annual)) +
+      geom_line(aes(x = .iteration, y = ls_noise))
+    
+    print(p)
+  },
+  seed = 1,
+  chains = 1,
+  iter_warmup = 100, iter_sampling = 100,
+  save_warmup = TRUE
 )
-
-fit <- model$laplace(
-  data = data_list, seed = 3, init = 0.1,
-  mode = fit, jacobian = TRUE
-)
-
-
-fit <- model$pathfinder(
-  data = data_list, seed = 4, init = 0.5
-)
-fit <- model$variational(
-  data = data_list, seed = 4, iter = 1e4,
-  algorithm = "fullrank"
-)
-
 
 
 fit <- model$sample(
