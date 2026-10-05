@@ -385,7 +385,8 @@ check_convergence <- function(fit) {
   
   return(list(
     max_rhat = max(draws_summ$rhat, na.rm = TRUE),
-    min_ess = min(draws_summ$ess_bulk, na.rm = TRUE)
+    min_ess = min(draws_summ$ess_bulk, na.rm = TRUE),
+    summ = draws_summ
   ))
 }
 

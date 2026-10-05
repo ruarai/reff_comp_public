@@ -31,16 +31,20 @@ download_round <- function(round_id, results_dir = "baseline") {
 
   message(x$stdout)
 }
-# 
-# run(
-#   "/apps/unimelb-mf-clients/current/bin/unimelb-mf-download",
-#   c("--mf.config", "data/mflux.cfg",
-#     "--nb-workers", "4",
-#     "--out", glue::glue("saved_results"),
-#     glue::glue("/projects/proj-5050_reffcomp_model_evaluation-1128.4.1617/baseline")
-#   ),
-#   echo = TRUE
-# )
+
+download_results <- function(results_dir) {
+  run(
+    "/apps/unimelb-mf-clients/current/bin/unimelb-mf-download",
+    c("--mf.config", "data/mflux.cfg",
+      "--nb-workers", "4",
+      "--out", "saved_results",
+      glue::glue("/projects/proj-5050_reffcomp_model_evaluation-1128.4.1617/{results_dir}")
+    ),
+    echo = TRUE
+  )
+}
+
+
 
 
 consolidate_result <- function(results_name) {

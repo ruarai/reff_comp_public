@@ -136,53 +136,6 @@ delay_draws <- map(
 
 write_parquet(delay_draws, "data/paper/delay_draws.parquet")
 
-rhat_tbl <- map(
-  fit_files,
-  function(fit_file) {
-    
-    round_id <- ymd(str_extract(fit_file, "\\d{4}-\\d{2}-\\d{2}"))
-    job_name <- fs::path_file(fit_file) |> fs::path_ext_remove()
-    pathogen <- str_split_fixed(job_name, "_", 3)[1]
-    location <- str_split_fixed(job_name, "_", 3)[2]
-    target <- str_split_fixed(job_name, "_", 3)[3]
-    
-    if(!(location %in% locations_paper)) {
-      return(NULL)
-    }
-    
-    fit <- read_rds(fit_file)
-    
-    # Don't calculate rhat across every single parameter
-    # it's too slow for the GPs and HSGP parameters etc
-    # but this catches the vast majority (and all actual free params)
-    params_diag_match <- c(
-      "scaling_annual", "scaling_noise", "scaling_weekly_asc", "ls_annual",
-      "ls_noise", "log_R_0", "phi", "beta",
-      "beta_offset_weekly", "r_0", "log_I_0",
-      "school_holiday", "public_holiday", "delay_mean", "delay_sd"
-    )
-    
-    params_all <- fit$metadata()$model_params
-    
-    params_diag <- params_all[str_starts(params_all, str_c(params_diag_match, collapse = "|"))]
-    
-    draws <- posterior::subset_draws(fit$draws(), params_diag)
-    
-    summarise_draws(draws) |> 
-      mutate(location = !!location, pathogen = !!pathogen, target = !!target)
-  },
-  .progress = TRUE
-) |> 
-  bind_rows()
-
-max(rhat_tbl$rhat, na.rm = TRUE)
-
-rhat_tbl |>
-  group_by(location, pathogen) |>
-  summarise(rhat_max = max(rhat, na.rm = TRUE)) |> 
-  write_csv("data/paper/rhat_max.csv")
-
-
 
 fit_files_no_holidays <- fs::dir_ls("saved_results/no_holidays/2025-11-27/", recurse = TRUE, glob = "*.rds")
 

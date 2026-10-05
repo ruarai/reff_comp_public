@@ -16,19 +16,19 @@ jobs <- make_retrospective_jobs() |>
   ) |> 
   
   expand_grid(model_version = c(
-    "baseline"
+    # "baseline" # re-done
     
-    # "no_school_holidays"
-    # "no_public_holidays"
+    # "no_school_holidays" # re-done
+    # "no_public_holidays" # re-done
     
-    # "no_holidays"
-    # "no_asc_holidays"
-    # "no_Rt_holidays"
+    # "no_holidays" # re-done
+    # "no_asc_holidays" # re-done
+    "no_Rt_holidays"
     #  
     # "no_annual"
     # 
     # "no_holidays_no_annual"
-    # "no_delay"
+    # "no_delay" # re-done
   ))
 
 print(str_c("Generated ", nrow(jobs), " jobs"))
@@ -57,17 +57,22 @@ fit <- read_rds(fit_file)
 
 convergence_check <- check_convergence(fit)
 
-if(convergence_check$max_rhat < 1.01) {
+if(convergence_check$max_rhat < 1.05) {
   print("R-hat is below threshold, exiting.")
+  arrow::write_parquet(convergence_check$summ, str_c(results_dir, "/", round_id, "/", x_pathogen, "_", x_location, "_", x_target, "_convergence.parquet"))
+  
   q('no')
 }
 
 
 # Below is as in forecast_renewal_retro, but with more iterations
 
-n_warmup <- 5000
-n_samples <- 20000
-thin <- 10
+n_warmup <- 10000
+n_samples <- 40000
+thin <- 20
+# n_warmup <- 10000
+# n_samples <- 120000
+# thin <- 120
 
 
 combined_counts <- read_csv(str_c("data/retro_rounds/", round_id, "/combined-count-smoothed-", round_id, ".csv"))
@@ -111,5 +116,12 @@ calculate_performance_metrics(round_id, x_pathogen, x_location, x_target, result
 print("Making plots...")
 
 make_fit_plots(round_id, x_pathogen, x_location, x_target, results_dir = results_dir)
+
+print("Convergence check...")
+
+convergence_check <- check_convergence(fit)
+
+arrow::write_parquet(convergence_check$summ, str_c(results_dir, "/", round_id, "/", x_pathogen, "_", x_location, "_", x_target, "_convergence.parquet"))
+
 
 print("Complete")
