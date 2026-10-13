@@ -23,11 +23,11 @@ jobs <- make_retrospective_jobs() |>
     
     # "no_holidays" # re-done
     # "no_asc_holidays" # re-done
-    "no_Rt_holidays"
+    # "no_Rt_holidays" # re-done
     #  
-    # "no_annual"
+    # "no_annual" # re-done
     # 
-    # "no_holidays_no_annual"
+    # "no_holidays_no_annual" # re-done
     # "no_delay" # re-done
   ))
 

@@ -99,10 +99,15 @@ write_forecast_file <- function(round_id, x_pathogen, x_location, x_target, resu
   
   origin_date <- training_counts$origin_date[[1]]
   
+  dow_effect <- fit |> 
+    spread_draws(obs_offset_weekly[dow])
+  
   case_trajectories <- fit |> 
-    spread_draws(c(cases, latent_cases_log, inf_delayed)[ix_t]) |> 
+    spread_draws(c(cases, latent_cases_log, inf_delayed)[ix_t], phi) |> 
     mutate(date = training_counts$date[ix_t],
-           latent_cases = exp(latent_cases_log))
+           latent_cases = exp(latent_cases_log),
+           dow = wday(date)) |> 
+    left_join(dow_effect, by = join_by(.chain, .iteration, .draw, dow))
   
   peak_forecasts <- case_trajectories |> 
     filter(year(date) == year(round_id)) |> 
@@ -149,8 +154,8 @@ write_forecast_file <- function(round_id, x_pathogen, x_location, x_target, resu
     ) |>
     filter(horizon >= -7, horizon <= 7 * 8)
   
+  
   case_forecasts_smoothed <- case_trajectories |>
-    add_forecast_noise(training_counts) |> 
     ungroup() |>
     transmute(
       round_id = ymd(round_id),
@@ -161,9 +166,27 @@ write_forecast_file <- function(round_id, x_pathogen, x_location, x_target, resu
       pathogen = x_pathogen,
       output_type = "sample",
       output_type_id = .draw,
-      value = as.integer(replace_na(count, 0))
+      value = as.integer(replace_na(
+        rnbinom(n(), mu = inf_delayed, size = phi),  
+      0))
     ) |>
     filter(horizon >= -7, horizon <= 7 * 8)
+  
+  # case_forecasts_smoothed <- case_trajectories |>
+  #   add_forecast_noise(training_counts) |> 
+  #   ungroup() |>
+  #   transmute(
+  #     round_id = ymd(round_id),
+  #     origin_date = origin_date,
+  #     target = "case_incidence_smoothed",
+  #     horizon = as.integer(date - origin_date),
+  #     location = x_location,
+  #     pathogen = x_pathogen,
+  #     output_type = "sample",
+  #     output_type_id = .draw,
+  #     value = as.integer(replace_na(count, 0))
+  #   ) |>
+  #   filter(horizon >= -7, horizon <= 7 * 8)
   
   forecast_data <- bind_rows(
     case_forecasts,

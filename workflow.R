@@ -3,7 +3,7 @@ library(tidyverse)
 library(processx)
 source("R/functions.R")
 
-round_id <- "2026-09-30"
+round_id <- "2026-10-14"
 
 check_and_log_git_status(round_id)
 
@@ -33,7 +33,7 @@ run("git", c("switch", "uom-reff_comp"), wd = repo_dir, echo = TRUE)
 
 fs::dir_copy("forecast_outputs/uom-reff_comp/", "../forecast-hub/model-output/uom-reff_comp/", overwrite = TRUE)
 run("git", c("add", "."), wd = repo_dir, echo = TRUE)
-run("git", c("commit", "-m", str_c("Add uom-reff_comp forecasts for ", round_id)), wd = repo_dir, echo = TRUE)
+run("git", c("commit", "-m", str_c("Updated uom-reff_comp forecasts for ", round_id)), wd = repo_dir, echo = TRUE)
 
 run("git", c("fetch", "origin"), wd = repo_dir, echo = TRUE)
 run("git", c("rebase", "origin/main"), wd = repo_dir, echo = TRUE)
@@ -45,5 +45,7 @@ run("git", c("push", "-f", "origin", "uom-reff_comp"), wd = repo_dir, echo = TRU
 # Return to main branch
 run("git", c("switch", "main"), wd = repo_dir, echo = TRUE)
 message(run("git", c("pull"), wd = repo_dir, echo = TRUE)$stdout)
+
+run("git", c("reset", "--hard", "origin/main"), wd = repo_dir, echo = TRUE)
 
 source("reporting.R")

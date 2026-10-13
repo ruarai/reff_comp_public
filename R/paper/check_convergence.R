@@ -3,7 +3,7 @@
 source("R/functions.R")
 source("R/paper/common.R")
 
-run_name <- "no_Rt_holidays"
+run_name <- "no_holidays_no_annual"
 
 rhat_files <- fs::dir_ls(glue::glue("saved_results/{run_name}/"), recurse = TRUE, glob = "*_convergence.parquet")
 fit_files <- fs::dir_ls(glue::glue("saved_results/{run_name}/"), recurse = TRUE, glob = "*.rds")

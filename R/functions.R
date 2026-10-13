@@ -9,6 +9,7 @@ library(arrow)
 source("R/holidays.R")
 source("R/functions_plotting.R")
 source("R/functions_fitting.R")
+source("R/mediaflux_integration.R")
 
 
 get_training_dates <- function() {
@@ -217,7 +218,7 @@ add_forecast_noise <- function(case_trajectories, training_counts, horizon_range
     filter(date < origin_date) |> 
     filter(date > max(date) - days(365)) |> 
     mutate(remainder = y_trend_and_remainder - y_trend,
-           log_abs_remainder = log(abs(remainder) + 1),
+           log_abs_remainder = log(abs(remainder) + 0.01),
            count = y_trend)
   
   require(mgcv)
@@ -236,11 +237,11 @@ add_forecast_noise <- function(case_trajectories, training_counts, horizon_range
     ungroup() |> 
     mutate(
       pred_noise_mean = predict(gam_fit, newdata = smoothed_forecast),
-      pred_noise_mean = pmax(1e-5, pmin(6, pred_noise_mean)),
+      pred_noise_mean = pmax(-5, pmin(3, pred_noise_mean)),
       pred_noise_mean = replace_na(pred_noise_mean, 1.0),
       
-      pred_noise = VGAM::rlaplace(n(), location = 0, scale = exp(pred_noise_mean)),
-      count = pmax(0, round(count) + round(pred_noise))
+      pred_noise = VGAM::rlaplace(n(), location = 0, scale = exp(pred_noise_mean) - 0.01),
+      count = pmax(0, round(count + pred_noise))
     )
   
   return(forecast_noisy)

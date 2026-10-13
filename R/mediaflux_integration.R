@@ -15,6 +15,23 @@ upload_output_to_mediaflux <- function(target_dir) {
   message(x$stdout)
 }
 
+upload_as_presented_rounds_to_mediaflux <- function() {
+  library(processx)
+  
+  x <- run(
+    "/apps/unimelb-mf-clients/current/bin/unimelb-mf-upload",
+    c("--mf.config", "data/mflux.cfg",
+      "--nb-workers", "4",
+      "--aggregate-transmission",
+      "--exclude-parent",
+      "--dest", "/projects/proj-5050_reffcomp_model_evaluation-1128.4.1617/results_as_presented/",
+      "results/"),
+    echo = TRUE
+  )
+  
+  message(x$stdout)
+}
+
 
 download_round <- function(round_id, results_dir = "baseline") {
   library(processx)
