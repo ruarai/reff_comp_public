@@ -2,21 +2,15 @@ source("R/functions.R")
 source("R/paper/common.R")
 
 
-perf_data <- bind_rows(
-  read_perf("baseline"),
-  read_perf("no_holidays"),
-  read_perf("no_annual"),
-  read_perf("no_holidays_no_annual")
-) |> 
-  process_perf_data()
+perf_summary <- read_perf_summary(c("baseline", "no_holidays", "no_annual", "no_holidays_no_annual"))
 
 combined_counts <- read_csv("data/combined-count-smoothed_final_anonymised.csv")
 
 
 
 
-perf_data |> 
-  filter(horizon == 7) |> 
+perf_summary |> 
+  filter(horizon_week == 0) |> 
   count(round_id = ymd(round_id), location, pathogen) |> 
   ggplot() + 
   geom_tile(aes(x = ymd(round_id), y = location, fill = factor(n))) +
@@ -30,14 +24,8 @@ model_labels <- c(
   "no_holidays_no_annual" = "With neither"
 )
 
-n_models <- length(unique(perf_data$.model))
-
-perf_data_paired <- perf_data |> 
-  group_by(location, pathogen, round_id, horizon, date) |> 
-  filter(n() == n_models)
-
-plot_data_performance <- perf_data_paired |> 
-  filter(horizon > 21, horizon <= 28) |> 
+plot_data_performance <- perf_summary |> 
+  filter(horizon_week == 3) |> 
   group_by(.model, pathogen) |> 
   summarise(crps_log = mean(crps_log)) |> 
   label_pathogen() |> 

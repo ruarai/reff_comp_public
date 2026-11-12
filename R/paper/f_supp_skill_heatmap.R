@@ -1,40 +1,19 @@
 source("R/functions.R")
 source("R/paper/common.R")
 
-snaive_perf_data <- read_parquet("data/snaive_perf_extended.parquet")
-
-
-
-
-perf_data <- bind_rows(
-  read_perf("baseline"),
-  read_perf("no_holidays_no_annual")
-) |> 
-  bind_rows(snaive_perf_data) |> 
-  process_perf_data()
+perf_summary <- read_perf_summary(c("baseline", "no_holidays_no_annual", "snaive"))
 
 combined_counts <- read_csv("data/combined-count-smoothed_final_anonymised.csv")
 
 
 
-perf_data |> 
-  filter(horizon == 7) |> 
+perf_summary |> 
+  filter(horizon_week == 0) |> 
   ggplot() + 
   geom_tile(aes(x = ymd(round_id), y = location, fill = .model),
             alpha = 0.5) +
   
   facet_grid(rows = vars(pathogen))
-
-perf_data_paired <- perf_data |> 
-  group_by(pathogen, location, round_id, date) |> 
-  filter(n() == 3) |> 
-  ungroup() |> 
-  filter(horizon <= 7 * 4)
-
-location_y <- tibble(
-  location = unique(perf_data_paired$location)
-) |> 
-  mutate(y_offset = row_number())
 
 
 
@@ -58,18 +37,13 @@ school_holidays <- get_school_holidays() |>
   label_pathogen()
 
 
-skill_days_ahead <- 7 * 3
-
-
-plot_data_skill_snaive <- perf_data_paired |> 
-  filter(horizon > skill_days_ahead, horizon <= skill_days_ahead + 7) |> 
-  group_by(pathogen, location, round_id, date) |> 
+plot_data_skill_snaive <- perf_summary |> 
+  filter(horizon_week == 3) |> 
+  group_by(pathogen, location, round_id) |> 
   mutate(crps_log_snaive = crps_log[.model == "snaive"]) |> 
   filter(.model == "baseline") |> 
-  group_by(pathogen, location, round_id) |> 
-  summarise(skill_score = 1 - mean(crps_log) / mean(crps_log_snaive),
-            skill_score = pmax(skill_score, -1),
-            date = first(date)) |> 
+  mutate(skill_score = pmax(1 - crps_log / crps_log_snaive, -1)) |> 
+  select(pathogen, location, round_id, skill_score, date = first_date) |> 
   label_pathogen() |> 
   left_join(location_y, by = join_by(location)) |> 
   arrange(location, desc(date))
@@ -120,15 +94,13 @@ p_heatmap_snaive <- ggplot(plot_data_skill_snaive) +
   theme(legend.position = "right",
         panel.background = element_facet_background)
 
-plot_data_skill_null <- perf_data_paired |> 
-  filter(horizon > skill_days_ahead, horizon <= skill_days_ahead + 7) |> 
-  group_by(pathogen, location, round_id, date) |> 
+plot_data_skill_null <- perf_summary |> 
+  filter(horizon_week == 3) |> 
+  group_by(pathogen, location, round_id) |> 
   mutate(crps_log_snaive = crps_log[.model == "no_holidays_no_annual"]) |> 
   filter(.model == "baseline") |> 
-  group_by(pathogen, location, round_id) |> 
-  summarise(skill_score = 1 - mean(crps_log) / mean(crps_log_snaive),
-            skill_score = pmax(skill_score, -1),
-            date = first(date)) |> 
+  mutate(skill_score = pmax(1 - crps_log / crps_log_snaive, -1)) |> 
+  select(pathogen, location, round_id, skill_score, date = first_date) |> 
   label_pathogen() |> 
   left_join(location_y, by = join_by(location)) |> 
   arrange(location, desc(date))

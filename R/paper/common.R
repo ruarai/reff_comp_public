@@ -90,6 +90,18 @@ read_perf <- function(output_dir, model_name = output_dir) {
   return(perf_data)
 }
 
+# Mean CRPS (log scale) per model, pathogen, jurisdiction, round and horizon week
+# (0 = days 1-7, ..., 3 = days 22-28), written by summarise_performance.R. The figures use
+# this instead of the per-day scores, which are not released.
+read_perf_summary <- function(models) {
+  read_parquet("saved_results/perf_summary.parquet") |>
+    filter(.model %in% models)
+}
+
+# Row order of jurisdictions in the heatmaps
+location_y <- tibble(location = c("NSW", "QLD", "ACT", "NT", "VIC")) |>
+  mutate(y_offset = row_number())
+
 
 # Plot data for figures that show individual forecasts (Figs 1, 3 and Supp. Fig 6) ----
 #

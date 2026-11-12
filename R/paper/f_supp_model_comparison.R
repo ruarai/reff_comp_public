@@ -2,23 +2,14 @@ source("R/functions.R")
 source("R/paper/common.R")
 
 
-perf_data <- bind_rows(
-  read_perf("baseline"),
-  read_perf("no_public_holidays"),
-  read_perf("no_school_holidays"),
-  read_perf("no_holidays"),
-  
-  read_perf("no_asc_holidays"),
-  read_perf("no_Rt_holidays"),
-  read_perf("no_delay"),
-  read_perf("no_annual"),
-  read_perf("no_holidays_no_annual")
-) |> 
-  process_perf_data()
+perf_summary <- read_perf_summary(c(
+  "baseline", "no_public_holidays", "no_school_holidays", "no_holidays",
+  "no_asc_holidays", "no_Rt_holidays", "no_delay", "no_annual", "no_holidays_no_annual"
+))
 
 
-perf_data |> 
-  filter(horizon == 7) |> 
+perf_summary |> 
+  filter(horizon_week == 0) |> 
   count(round_id = ymd(round_id), location, pathogen) |> 
   ggplot() + 
   geom_tile(aes(x = ymd(round_id), y = location, fill = factor(n))) +
@@ -51,19 +42,13 @@ model_labels <- c(
   # "no_holidays_no_annual" = "No holiday effects or periodic GP"
 ) |> rev()
 
-n_models <- length(unique(perf_data$.model))
-
 plot_data_label <- tibble(model_label = factor(model_labels, model_labels)) |> 
   expand_grid(pathogen = c("RSV", "flu", "SARSCOV2")) |> 
   label_pathogen()
 
-perf_data_paired <- perf_data |> 
-  group_by(location, pathogen, round_id, horizon, date) |> 
-  filter(n() == n_models)
-
-plot_data_performance <- perf_data_paired |> 
+plot_data_performance <- perf_summary |> 
   filter(.model %in% c("baseline", names(model_labels))) |> 
-  filter(horizon > 21, horizon <= 28) |> 
+  filter(horizon_week == 3) |> 
   group_by(.model, pathogen) |> 
   summarise(crps_log = mean(crps_log)) |> 
   label_pathogen() |> 

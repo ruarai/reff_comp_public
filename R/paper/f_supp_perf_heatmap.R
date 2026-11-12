@@ -1,26 +1,9 @@
 source("R/functions.R")
 source("R/paper/common.R")
 
-snaive_perf_data <- read_parquet("data/snaive_perf_extended.parquet")
-
-
-
-
-perf_data <- read_perf("baseline") |> 
-  bind_rows(snaive_perf_data) |> 
-  process_perf_data()
+perf_summary <- read_perf_summary("baseline")
 
 combined_counts <- read_csv("data/combined-count-smoothed_final_anonymised.csv")
-
-perf_data_paired <- perf_data |> 
-  group_by(pathogen, location, round_id, date) |> 
-  filter(n() == 2) |> 
-  ungroup()
-
-location_y <- tibble(
-  location = unique(perf_data_paired$location)
-) |> 
-  mutate(y_offset = row_number())
 
 
 
@@ -36,20 +19,11 @@ plot_data_counts <- combined_counts |>
 mutate(location = factor(location, c("NSW", "QLD", "ACT", "NT", "VIC") |> rev()))
 
 
-skill_days_ahead <- 7 * 3
-
-plot_data_skill <- perf_data_paired |> 
-  expand_grid(days_ahead_group = c(0, 7, 14, 21)) |> 
-  filter(horizon > days_ahead_group, horizon <= days_ahead_group + 7) |> 
-  group_by(days_ahead_group, pathogen, location, round_id, date) |> 
-  filter(.model == "baseline") |> 
-  group_by(days_ahead_group, pathogen, location, round_id) |> 
-  summarise(crps_log = mean(crps_log),
-            date = first(date)) |> 
+plot_data_skill <- perf_summary |> 
+  mutate(days_ahead_group = horizon_week * 7) |> 
+  select(days_ahead_group, pathogen, location, round_id, crps_log, date = first_date) |> 
   label_pathogen() |> 
   mutate(crps_log = pmin(0.75, crps_log)) |> 
-  
-  ungroup() |> 
   
   left_join(location_y, by = join_by(location)) |> 
   arrange(location, desc(date)) |> 
