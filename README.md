@@ -32,9 +32,7 @@ data/
 ├── retro_rounds/<round_id>/
 │   ├── combined-count-<round_id>.csv            # defines the jobs (location × pathogen × target) for a round
 │   └── combined-count-smoothed-<round_id>.csv   # counts used for fitting
-├── combined-count-smoothed-2026-04-15.csv       # final data used to score forecasts
-├── combined-count-smoothed-2026-04-22.csv       # final data used in Figures 1 and 4
-├── combined-count-smoothed_paper.csv            # data shown in Figure 2 and Supp. Figs 2–4
+├── combined-count-smoothed_final_anonymised.csv # final (anonymised) case counts: used for scoring and all figures
 └── paper/                                       # posterior summaries written by R/paper/collect_effect_draws.R
 ```
 

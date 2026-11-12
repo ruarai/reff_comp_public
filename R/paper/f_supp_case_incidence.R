@@ -1,7 +1,7 @@
 source("R/functions.R")
 source("R/paper/common.R")
 
-combined_counts <- read_csv("data/combined-count-smoothed_paper.csv")
+combined_counts <- read_csv("data/combined-count-smoothed_final_anonymised.csv")
 
 training_dates <- get_training_dates()
 

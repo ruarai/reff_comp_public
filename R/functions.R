@@ -56,7 +56,7 @@ calculate_performance_metrics <- function(
     results_dir = "results"
 ) {
   
-  eval_counts <- read_csv("data/combined-count-smoothed-2026-04-15.csv", show_col_types = FALSE) |> 
+  eval_counts <- read_csv("data/combined-count-smoothed_final_anonymised.csv", show_col_types = FALSE) |> 
     filter(location == x_location, pathogen == x_pathogen, target == x_target) |> 
     process_counts(x_location, x_pathogen, x_target, 0, today()) |> 
     

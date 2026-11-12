@@ -8,7 +8,7 @@ public_holidays <- get_public_holidays() |>
 
 
 
-combined_counts <- read_csv("data/combined-count-smoothed-2026-04-15.csv") |> 
+combined_counts <- read_csv("data/combined-count-smoothed_final_anonymised.csv") |> 
   filter(notification_date < ymd("2026-01-01"))
 
 

@@ -1,7 +1,7 @@
 source("R/functions.R")
 source("R/paper/common.R")
 
-combined_counts <- read_csv("data/combined-count-smoothed_paper.csv")
+combined_counts <- read_csv("data/combined-count-smoothed_final_anonymised.csv")
 
 combined_counts <- read_csv("../forecast-hub/processed-data/2026/2026-08-19/combined-count-smoothed-2026-08-19.csv")
 

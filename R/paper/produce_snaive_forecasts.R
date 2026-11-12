@@ -56,7 +56,7 @@ start_date <- ymd("2024-01-01")
 
 
 combined_count_latest <- read_csv(
-  "data/combined-count-smoothed-2026-04-15.csv",
+  "data/combined-count-smoothed_final_anonymised.csv",
   show_col_types = FALSE
 ) |> 
   filter(target == "case_incidence")

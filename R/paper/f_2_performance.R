@@ -10,7 +10,7 @@ perf_data <- read_perf("baseline") |>
   bind_rows(snaive_perf_data) |> 
   process_perf_data()
 
-combined_counts <- read_csv("data/combined-count-smoothed_paper.csv")
+combined_counts <- read_csv("data/combined-count-smoothed_final_anonymised.csv")
 
 
 

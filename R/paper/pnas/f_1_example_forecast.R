@@ -16,7 +16,7 @@ training_counts <- arrow::read_parquet(str_c("saved_results/baseline/", job_name
 origin_date <- training_counts$origin_date[[1]] - days(1)
 
 
-eval_counts <- read_csv("data/combined-count-smoothed-2026-04-22.csv", show_col_types = FALSE) |> 
+eval_counts <- read_csv("data/combined-count-smoothed_final_anonymised.csv", show_col_types = FALSE) |> 
   filter(notification_date > origin_date, location == x_location, pathogen == x_pathogen)
 
 school_holidays <- get_school_holidays() |> 

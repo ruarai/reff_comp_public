@@ -62,7 +62,7 @@ calculate_crps <- function(dist, truth) {
 
 library(fable)
 combined_count_latest <- read_csv(
-  "data/combined-count-smoothed-2026-04-15.csv",
+  "data/combined-count-smoothed_final_anonymised.csv",
   show_col_types = FALSE
 ) |> 
   filter(target == "case_incidence", location == "SA", pathogen == "RSV")

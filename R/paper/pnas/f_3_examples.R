@@ -4,7 +4,7 @@ source("R/paper/common.R")
 library(pammtools)
 
 
-eval_counts <- read_csv("data/combined-count-smoothed-2026-04-15.csv", show_col_types = FALSE)
+eval_counts <- read_csv("data/combined-count-smoothed_final_anonymised.csv", show_col_types = FALSE)
 
 
 gp_draws <- read_parquet("data/paper/gp_draws.parquet")

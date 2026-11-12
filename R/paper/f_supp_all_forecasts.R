@@ -3,7 +3,7 @@ source("R/functions.R")
 source("R/paper/common.R")
 
 baseline_quants <- read_parquet("saved_results/baseline_quants.parquet")
-combined_counts <- read_csv("data/combined-count-smoothed_paper.csv")
+combined_counts <- read_csv("data/combined-count-smoothed_final_anonymised.csv")
 
 
 x_location <- "NSW"
