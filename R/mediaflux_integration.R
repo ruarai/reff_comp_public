@@ -45,6 +45,16 @@ download_round <- function(round_id, results_dir = "baseline") {
     ),
     echo = TRUE
   )
+  
+  run(
+    "/apps/unimelb-mf-clients/current/bin/unimelb-mf-download",
+    c("--mf.config", "data/mflux.cfg",
+      "--nb-workers", "4",
+      "--out", glue::glue("results/"),
+      glue::glue("/projects/proj-5050_reffcomp_model_evaluation-1128.4.1617/results_as_presented/2026-08-26")
+    ),
+    echo = TRUE
+  )
 
   message(x$stdout)
 }
