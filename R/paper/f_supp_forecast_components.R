@@ -1,19 +1,23 @@
+source("R/functions.R")
+source("R/paper/common.R")
+
+library(pammtools)
+
+eval_counts <- read_csv("data/combined-count-smoothed_final_anonymised.csv", show_col_types = FALSE)
 
 plot_forecast <- function(x_pathogen, x_location, round_id, title, model_version, y_lim) {
-  x_target <- "case_incidence"
-  
-  job_name <- str_c(x_pathogen, "_", x_location, "_", x_target)
-  
-  fit <- read_rds(str_c("saved_results/", model_version, "/", round_id, "/", job_name, ".rds"))
-  training_counts <- read_parquet(str_c("saved_results/", model_version, "/", round_id, "/", job_name, "_training_counts.parquet"))
-  
-  origin_date <- training_counts$origin_date[[1]] - days(1)
-  
-  trajectory_data <- fit |> 
-    spread_draws(c(log_R, cases)[ix_t],
-                 log_R_0) |> 
-    mutate(date = training_counts$date[ix_t])
-  
+  # Draws are read from data/paper/plot_data/ (or extracted from the raw fit if that file is absent)
+  trajectory_data <- load_fit_trajectories(
+    "f_supp_components", model_version, round_id, x_pathogen, x_location,
+    vars = c("log_R", "cases")
+  )
+
+  origin_date <- trajectory_data$origin_date[[1]]
+
+  # Observed counts (before and after the forecast date) are from the anonymised final dataset
+  training_counts <- read_final_counts(x_pathogen, x_location) |>
+    filter(date <= origin_date)
+
   plot_data <- trajectory_data |> 
     filter(date > origin_date - days(7 * 8),
            date <= origin_date + days(7 * 4))
@@ -27,7 +31,7 @@ plot_forecast <- function(x_pathogen, x_location, round_id, title, model_version
            date <= origin_date + days(7 * 4))
   
   plot_data_eval <- eval_counts |> 
-    filter(location == x_location, pathogen == x_pathogen) |> 
+    filter(location == x_location, pathogen == x_pathogen, target == "case_incidence") |>
     filter(notification_date > origin_date,
            notification_date <= origin_date + days(7 * 4))
   

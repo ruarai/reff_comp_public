@@ -10,22 +10,31 @@ library(pammtools)
 round_id <- "2025-07-03"
 x_pathogen <- "flu"
 x_location <- "VIC"
-job_name <- str_c(round_id, "/", x_pathogen, "_", x_location, "_case_incidence")
-training_counts <- arrow::read_parquet(str_c("saved_results/baseline/", job_name, "_training_counts.parquet"))
 
-origin_date <- training_counts$origin_date[[1]] - days(1)
+# Draws are read from data/paper/plot_data/ (or extracted from the raw fit if that file is absent)
+trajectory_data <- load_fit_trajectories(
+  "f_1", "baseline", round_id, x_pathogen, x_location,
+  window = c(-450, 100)
+) |>
+  mutate(holiday_effect = log_R - log_R_0 - f_annual - f_noise)
 
+origin_date <- trajectory_data$origin_date[[1]]
 
-eval_counts <- read_csv("data/combined-count-smoothed_final_anonymised.csv", show_col_types = FALSE) |> 
-  filter(notification_date > origin_date, location == x_location, pathogen == x_pathogen)
+# Observed counts (before and after the forecast date) are from the anonymised final dataset
+observed_counts <- read_final_counts(x_pathogen, x_location)
+
+training_counts <- observed_counts |>
+  filter(date <= origin_date)
+
+eval_counts <- observed_counts |>
+  filter(date > origin_date) |>
+  rename(notification_date = date, value = y)
 
 school_holidays <- get_school_holidays() |> 
   filter(location == x_location)
 
 public_holidays <- get_public_holidays() |> 
   filter(location == x_location)
-
-results <- read_rds(str_c("saved_results/baseline/", job_name, ".rds"))
 
 date_range <- c(ymd("2024-05-01"), ymd("2025-10-01"))
 
@@ -47,15 +56,6 @@ plot_common_above <- list(
   geom_vline(xintercept = origin_date, linetype = "44", linewidth = 0.5),
   geom_vline(xintercept = origin_date + days(28), linetype = "44", linewidth = 0.5, alpha = 0.5)
 )
-
-trajectory_data <- results |> 
-  spread_draws(c(log_R, inf, inf_delayed, cases, f_annual,
-                 f_noise, latent_cases_log)[ix_t],
-               log_R_0) |> 
-  mutate(date = training_counts$date[ix_t],
-         latent_cases = exp(latent_cases_log),
-         holiday_effect = log_R - log_R_0 - f_annual - f_noise)
-
 
 traj_data_backcast_long <- trajectory_data |> 
   filter(date >= date_range[1], date <= origin_date + 1)

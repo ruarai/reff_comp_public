@@ -144,7 +144,6 @@ Each script in `R/paper/` writes a single figure to `paper_figures/` or `paper_f
 | [R/forecast_renewal_retro*.R](R/) | Retrospective fitting entry points (see above). |
 | [R/paper/](R/paper/) | Manuscript figures, tables and summaries. |
 | `paper_figures/` | Rendered manuscript figures. |
-| `R/paper/pnas/`, `pnas_figures/` | Alternative figure layouts for a different journal format. Not needed for the manuscript. |
 | `workflow.R`, `reporting.R`, `R/forecast_renewal.R`, `run_forecasts.slurm` | Operational real-time pipeline that submits weekly forecasts to the Forecasting Hub. Not needed for the manuscript. |
 | `R/mediaflux_integration.R` | Upload of results to University of Melbourne Mediaflux storage. |
 | `R/scratch/`, `R/plots/`, `R/presentation/`, `R/forecast_renewal_scratch.R`, `src/gp_renewal_sus.stan` | Exploratory model variants (hierarchical, immunity-based, locally periodic) and presentation plots. Not used in the manuscript. |

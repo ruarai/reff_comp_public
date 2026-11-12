@@ -89,3 +89,60 @@ read_perf <- function(output_dir, model_name = output_dir) {
   
   return(perf_data)
 }
+
+
+# Plot data for figures that show individual forecasts (Figs 1, 3 and Supp. Fig 6) ----
+#
+# The public repository does not include the raw model fits in saved_results/. Instead,
+# the posterior draws these figures need are saved to data/paper/plot_data/ the first time
+# they are extracted from a raw fit, and are read from there afterwards. Delete a file in
+# data/paper/plot_data/ to re-extract it.
+#
+# Only model output and dates are saved. Observed case counts always come from the
+# anonymised final dataset via read_final_counts().
+
+plot_data_dir <- "data/paper/plot_data"
+
+load_fit_trajectories <- function(
+    plot_name, model_version, round_id, x_pathogen, x_location,
+    vars = c("log_R", "cases", "f_annual", "f_noise"),
+    window = c(-7 * 8, 7 * 4), # days relative to the forecast origin date
+    n_draws = 2000,
+    x_target = "case_incidence"
+) {
+  job_name <- str_c(x_pathogen, "_", x_location, "_", x_target)
+  plot_data_file <- fs::path(
+    plot_data_dir,
+    str_c(plot_name, "_", model_version, "_", round_id, "_", job_name, ".parquet")
+  )
+  
+  if(fs::file_exists(plot_data_file)) {
+    return(read_parquet(plot_data_file))
+  }
+  
+  fit_dir <- str_c("saved_results/", model_version, "/", round_id, "/")
+  fit <- read_rds(str_c(fit_dir, job_name, ".rds"))
+  training_counts <- read_parquet(str_c(fit_dir, job_name, "_training_counts.parquet"))
+  
+  origin_date <- training_counts$origin_date[[1]] - days(1)
+  
+  vars_spec <- rlang::parse_expr(str_c("c(", str_c(vars, collapse = ", "), ")[ix_t]"))
+  
+  plot_data <- fit |> 
+    spread_draws(!!vars_spec, log_R_0, ndraws = n_draws, seed = 1) |> 
+    ungroup() |> 
+    mutate(date = training_counts$date[ix_t], origin_date = origin_date) |> 
+    filter(date > origin_date + days(window[1]), date <= origin_date + days(window[2])) |> 
+    select(.draw, date, origin_date, all_of(vars), log_R_0)
+  
+  fs::dir_create(plot_data_dir)
+  write_parquet(plot_data, plot_data_file)
+  
+  return(plot_data)
+}
+
+read_final_counts <- function(x_pathogen, x_location, x_target = "case_incidence") {
+  read_csv("data/combined-count-smoothed_final_anonymised.csv", show_col_types = FALSE) |> 
+    filter(location == x_location, pathogen == x_pathogen, target == x_target) |> 
+    select(date = notification_date, y = value)
+}
