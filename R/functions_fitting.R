@@ -36,11 +36,6 @@ create_stan_data <- function(
   N_public_holiday_types <- max(training_counts$public_holiday_type) - 1
   N_school_holiday_types <- max(training_counts$school_holiday_type) - 1
   
-  # Download humidity data for (experimental) immunity model
-  humidity_data <- read_csv("data/modelled_humidity.csv", show_col_types = FALSE) |> 
-    filter(location == x_location) |> 
-    arrange(day_of_year)
-  
   data_list <- list(
     x = training_counts$x,
     day_of_week = training_counts$day_of_week,
@@ -62,7 +57,6 @@ create_stan_data <- function(
     
     # Experimental immunity-model params
     k = 5, init_factor = 0.5e-2,
-    humidity = humidity_data$humidity_scaled,
     sample_from_prior = 0, log_R_0 = 0.33
   )
   
