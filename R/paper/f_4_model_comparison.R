@@ -76,24 +76,9 @@ p_skill <- ggplot(plot_data_performance) +
 
 p_skill
 
-p_top <- p_skill + 
-  plot_annotation("4th week forecast skill relative to null model",
-                  theme = plot_theme_annotation)
-
-p_bottom <- p_heatmap + 
-  plot_annotation("<b>B</b>. 4th week forecast skill (model with both holiday effects and annual<br>GP relative to null model) by epidemic period",
-                  theme = plot_theme_annotation)
-
-
-(wrap_elements(full = p_top) / 
-    wrap_elements(full = p_bottom)) +
-  plot_layout(heights = c(1, 1.5))
-
-
-p_skill
-
 ggsave(
   "paper_figures/f_4_model_comparison.png",
+  p_skill,
   width = 9, height = 3,
   bg = "white"
 )

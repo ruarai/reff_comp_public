@@ -1,6 +1,5 @@
 .Rproj.user
 .Rhistory
-data
 results/
 slurm_out
 forecast_outputs
@@ -13,4 +12,10 @@ src/*
 !src/
 !src/*.stan
 
-saved_results
+.DS_Store
+# Restricted data and raw model fits: never commit these.
+# Only the summarised outputs (saved_results/*.parquet) are shared.
+data/retro_rounds/
+data/combined-count*.csv
+!data/combined-count-smoothed_final_anonymised.csv
+saved_results/*/

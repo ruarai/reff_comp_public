@@ -93,15 +93,26 @@ gp_draws <- map(
     
     fit |> 
       spread_draws(f_annual[ix_t], f_noise[ix_t], log_R[ix_t]) |> 
-      filter(.draw %% 10 == 0) |> 
-      mutate(date = training_counts$date[ix_t]) |> 
-      mutate(round_id = round_id, location = location, pathogen = pathogen, target = target)
+      filter(.draw %% 10 == 0) |>
+      mutate(date = training_counts$date[ix_t]) |>
+      # Figures 3 and 5 only show 2025
+      filter(year(date) == 2025) |>
+      mutate(location = location, pathogen = pathogen) |>
+      select(.draw, date, location, pathogen, log_R, f_annual, f_noise)
   },
   .progress = TRUE
-) |> 
+) |>
   bind_rows()
 
-write_parquet(gp_draws, "data/paper/gp_draws.parquet")
+# Store draws as 32-bit floats to keep the file under GitHub's 100 MB limit
+gp_draws |>
+  mutate(.draw = as.integer(.draw)) |>
+  arrow_table() |>
+  (\(t) t$cast(schema(
+    .draw = int32(), date = date32(), location = utf8(), pathogen = utf8(),
+    log_R = float32(), f_annual = float32(), f_noise = float32()
+  )))() |>
+  write_parquet("data/paper/gp_draws.parquet")
 
 
 delay_draws <- map(
@@ -135,40 +146,3 @@ delay_draws <- map(
 
 
 write_parquet(delay_draws, "data/paper/delay_draws.parquet")
-
-
-fit_files_no_holidays <- fs::dir_ls("saved_results/no_holidays/2025-11-27/", recurse = TRUE, glob = "*.rds")
-
-
-no_holidays_gp_draws <- map(
-  fit_files_no_holidays,
-  function(fit_file) {
-    
-    round_id <- ymd(str_extract(fit_file, "\\d{4}-\\d{2}-\\d{2}"))
-    job_name <- fs::path_file(fit_file) |> fs::path_ext_remove()
-    pathogen <- str_split_fixed(job_name, "_", 3)[1]
-    location <- str_split_fixed(job_name, "_", 3)[2]
-    target <- str_split_fixed(job_name, "_", 3)[3]
-    
-    if(!(location %in% locations_paper)) {
-      return(NULL)
-    }
-    
-    fit <- read_rds(fit_file)
-    
-    training_counts <- read_parquet(
-      str_c("saved_results/baseline/", round_id, "/", job_name, "_training_counts.parquet")
-    )
-    
-    fit |> 
-      spread_draws(f_annual[ix_t], f_noise[ix_t], log_R[ix_t]) |> 
-      filter(.draw %% 10 == 0) |> 
-      mutate(date = training_counts$date[ix_t]) |> 
-      mutate(round_id = round_id, location = location, pathogen = pathogen, target = target)
-  },
-  .progress = TRUE
-) |> 
-  bind_rows()
-
-write_parquet(no_holidays_gp_draws, "data/paper/no_holidays_gp_draws.parquet")
-
