@@ -19,3 +19,7 @@ data/retro_rounds/
 data/combined-count*.csv
 !data/combined-count-smoothed_final_anonymised.csv
 saved_results/*/
+# Per-day scores were computed against the restricted counts and can be inverted to
+# recover them. Only the weekly summary (saved_results/perf_summary.parquet) is shared.
+saved_results/*_performance.parquet
+data/snaive_perf_extended.parquet

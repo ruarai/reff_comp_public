@@ -26,7 +26,7 @@ The case data come from line lists in the National Notifiable Disease Surveillan
 This repository instead includes:
 
 - **Anonymised case counts.** These are the final case time series used in the study, with noise added. Wherever a figure shows observed case counts, it shows these anonymised counts, so those points will differ slightly from the manuscript.
-- **Summarised outputs of the retrospective forecasts.** These are scores, forecast quantiles and posterior draws, produced from model fits to the true data. They contain no case counts.
+- **Summarised outputs of the retrospective forecasts.** These are forecast scores, forecast quantiles and posterior draws, produced from model fits to the true data. They contain no case counts. The scores were computed against the true counts, so they are released only as weekly means (see [summarise_performance.R](R/paper/summarise_performance.R)). Per-day scores are withheld because they can be inverted to recover the counts.
 
 Together these regenerate every figure and table in the manuscript. Re-fitting the model requires the restricted data (see [Running the full pipeline](#running-the-full-pipeline)).
 
@@ -35,9 +35,8 @@ Together these regenerate every figure and table in the manuscript. Re-fitting t
 | File | Contents | Written by |
 |------|----------|------------|
 | `data/combined-count-smoothed_final_anonymised.csv` | Anonymised daily case counts, January 2023 to December 2025 | (provided) |
-| `saved_results/<model_version>_performance.parquet` | CRPS and other scores for every forecast, one file per model version | `consolidate_result()`, true counts removed (see step 4 below) |
+| `saved_results/perf_summary.parquet` | Mean CRPS (log scale) per model version, pathogen, jurisdiction, round and horizon week, for all nine model versions and the random-walk baseline | [summarise_performance.R](R/paper/summarise_performance.R) |
 | `saved_results/baseline_quants.parquet` | Forecast quantiles (50%, 80% and 95% intervals) for every forecast | [collect_trajectories.R](R/paper/collect_trajectories.R) |
-| `data/snaive_perf_extended.parquet` | Scores for the random-walk (seasonal naive) baseline | [produce_snaive_forecasts.R](R/paper/produce_snaive_forecasts.R) |
 | `data/paper/holiday_draws.parquet` | Posterior draws of the school holiday effects (final round) | [collect_effect_draws.R](R/paper/collect_effect_draws.R) |
 | `data/paper/public_holiday_draws.parquet` | Posterior draws of the public holiday effects (final round) | [collect_effect_draws.R](R/paper/collect_effect_draws.R) |
 | `data/paper/gp_draws.parquet` | Posterior draws of `log R(t)`, `f_seasonal` and `f_noise` across 2025 (final round) | [collect_effect_draws.R](R/paper/collect_effect_draws.R) |
@@ -81,17 +80,17 @@ Rscript R/paper/f_2_performance.R
 | Output | Script | Inputs |
 |--------|--------|--------|
 | Figure 1 | [f_1_example_forecast.R](R/paper/f_1_example_forecast.R) | plot data, case counts |
-| Figure 2 | [f_2_performance.R](R/paper/f_2_performance.R) | `baseline` scores, baseline-model scores, case counts |
+| Figure 2 | [f_2_performance.R](R/paper/f_2_performance.R) | score summary (`baseline`, random-walk baseline), case counts |
 | Figure 3 | [f_3_examples.R](R/paper/f_3_examples.R) | plot data, `gp_draws`, case counts |
-| Figure 4 | [f_4_model_comparison.R](R/paper/f_4_model_comparison.R) | scores for `baseline`, `no_holidays`, `no_annual`, `no_holidays_no_annual`; case counts |
+| Figure 4 | [f_4_model_comparison.R](R/paper/f_4_model_comparison.R) | score summary (`baseline`, `no_holidays`, `no_annual`, `no_holidays_no_annual`) |
 | Figure 5 | [f_5_estimated_effects.R](R/paper/f_5_estimated_effects.R) | `holiday_draws`, `gp_draws` |
 | Supp. Table 1 | [t_supp_estimated_effects.R](R/paper/t_supp_estimated_effects.R) | `holiday_draws` |
 | Supp. Fig 1 (holiday dates) | [f_supp_public_holidays.R](R/paper/f_supp_public_holidays.R) | case counts |
 | Supp. Figs 2–4 (case incidence) | [f_supp_case_incidence.R](R/paper/f_supp_case_incidence.R) | case counts |
-| Supp. Fig 5 (CRPS by horizon) | [f_supp_perf_heatmap.R](R/paper/f_supp_perf_heatmap.R) | `baseline` scores, baseline-model scores, case counts |
+| Supp. Fig 5 (CRPS by horizon) | [f_supp_perf_heatmap.R](R/paper/f_supp_perf_heatmap.R) | score summary (`baseline`), case counts |
 | Supp. Fig 6 (forecasts with and without components) | [f_supp_forecast_components.R](R/paper/f_supp_forecast_components.R) | plot data, case counts |
-| Supp. Fig 7 (skill heatmaps) | [f_supp_skill_heatmap.R](R/paper/f_supp_skill_heatmap.R) | scores for `baseline`, `no_holidays_no_annual`; baseline-model scores; case counts |
-| Supp. Fig 8 (component ablations) | [f_supp_model_comparison.R](R/paper/f_supp_model_comparison.R) | scores for all nine model versions |
+| Supp. Fig 7 (skill heatmaps) | [f_supp_skill_heatmap.R](R/paper/f_supp_skill_heatmap.R) | score summary (`baseline`, `no_holidays_no_annual`, random-walk baseline), case counts |
+| Supp. Fig 8 (component ablations) | [f_supp_model_comparison.R](R/paper/f_supp_model_comparison.R) | score summary (all nine model versions) |
 | Supp. Figs 9–10 (holiday effects) | [f_supp_estimated_effects.R](R/paper/f_supp_estimated_effects.R) | `holiday_draws`, `public_holiday_draws` |
 | Supp. Fig 11 (delay distributions) | [f_supp_delay.R](R/paper/f_supp_delay.R) | `delay_draws` |
 | Supp. Fig 12 (HSGP validation) | [f_supp_hsgp.R](R/paper/f_supp_hsgp.R) | none |
@@ -133,7 +132,7 @@ To run one job locally:
 Rscript R/forecast_renewal_retro.R 1
 ```
 
-Each job writes the following to `saved_results/<model_version>/<round_id>/`: the `cmdstanr` fit object (`.rds`), the training data, forecast trajectories, scores against `data/combined-count-smoothed_final_anonymised.csv`, and diagnostic plots.
+Each job writes the following to `saved_results/<model_version>/<round_id>/`: the `cmdstanr` fit object (`.rds`), the training data, forecast trajectories, per-day scores (`*_performance.parquet`) and diagnostic plots. Scores are computed against the counts file named in `calculate_performance_metrics()` in [R/functions.R](R/functions.R). It points at the anonymised counts in this repository, but the manuscript's scores were computed against the final restricted counts, so point it at those to reproduce them exactly.
 
 Rounds are fitted with 2,000 warm-up and 2,000 sampling iterations, except the `baseline` fit for the final round (`2025-11-27`), which uses 5,000 warm-up and 20,000 sampling iterations, thinned by 10.
 
@@ -146,28 +145,19 @@ Rounds are fitted with 2,000 warm-up and 2,000 sampling iterations, except the `
 ### 3. Baseline model and posterior summaries
 
 ```bash
-Rscript R/paper/produce_snaive_forecasts.R   # random-walk baseline → data/snaive_perf_extended.parquet
+Rscript R/paper/produce_snaive_forecasts.R   # random-walk baseline scores → data/snaive_perf_extended.parquet (not released)
 Rscript R/paper/collect_effect_draws.R       # final-round posterior draws → data/paper/*.parquet
 Rscript R/paper/collect_trajectories.R       # forecast quantiles → saved_results/baseline_quants.parquet
 ```
 
-### 4. Combine the scores
+### 4. Summarise the scores
 
-Combine each model version's per-job scores into a single file, dropping the observed counts:
-
-```r
-library(tidyverse)
-library(arrow)
-
-for (v in c("baseline", "no_holidays_no_annual", "no_holidays", "no_annual", "no_school_holidays",
-            "no_public_holidays", "no_asc_holidays", "no_Rt_holidays", "no_delay")) {
-  open_dataset(fs::dir_ls(str_c("saved_results/", v), glob = "*_performance.parquet", recurse = TRUE)) |>
-    select(-cases_true, -log_cases_true) |>
-    write_parquet(str_c("saved_results/", v, "_performance.parquet"))
-}
+```bash
+Rscript R/paper/summarise_performance.R      # → saved_results/perf_summary.parquet
 ```
 
-`consolidate_result()` in [R/mediaflux_integration.R](R/mediaflux_integration.R) does the same, but also uploads the results to Mediaflux and then **deletes** `saved_results/<model_version>/`.
+This reads the per-day scores for every model version from `saved_results/<model_version>/` and the random-walk baseline scores from `data/snaive_perf_extended.parquet`. It writes their weekly means, which are all the figures use. It stops with an error if any model is missing a forecast date that the others have.
+
 
 ### 5. Plot data for individual forecasts
 
