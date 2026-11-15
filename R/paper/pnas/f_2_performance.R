@@ -63,8 +63,13 @@ school_holidays <- get_school_holidays() |>
   label_pathogen()
 
 
-plot_theme_annotation_small <- theme(plot.title = element_markdown(family = "Helvetica"),
-                               plot.margin = margin(t = 0.05, l = 0.05, b = 0.05, r = 0.05, unit = "cm"))
+# Tight titles, strips and margins for the compact PNAS layout
+title_theme <- theme(
+  plot.title.position = "plot",
+  plot.title = element_markdown(family = "Helvetica", margin = margin(b = 2)),
+  strip.text.x = element_text(size = 11, hjust = 0, margin = margin(t = 0, b = 2)),
+  plot.margin = margin(0.1, 0.05, 0.1, 0.05, unit = "cm")
+)
 
 
 p_heatmap <- ggplot(plot_data_skill) +
@@ -222,32 +227,25 @@ p_skill <- perf_summary |>
         panel.grid.major = element_gridline)
 
 
-p_top <- p_crps + 
-  plot_annotation("<b>A</b>. Forecast performance by horizon week (lower value is better)",
-                  theme = plot_theme_annotation_small)
+p_top <- p_crps +
+  ggtitle("<b>A</b>. Forecast performance by horizon week (lower value is better)") +
+  title_theme
 
-p_mid <- p_heatmap + 
-  plot_annotation("<b>B</b>. 4th week forecast performance by epidemic period",
-                  theme = plot_theme_annotation_small)
+p_mid <- p_heatmap +
+  ggtitle("<b>B</b>. 4th week forecast performance by epidemic period") +
+  title_theme
 
+p_bottom <- p_skill +
+  ggtitle("<b>C</b>. Forecast skill against baseline by jurisdiction (higher value is better)") +
+  xlab(NULL) +
+  title_theme
 
-
-p_bottom <- (p_skill + plot_spacer()) +
-  plot_layout(widths = c(1, 0.1)) +
-  plot_annotation("<b>C</b>. Forecast skill against baseline by jurisdiction (higher value is better)",
-                  theme = plot_theme_annotation_small)
-
-p_bottom
-
-
-(wrap_elements(full = p_top) / 
-    wrap_elements(full = p_mid) /
-    wrap_elements(full = p_bottom)) +
+(p_top / p_mid / p_bottom) +
   plot_layout(heights = c(1, 1.5, 1))
 
 ggsave(
   "pnas_figures/f_2_performance.png",
-  width = 0.81 * 9, height = 7,
+  width = 0.81 * 9, height = 6.3,
   bg = "white"
 )
 
