@@ -2,7 +2,7 @@
 
 Code accompanying the manuscript:
 
-> Tobin RJ, Eales O, Plank MJ, Morris DJ, McCaw JM, Shearer FM. **Improving respiratory virus forecasts by capturing the effects of school holidays, public holidays and seasonal changes in transmission.** *Preprint* (2026). doi: TODO
+> Tobin RJ, Eales O, Plank MJ, Morris DJ, McCaw JM, Shearer FM. **Improving respiratory virus forecasts by capturing the effects of school holidays, public holidays and seasonal changes in transmission.** *medRxiv pre-print* (2026). [doi: 10.64898/2026.11.15.26367964](https://doi.org/10.64898/2026.11.15.26367964)
 
 The model is a Bayesian renewal model. The log effective reproduction number is decomposed into additive components:
 
@@ -184,7 +184,7 @@ If you use this code, please cite the manuscript:
 ```
 Tobin RJ, Eales O, Plank MJ, Morris DJ, McCaw JM, Shearer FM (2026).
 Improving respiratory virus forecasts by capturing the effects of school holidays,
-public holidays and seasonal changes in transmission. doi: TODO
+public holidays and seasonal changes in transmission. doi:10.64898/2026.11.15.26367964
 ```
 
 ## Licence
