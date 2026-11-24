@@ -4,7 +4,7 @@ Code accompanying the manuscript:
 
 > Tobin RJ, Eales O, Plank MJ, Morris DJ, McCaw JM, Shearer FM. **Improving respiratory virus forecasts by capturing the effects of school holidays, public holidays and seasonal changes in transmission.** *medRxiv pre-print* (2026). [doi: 10.64898/2026.11.15.26367964](https://doi.org/10.64898/2026.11.15.26367964)
 
-The model is a Bayesian renewal model. The log effective reproduction number is decomposed into additive components:
+The model is a Bayesian renewal model, with the log effective reproduction number decomposed into additive components:
 
 ```
 log R(t) = ω_S(t) + ω_P(t) + f_seasonal(t) + f_noise(t) + c
@@ -15,9 +15,7 @@ log R(t) = ω_S(t) + ω_P(t) + f_seasonal(t) + f_noise(t) + c
 - `f_noise(t)` is a Matérn 5/2 Gaussian process that captures remaining variation.
 - `c` is a baseline.
 
-Infections are convolved with an estimated infection-to-notification delay to give expected case counts. Expected counts are further adjusted by school holiday, public holiday and day-of-week reporting effects, and observed counts are negative binomial. Both Gaussian processes use Hilbert space (HSGP) approximations. The model is fitted in Stan through `cmdstanr`. The study produced 28-day-ahead forecasts of RSV, influenza and SARS-CoV-2 daily case incidence in five Australian jurisdictions (ACT, NSW, NT, QLD, VIC) across the 2025 season.
-
-The model also produces real-time forecasts for the Australia-Aotearoa Forecasting Hub under the model name `uom-reff_comp`.
+Infections are convolved with an estimated infection-to-notification delay to give expected case counts. Expected counts are further adjusted by school holiday, public holiday and day-of-week reporting effects. The model is fitted in Stan through `cmdstanr`. The study produced 28-day-ahead forecasts of RSV, influenza and SARS-CoV-2 daily case incidence in five Australian jurisdictions (ACT, NSW, NT, QLD, VIC) across the 2025 season.
 
 ## Data availability
 
