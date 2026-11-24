@@ -184,9 +184,5 @@ If you use this code, please cite the manuscript:
 ```
 Tobin RJ, Eales O, Plank MJ, Morris DJ, McCaw JM, Shearer FM (2026).
 Improving respiratory virus forecasts by capturing the effects of school holidays,
-public holidays and seasonal changes in transmission. doi:10.64898/2026.11.15.26367964
+public holidays and seasonal changes in transmission. [doi: 10.64898/2026.11.15.26367964](https://doi.org/10.64898/2026.11.15.26367964)
 ```
-
-## Licence
-
-MIT. See [LICENSE](LICENSE).
